@@ -146,43 +146,14 @@ Vorteil gegenüber dem V8-Isolate lässt sich daraus nicht ableiten, ein Nachtei
 Die Kompatibilität des Bestands ist nach Abschnitt~\ref{sec:kriterienkatalog} kein
 Muss-Kriterium, sondern geht als S7 und S8 gewichtet in die Nutzwertanalyse ein. Sie scheidet
 daher keinen Kandidaten aus. Ihre Struktur bestimmt aber, welcher Aufwand mit einer inneren
-Grenze verbunden ist, und wird deshalb hier erhoben.
+Grenze verbunden ist, und geht deshalb in die Vorauswahl ein.
 
-Von 1.718 Mandanten liegen 713 (41,5\,\%) auf dem Hard Floor, können also ohne Host-Binding
-nicht auf einer sprachbasierten Laufzeit ausgeführt werden. Die Auswertung der 27 transitiv
-geprüften npm-Pakete, die 87,9\,\% der npm-nutzenden Mandanten abdecken, zeigt eine deutliche
-Struktur dieser Schranke.
-
-\begin{table}[htbp]
-\centering
-\caption{Blockierende Paketfamilien im Hard-Floor-Bestand}
-\label{tab:blockierende-familien}
-\begin{tabular}{lrr}
-\hline
-Familie & Pakete & Mandanten \\
-\hline
-Benötigen \ac{HTTP} direkt & 14 & 629 \\
-Benötigen einen rohen \ac{TCP}- oder \ac{TLS}-Socket & 8 & 63 \\
-Schnittmenge beider Familien & & 44 \\
-\hline
-Vereinigung & 22 & 648 \\
-Hard Floor gesamt & & 713 \\
-\hline
-\end{tabular}
-\end{table}
-
-648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einer Netzwerkbindung und an
-nichts anderem. Weder Dateisystemzugriff noch Prozesserzeugung noch dynamische Codeerzeugung
-tragen nennenswert zur Schranke bei. Die Kompatibilitätsfrage ist damit eng umrissen: Ein
-Entwurf, der Netzwerkzugriff vermittelt, adressiert den überwiegenden Teil des Bestands.
-
-Zwischen beiden Familien besteht ein Größenunterschied von etwa zehn zu eins. Die
-\ac{HTTP}-Familie wird von \texttt{axios} mit 579 Mandanten dominiert. Die Socket-Familie umfasst
-63 Mandanten, davon rund 58 auf Datenbanktreibern, überwiegend \texttt{mssql} mit dem Treiber
-\texttt{tedious}. Dessen Protokoll verlangt eine Besonderheit: Die Verbindung wird im Klartext
-aufgebaut und erst danach auf \ac{TLS} umgestellt. Wie fehleranfällig die Nachbildung dieses
-Pfades ist, zeigt die Entwicklungsgeschichte der Node-Kompatibilitätsschicht von Deno, in der
-genau dieser Übergang mehrfach zurückfiel.
+Abschnitt~\ref{sec:bestandsanalyse} weist 713 Mandanten (41,5\,\%) auf dem Hard Floor aus.
+Nach Tabelle~\ref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einer
+Netzwerkbindung und an nichts anderem. Für die Vorauswahl ist damit die entscheidende Aussage
+getroffen: Der Aufwand einer inneren Grenze konzentriert sich auf eine einzige Fähigkeit, und er
+verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Familie und eine deutlich
+kleinere Socket-Familie.
 
 Für den Entwurf folgt daraus eine Unterscheidung, die Abschnitt~\ref{sec:orchestrierung}
 ausgestaltet. Eine Schnittstelle kann über einen Shim nachgebildet oder durch ein gleichwertiges
