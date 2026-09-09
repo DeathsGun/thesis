@@ -157,11 +157,13 @@ kleinere Socket-Familie.
 
 Für den Entwurf folgt daraus eine Unterscheidung, die Abschnitt~\ref{sec:orchestrierung}
 ausgestaltet. Eine Schnittstelle kann über einen Shim nachgebildet oder durch ein gleichwertiges
-Host-Binding ersetzt werden. Für die \ac{HTTP}-Familie ist die Nachbildung angemessen, weil die benötigte
-Oberfläche klein ist und die Vermittlung nach M4 erhalten bleibt. Für die Datenbanktreiber liegt
-der Ersatz näher, weil ein vermitteltes \ac{SQL}-Binding Zugangsdaten im Host hält und auf
-Statement-Ebene kontrolliert. Ein roher Socket erlaubt dagegen nur eine Prüfung von Host
-und Port zum Verbindungsaufbau und schöpft M4 damit nur teilweise aus.
+Host-Binding ersetzt werden. Als Entwurfsoption naheliegend, aber an dieser Stelle noch nicht
+entschieden, ist Folgendes: Für die \ac{HTTP}-Familie könnte die Nachbildung angemessen sein,
+weil die benötigte Oberfläche klein ist und die Vermittlung nach M4 erhalten bliebe. Für die
+Datenbanktreiber läge der Ersatz näher, weil ein vermitteltes \ac{SQL}-Binding Zugangsdaten im
+Host halten und auf Statement-Ebene kontrollieren würde, während ein roher Socket nur eine
+Prüfung von Host und Port zum Verbindungsaufbau erlaubt und M4 damit nur teilweise ausschöpft.
+Abschnitt~\ref{sec:orchestrierung} trifft die endgültige Wahl.
 
 \subsubsection{Ergebnis der Vorauswahl}
 \label{sec:vorauswahl-ergebnis}
@@ -216,20 +218,10 @@ von Abschnitt~\ref{sec:orchestrierung}.
 % ---------------------------------------------------------------------------
 % HINWEIS, nicht Teil des Kapiteltextes:
 %
-% 1. Ergaenzungen in abkuerzungen/acronyms:
-%    \acro{API}{Application Programming Interface}
-%    \acro{FFI}{Foreign Function Interface}
-%    \acro{HTTP}{Hypertext Transfer Protocol}
-%    \acro{JIT}{Just-in-Time}
-%    \acro{ASLR}{Address Space Layout Randomization}
-%    \acro{SQL}{Structured Query Language}
-%    \acro{TCP}{Transmission Control Protocol}
-%    \acro{TLS}{Transport Layer Security}
+% Akronyme und Bibliografie-Schluessel sind bereits ergaenzt (siehe
+% abkuerzungen/acronyms.tex, literatur/literatur.bib).
 %
-% 2. Noch undefinierte Labels, auf die dieser Abschnitt verweist:
-%      sec:bestandsanalyse  -> neuer Unterabschnitt in Kapitel 3.1
-%      sec:orchestrierung   -> Abschnitt 4.2
-%      sec:nutzwertanalyse  -> Abschnitt 4.3, bereits aus 3.3 referenziert
-%
-% 3. Bibliografie: neun Schluessel aus "neue-quellen.bib" ergaenzen.
+% Noch undefinierte Labels, auf die dieser Abschnitt verweist:
+%      sec:orchestrierung   -> Abschnitt 4.2, noch zu schreiben
+%      sec:nutzwertanalyse  -> Abschnitt 4.3, noch zu schreiben
 % ---------------------------------------------------------------------------

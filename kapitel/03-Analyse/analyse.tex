@@ -385,7 +385,7 @@ belegt, welche Eigenschaften der Ausgangszustand bereits erfüllt.
     T3 & Eine Veränderung eines eingebauten Prototyps oder des Module Cache wirkt in
          Ausführung $n+1$ fort. & M2 & abgeleitet \\
     T4 & Eine in Ausführung $n$ abgelegte Datei ist in Ausführung $n+1$ lesbar. & M2 &
-         beobachtet \\
+         abgeleitet \\
     T5 & Eine in Ausführung $n$ geöffnete Netzwerkverbindung ist in Ausführung $n+1$ nutzbar.
          & M2 & abgeleitet \\
     T6 & Eine Ausführung erschöpft den Speicher und macht die Instanz für folgende
@@ -398,9 +398,13 @@ belegt, welche Eigenschaften der Ausgangszustand bereits erfüllt.
   \end{tabularx}
 \end{table}
 
-T1, T4 und T6 bilden Vorgänge nach, die im Ausgangszustand dokumentiert sind, und sind damit
-keine konstruierten Laborfälle. Die übrigen ergänzen den Katalog um Wege, die aus derselben
-geteilten Ressource folgen, aber noch nicht beobachtet wurden. Damit steht fest, woran die
+T1 und T6 bilden Vorgänge nach, die im Ausgangszustand dokumentiert sind, und sind damit keine
+konstruierten Laborfälle. Für T4 gilt das nicht: Der Ausgangszustand setzt das temporäre
+Verzeichnis vor jeder Ausführung mittels \texttt{rm -rf} zurück, weshalb eine Datei aus
+Ausführung $n$ in Ausführung $n+1$ gerade nicht mehr vorhanden ist. T4 prüft also, ob dieser
+Reset auch im Artefakt greift, und ist ein abgeleiteter, kein beobachteter Fall. Die übrigen
+Prüffälle ergänzen den Katalog um Wege, die aus derselben geteilten Ressource folgen, aber noch
+nicht beobachtet wurden. Damit steht fest, woran die
 Unterfragen aus Abschnitt~\ref{sec:forschungsfragen} beantwortet werden: U3 prüft M1 bis M4
 über Prüffallkatalog und Architekturprüfung, U4 erhebt die Messgrößen S1 bis S4 sowie M5, und
 die Nutzwertanalyse führt die Soll-Kriterien zu einer Empfehlung zusammen, nachdem die
