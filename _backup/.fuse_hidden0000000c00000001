@@ -1,0 +1,264 @@
+\newpage
+\section{Entwurf und Umsetzung des Ausführungsmodells} \label{sec:Entwurf}
+
+\subsection{Vorauswahl des Ausführungsmodells}
+\label{sec:vorauswahl}
+
+Dieser Abschnitt engt den Kandidatenkreis ein, bevor die Nutzwertanalyse die verbleibenden
+Alternativen gewichtet und in Abschnitt~\ref{sec:orchestrierung} das Ausführungsmodell konstruiert
+wird. Er ist Vorarbeit und keine eigenständige Forschungsfrage. Angewendet werden die
+Muss-Kriterien M1 bis M5 aus Abschnitt~\ref{sec:kriterienkatalog}, ergänzt um zwei
+Randbedingungen der Zielplattform, die den Entwurfsraum unabhängig von jeder Bewertung verengen.
+Die Soll-Kriterien bleiben hier außer Betracht, sie gehen erst in die Nutzwertanalyse ein.
+
+Die Belege stammen aus zwei Quellenarten. Für Aussagen darüber, was eine Laufzeitumgebung
+zusichert, wird deren normative Herstellerdokumentation herangezogen, denn für einen Ausschluss
+ist die dokumentierte Zusicherung des Herstellers aussagekräftiger als eine Einzelmessung. Für Aussagen über den
+betroffenen Bestand dient die Auswertung aus Abschnitt~\ref{sec:bestandsanalyse}.
+
+\subsubsection{Äußere und innere Isolationsgrenze}
+\label{sec:zwei-grenzen}
+
+M1 verlangt zwischen zwei Mandanten eine Grenze auf Prozess- oder Virtualisierungsebene und
+schließt eine allein sprachbasierte Grenze aus. Für die Vorauswahl ist deshalb zu klären, welche
+Mechanismen dieses Kriterium überhaupt erfüllen können.
+
+Ein verbreiteter Vergleich stellt Container und sprachbasierte Isolate als Alternativen
+gegenüber. Diese Gegenüberstellung trägt nicht, weil beide an unterschiedlichen Stellen wirken.
+Ein Container ist eine äußere Grenze, die vom Betriebssystemkern durchgesetzt wird. Ein Isolate
+ist eine innere Grenze innerhalb eines Prozesses. Eine äußere Grenze existiert in jedem Entwurf,
+auch dann, wenn sie nicht eigens gewählt wird. Offen sind daher zwei andere Fragen: ob zusätzlich
+eine innere Grenze eingezogen wird, und wie viele Ausführungseinheiten sich eine Grenze jeweils
+teilen.
+
+Die Begründung für M1 findet sich in der Praxis der Anbieter. Reis et al. führten die
+Prozesstrennung in Chrome ein, weil die sprachbasierte Trennung mehrerer Origins innerhalb
+eines Prozesses nicht zuverlässig durchsetzbar blieb \autocite{reis_site_2019}. Cloudflare hält
+für die eigene Isolate-Plattform fest, dass V8 selbst keinen Schutz gegen Spectre bietet, und
+ergänzt die Isolate um eine Prozesssandbox mit Namespaces und \texttt{seccomp}
+\autocite{cloudflare_security_2026}. Deno beschreibt für die eigene mandantenfähige Plattform
+denselben Aufbau, mit einem Prozess je Deployment, Namespaces, seccomp, cgroups und einem
+Watchdog \autocite{deno_land_inc_how_2026}.
+
+Kein Kandidat erfüllt M1 also über die innere Grenze. Erfüllt wird es über die äußere, und die
+Fallstudie erfüllt es nach Abschnitt~\ref{sec:systemkontext} bereits, weil jeder Mandant einen
+eigenen Ausführungsdienst erhält. M1 scheidet damit keinen Kandidaten aus. Es legt fest, dass die
+mandantenweise Prozessgrenze des Ausgangszustands in jedem Entwurf erhalten bleibt, und verschiebt
+die eigentliche Entwurfsfrage auf die innere Grenze und auf die Granularität.
+
+\subsubsection{Randbedingungen der Zielplattform}
+\label{sec:randbedingungen}
+
+Zwei Eigenschaften der bestehenden Umgebung verengen den Entwurfsraum unabhängig von den
+Kriterien.
+
+Erstens steht kein Hypervisor zur Verfügung. Firecracker setzt Lese- und Schreibzugriff auf
+\texttt{/dev/kvm} voraus \autocite{the_firecracker_authors_getting_2026}, einen Zugriff, den der
+Zielcluster nicht bereitstellt. MicroVM-basierte Ansätze scheiden damit aus. Der Ausschluss ist
+ein Plattformausschluss und kein Sicherheitsurteil, denn die von Agache et al. beschriebene
+Grenze ist die stärkste der betrachteten \autocite{agache_firecracker_2020}.
+
+Zweitens wird gVisor bereits produktiv eingesetzt. M3 ist als Rückschrittsverbot formuliert und
+untersagt, die dem Gastcode zugängliche Oberfläche des Host-Kernels gegenüber dem
+Ausgangszustand zu vergrößern. Damit ist die äußere Grenze gesetzt und keine Entwurfsvariable
+mehr. Ein Modell, das diese Schicht zugunsten kürzerer Startzeiten aufgäbe, verletzte M3, auch
+wenn es die Soll-Kriterien besser bediente. Der Aufwand dieser Schicht ist bekannt und in die
+Entscheidung des Ausgangszustands bereits eingegangen \autocite{young_true_2019}.
+
+Für das Bedrohungsmodell hat die feste äußere Grenze zwei Folgen. Ein Ausbruch aus der
+V8-Sandbox endet in einer gVisor-Sandbox mit eingeschränkter System-\ac{API} und nicht auf dem
+Host-Kernel. Hardwareseitige Seitenkanäle deckt gVisor nach eigener Darstellung dagegen nicht ab
+\autocite{the_gvisor_authors_security_2026}, und der Sentry gehört selbst zur vertrauenswürdigen
+Rechenbasis, wie das gezielte Fuzzing von Li et al. zeigt \autocite{li_g-fuzz_2024}.
+
+\subsubsection{Anwendung der Muss-Kriterien auf die Technologiefamilien}
+\label{sec:ausschluesse}
+
+\paragraph{Node.js als Vertrauensgrenze, Verstoß gegen M4.}
+M4 verlangt, dass Zugriff auf Netz und Dateisystem ausschließlich über Bindungen erfolgt, die die
+Ausführungsumgebung vermittelt, und dass keine Beschränkung auf der Mitwirkung des Modells
+beruht. Diese Forderung folgt unmittelbar aus V5. Node.js kann sie nicht erfüllen, und zwar nicht
+aufgrund einer Messung, sondern aufgrund der dokumentierten Zusicherung. Das Bedrohungsmodell des
+Projekts erklärt den ausgeführten Code ausdrücklich für vertrauenswürdig, einschließlich dynamisch
+geladenen Codes, und schließt daraus, dass ein Szenario, das ein bösartiges Modul voraussetzt,
+keine Schwachstelle in Node.js darstellen kann \autocite{the_nodejs_project_security_2026}. Ein
+Skript, das \texttt{require} aufrufen kann, erreicht Netz und Dateisystem an jeder vermittelten
+Bindung vorbei, und ein Ausbruch aus einem Worker wäre nach dieser Festlegung kein zu behebender
+Fehler. Das seit Version 20 verfügbare Berechtigungsmodell bestätigt die Einordnung und
+bezeichnet sich selbst als \enquote{seat belt} ohne Garantie gegenüber bösartigem Code
+\autocite{the_nodejs_project_permissions_2026}.
+
+Node.js ist damit nicht schwach bewertet, sondern als Vertrauensgrenze nicht bewertbar. Zu
+unterscheiden ist davon Node.js als Laufzeitumgebung innerhalb einer fremden Grenze. In dieser
+Rolle bleibt es tragfähig, weil die Grenze dann vom Container gezogen wird, und in dieser Rolle
+erfüllt der Ausgangszustand M1 und M3.
+
+\paragraph{Berechtigungsmodelle als Mandantengrenze, Verstoß gegen M1 und M4.}
+Die Berechtigungsmodelle von Node.js und Deno wirken prozessweit und trennen keine Mandanten
+innerhalb eines Prozesses, womit sie M1 nicht erfüllen. Für M4 benennt Deno zwei Umgehungen
+selbst: ein Skript, das einen neuen Deno-Prozess starten darf, kann diesen mit
+\texttt{-{}-allow-all} starten und verlässt die Sandbox vollständig, und eine über \ac{FFI}
+geladene native Bibliothek führt Maschinencode im selben Prozess aus und setzt Systemaufrufe
+direkt ab. Dieselbe Dokumentation empfiehlt für nicht vertrauenswürdigen Code zusätzlich
+Sandboxing auf Betriebssystemebene sowie gVisor oder Firecracker \autocite{the_deno_authors_security_2026}.
+
+\paragraph{Bun, Verstoß gegen M4 und fehlende Embedding-API.}
+Bun liefert kein Berechtigungsmodell, der entsprechende Vorschlag ist ein offener Issue
+im Repository \autocite{oven-shbun_contributors_bun_2026}. Unabhängig davon lässt es sich
+nicht als Bibliothek einbetten, sodass ein Host keine Isolate erzeugen, begrenzen oder beenden könnte
+\autocite{oven-shbun_contributors_feature_2026}. Ohne diese Kontrolle sind weder M2 noch M4 durchsetzbar.
+Hinzu kommt, dass Bun mit JavaScriptCore eine andere JavaScript-Engine verwendet, wodurch die
+in dieser Arbeit herangezogene V8-spezifische Sicherheitsliteratur ihre Anwendbarkeit verliert.
+
+\paragraph{WebAssembly als Mandantensprache, außerhalb des Gegenstands.}
+Ein Entwurf, in dem Mandanten ihre Logik selbst nach WebAssembly übersetzen, scheitert nicht an
+einem Muss-Kriterium, sondern an der Oberfrage. Diese fragt nach einem Ausführungsmodell für
+JavaScript-Funktionen. Ein Modell, das von den Mandanten eine andere Sprache verlangt, beantwortet
+sie nicht, und es bricht zugleich den gesamten Bestand von 14.575 Skriptversionen. Der Ansatz wird
+deshalb nicht als Kandidat geführt.
+
+\subsubsection{Zurückgestellt: JavaScript in WebAssembly}
+\label{sec:wasm-zurueckgestellt}
+
+Davon zu trennen ist der Ansatz, eine JavaScript-Engine nach WebAssembly zu übersetzen und in der
+Wasm-Sandbox auszuführen. Die Mandanten schreiben dabei weiterhin JavaScript. Der Ansatz
+verletzt kein Muss-Kriterium und bleibt deshalb im Kandidatenkreis, allerdings mit zwei
+Vorbehalten, die in der Nutzwertanalyse zu berücksichtigen sind.
+
+WebAssembly erlaubt keine Erzeugung und Ausführung von Maschinencode zur Laufzeit
+\autocite{haas_bringing_2017}, weshalb eine so übersetzte Maschine ohne \ac{JIT} interpretierend
+bleibt \autocite{igalia_five_2026}. Das wirkt auf S2 und S4. Der Betrieb auf
+Kubernetes erfordert zudem eigene containerd-Shims und damit einen zweiten Deployment-Stack
+neben dem bestehenden, was auf S6 wirkt.
+
+Für den Ansatz sprechen der geringere Ressourcenbedarf, den Shillaker und Pietzuch für
+serverloses Rechnen zeigen \autocite{shillaker_faasm_2020} und den Mainas et al. auf
+mandantenfähige Umgebungen übertragen \autocite{mainas_sandboxing_2024}. Die
+Sicherheitsüberlegenheit ist dagegen begrenzt. Innerhalb des linearen Speichers fehlen
+Schutzmechanismen, die native Programme besitzen, darunter \ac{ASLR}, Guard Pages, Stack Canaries
+und Read-only-Speicher \autocite{lehmann_everything_2020}, und Sandbox-Ausbrüche aus
+der Laufzeitumgebung selbst sind dokumentiert \autocite{bytecode_alliance_wasmtimes_2026}. Ein
+Vorteil gegenüber dem V8-Isolate lässt sich daraus nicht ableiten, ein Nachteil ebenso wenig.
+
+\subsubsection{Die Kompatibilitätsschranke}
+\label{sec:kompatibilitaet}
+
+Die Kompatibilität des Bestands ist nach Abschnitt~\ref{sec:kriterienkatalog} kein
+Muss-Kriterium, sondern geht als S7 und S8 gewichtet in die Nutzwertanalyse ein. Sie scheidet
+daher keinen Kandidaten aus. Ihre Struktur bestimmt aber, welcher Aufwand mit einer inneren
+Grenze verbunden ist, und wird deshalb hier erhoben.
+
+Von 1.718 Mandanten liegen 713 (41,5\,\%) auf dem Hard Floor, können also ohne Host-Binding
+nicht auf einer sprachbasierten Laufzeit ausgeführt werden. Die Auswertung der 27 transitiv
+geprüften npm-Pakete, die 87,9\,\% der npm-nutzenden Mandanten abdecken, zeigt eine deutliche
+Struktur dieser Schranke.
+
+\begin{table}[htbp]
+\centering
+\caption{Blockierende Paketfamilien im Hard-Floor-Bestand}
+\label{tab:blockierende-familien}
+\begin{tabular}{lrr}
+\hline
+Familie & Pakete & Mandanten \\
+\hline
+Benötigen \ac{HTTP} direkt & 14 & 629 \\
+Benötigen einen rohen \ac{TCP}- oder \ac{TLS}-Socket & 8 & 63 \\
+Schnittmenge beider Familien & & 44 \\
+\hline
+Vereinigung & 22 & 648 \\
+Hard Floor gesamt & & 713 \\
+\hline
+\end{tabular}
+\end{table}
+
+648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einer Netzwerkbindung und an
+nichts anderem. Weder Dateisystemzugriff noch Prozesserzeugung noch dynamische Codeerzeugung
+tragen nennenswert zur Schranke bei. Die Kompatibilitätsfrage ist damit eng umrissen: Ein
+Entwurf, der Netzwerkzugriff vermittelt, adressiert den überwiegenden Teil des Bestands.
+
+Zwischen beiden Familien besteht ein Größenunterschied von etwa zehn zu eins. Die
+\ac{HTTP}-Familie wird von \texttt{axios} mit 579 Mandanten dominiert. Die Socket-Familie umfasst
+63 Mandanten, davon rund 58 auf Datenbanktreibern, überwiegend \texttt{mssql} mit dem Treiber
+\texttt{tedious}. Dessen Protokoll verlangt eine Besonderheit: Die Verbindung wird im Klartext
+aufgebaut und erst danach auf \ac{TLS} umgestellt. Wie fehleranfällig die Nachbildung dieses
+Pfades ist, zeigt die Entwicklungsgeschichte der Node-Kompatibilitätsschicht von Deno, in der
+genau dieser Übergang mehrfach zurückfiel.
+
+Für den Entwurf folgt daraus eine Unterscheidung, die Abschnitt~\ref{sec:orchestrierung}
+ausgestaltet. Eine Schnittstelle kann über einen Shim nachgebildet oder durch ein gleichwertiges
+Host-Binding ersetzt werden. Für die \ac{HTTP}-Familie ist die Nachbildung angemessen, weil die benötigte
+Oberfläche klein ist und die Vermittlung nach M4 erhalten bleibt. Für die Datenbanktreiber liegt
+der Ersatz näher, weil ein vermitteltes \ac{SQL}-Binding Zugangsdaten im Wirt hält und auf
+Statement-Ebene kontrolliert. Ein roher Socket erlaubt dagegen nur eine Prüfung von Host
+und Port zum Verbindungsaufbau und schöpft M4 damit nur teilweise aus.
+
+\subsubsection{Ergebnis der Vorauswahl}
+\label{sec:vorauswahl-ergebnis}
+
+Tabelle~\ref{tab:kandidaten} führt die Anwendung der Muss-Kriterien auf die verbliebenen
+Familien zusammen. Alle behalten die mandantenweise Prozessgrenze des Ausgangszustands und die
+gVisor-Runtime-Klasse bei, weshalb M1 und M3 durchgängig erfüllt sind.
+
+\begin{table}[htbp]
+\centering
+\caption{Anwendung der Muss-Kriterien auf die Kandidaten}
+\label{tab:kandidaten}
+\small
+\begin{tabular}{@{}p{0.26\textwidth}ccccc p{0.17\textwidth}@{}}
+\hline
+Kandidat & M1 & M2 & M3 & M4 & M5 & Ergebnis \\
+\hline
+Ausgangszustand, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja &
+  scheidet aus \\
+Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen &
+  scheidet aus \\
+V8-Isolate je Ausführung mit vermittelten Bindungen & ja & ja & ja & ja & offen &
+  Kandidat \\
+JavaScript in WebAssembly je Ausführung & ja & ja & ja & ja & offen &
+  Kandidat \\
+\hline
+\end{tabular}
+\end{table}
+
+Der Ausgangszustand verletzt M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
+teilen, und M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Beide Befunde
+sind in Abschnitt~\ref{sec:systemkontext} hergeleitet.
+
+Die Variante mit einem frischen Node-Prozess je Ausführung stellt Zustandsfreiheit her und
+erfüllt M2, scheitert aber weiterhin an M4. Dieser Befund ist für die Arbeit wesentlich, weil er
+zeigt, dass Zustandsfreiheit und vermittelter Zugriff zwei verschiedene Eigenschaften sind und
+die einfachere Änderung nur die erste liefert. Ein Skript mit vollständiger Node-\ac{API} erreicht
+jeden erreichbaren Endpunkt, und ein Kontrollpunkt lässt sich nicht einziehen, weil die
+Laufzeitumgebung den Code als vertrauenswürdig behandelt \autocite{the_nodejs_project_security_2026}.
+Für zur Laufzeit erzeugte Skripte ist das nach V2 die maßgebliche Lücke, denn ein über die
+Eingaben beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin zugreifen darf
+\autocite{greshake_not_2023}. Keine Mandantengrenze verhindert das.
+
+Übrig bleiben zwei Kandidaten derselben Familie, die sich in der JavaScript-Engine
+unterscheiden und beide eine innere Grenze je Ausführung mit vermittelten Host-Bindings
+vorsehen. M5 ist für keinen der beiden aus der Vorauswahl heraus entscheidbar, weil es eine
+Messung am lauffähigen Modell voraussetzt. Die Gewichtung dieser beiden Kandidaten anhand der
+Soll-Kriterien S1 bis S8 leistet die Nutzwertanalyse in Abschnitt~\ref{sec:nutzwertanalyse}.
+Welche Kombination aus Zuordnungsgranularität und Instanzverwaltung sie tragen, ist Gegenstand
+von Abschnitt~\ref{sec:orchestrierung}.
+
+% ---------------------------------------------------------------------------
+% HINWEIS, nicht Teil des Kapiteltextes:
+%
+% 1. Ergaenzungen in abkuerzungen/acronyms:
+%    \acro{API}{Application Programming Interface}
+%    \acro{FFI}{Foreign Function Interface}
+%    \acro{HTTP}{Hypertext Transfer Protocol}
+%    \acro{JIT}{Just-in-Time}
+%    \acro{ASLR}{Address Space Layout Randomization}
+%    \acro{SQL}{Structured Query Language}
+%    \acro{TCP}{Transmission Control Protocol}
+%    \acro{TLS}{Transport Layer Security}
+%
+% 2. Noch undefinierte Labels, auf die dieser Abschnitt verweist:
+%      sec:bestandsanalyse  -> neuer Unterabschnitt in Kapitel 3.1
+%      sec:orchestrierung   -> Abschnitt 4.2
+%      sec:nutzwertanalyse  -> Abschnitt 4.3, bereits aus 3.3 referenziert
+%
+% 3. Bibliografie: neun Schluessel aus "neue-quellen.bib" ergaenzen.
+% ---------------------------------------------------------------------------

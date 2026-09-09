@@ -1,0 +1,239 @@
+\newpage
+\section{Entwurf und Umsetzung des Ausführungsmodells} \label{sec:Entwurf}
+
+% Abschnitt 4.1 Vorauswahl des Ausfuehrungsmodells
+% Entwurf, Stand 2026-09-09
+% Gehoert in die Datei von Kapitel 4, dort als \subsection unterhalb des
+% \section{...} von Kapitel 4.
+%
+% Ebenen in dieser Datei:
+%   \subsection    = 4.1
+%   \subsubsection = 4.1.1 bis 4.1.6
+%   \paragraph     = unnummerierte Zwischenueberschriften der Ausschluesse
+%
+% Benoetigte Eintraege in abkuerzungen/acronyms (siehe Hinweis am Dateiende):
+%   API, FFI, HTTP, JIT, KVM, SQL, TCP, TDS, TLS
+
+\subsection{Vorauswahl des Ausführungsmodells}
+\label{subsec:vorauswahl}
+
+Dieser Abschnitt grenzt den Entwurfsraum ein, bevor in Abschnitt~\ref{subsec:orchestrierung} das
+Ausführungsmodell konstruiert wird. Er ist Vorarbeit und keine eigenständige Forschungsfrage. Die
+Auswahl stützt sich auf zwei Quellenarten: normative Herstellerdokumentation zu den betrachteten
+Laufzeitumgebungen und die in Abschnitt~\ref{subsec:bestandsanalyse} erhobene Struktur des
+produktiven Skriptbestands. Wo eine Technologie ausgeschlossen wird, ist der Grund benannt und
+belegt, damit die spätere Konstruktion nicht als Setzung erscheint.
+
+\subsubsection{Äußere und innere Isolationsgrenze}
+\label{subsubsec:zwei-grenzen}
+
+Ein verbreiteter Vergleich stellt Container und sprachbasierte Isolate als Alternativen gegenüber.
+Diese Gegenüberstellung trägt nicht, weil beide Mechanismen an unterschiedlichen Stellen wirken. Ein
+Container ist eine äußere Grenze, die vom Betriebssystemkern durchgesetzt wird. Ein Isolate ist eine
+innere Grenze innerhalb eines Prozesses. Eine äußere Grenze existiert in jedem Entwurf, auch dann,
+wenn sie nicht eigens gewählt wird. Offen sind daher zwei andere Fragen: ob zusätzlich eine innere
+Grenze eingezogen wird, und wie viele Ausführungseinheiten sich eine Grenze jeweils teilen.
+
+Dass eine sprachbasierte Grenze allein nicht genügt, ist in der Literatur belegt. Reis et al.
+begründen die Einführung der Prozesstrennung in Browsern damit, dass die sprachbasierte Trennung
+mehrerer Herkünfte innerhalb eines Prozesses nicht zuverlässig durchsetzbar ist
+\autocite{reis_site_2019}. Cloudflare hält für die eigene Isolate-Plattform ausdrücklich fest, dass
+V8 selbst keinen Schutz gegen Spectre bietet, und ergänzt die Isolate um eine Prozesssandbox mit
+Namespaces und \texttt{seccomp} \autocite{cloudflare_security_2026}. Deno beschreibt für die eigene
+mandantenfähige Plattform denselben Aufbau, mit einem Prozess je Deployment, Namespaces, seccomp,
+cgroups und einer Überwachungskomponente \autocite{deno_subhosting_2026}. Die praktische
+Ausnutzbarkeit der verbleibenden Seitenkanäle zeigen Schwarzl et al. an einer produktiv betriebenen
+Isolate-Plattform \autocite{schwarzl_revisit_2026}.
+
+Für das Ausführungsmodell folgt daraus, dass die Wahl zwischen Container und Isolate keine
+Entweder-oder-Frage ist. Zu entscheiden ist, welche Laufzeitumgebung innerhalb der ohnehin
+vorhandenen Prozessgrenze läuft und auf welcher Granularität diese Grenze verläuft.
+
+\subsubsection{Randbedingungen der Zielplattform}
+\label{subsubsec:randbedingungen}
+
+Zwei Eigenschaften der bestehenden Umgebung verengen den Entwurfsraum, bevor eine Bewertung
+stattfindet.
+
+Erstens steht kein Hypervisor zur Verfügung. Firecracker setzt Lese- und Schreibzugriff auf
+\texttt{/dev/kvm} voraus \autocite{firecracker_getting_started_2026}, ein Zugriff, den der
+Zielcluster nicht bereitstellt. MicroVM-basierte Ansätze scheiden damit aus. Dieser Ausschluss ist
+ein Plattformausschluss und ausdrücklich kein Sicherheitsurteil, denn die von Agache et al.
+beschriebene Grenze ist die stärkste der betrachteten \autocite{agache_firecracker_2020}.
+
+Zweitens wird gVisor bereits produktiv eingesetzt. Die äußere Grenze ist damit gesetzt und keine
+Entwurfsvariable mehr. Für das Bedrohungsmodell hat das zwei Konsequenzen. Ein Ausbruch aus der
+V8-Sandbox endet in einer gVisor-Sandbox mit eingeschränkter System-\ac{API} und nicht auf dem
+Wirtskern, was die Schwere der einschlägigen Befunde für diesen Betrieb verringert. Hardwareseitige
+Seitenkanäle deckt gVisor dagegen nach eigener Darstellung nicht ab
+\autocite{the_gvisor_authors_security_2026}, und die Sentry selbst gehört zur vertrauenswürdigen
+Rechenbasis, wie das gezielte Fuzzing von Li et al. zeigt \autocite{li_g-fuzz_2024}.
+
+\subsubsection{Ausgeschlossene Technologien}
+\label{subsubsec:ausschluesse}
+
+\paragraph{Node.js als Vertrauensgrenze.}
+Node.js scheidet als Isolationsgrenze aus, und zwar nicht aufgrund einer Messung, sondern aufgrund
+der Gewährleistungslage. Das Bedrohungsmodell des Projekts erklärt den ausgeführten Code
+ausdrücklich für vertrauenswürdig, einschließlich dynamisch geladenen Codes, und schließt daraus,
+dass ein Szenario, das ein bösartiges Modul voraussetzt, keine Schwachstelle in Node.js darstellen
+kann \autocite{nodejs_security_policy_2026}. Das seit Version 20 verfügbare Berechtigungsmodell
+bestätigt diese Einordnung und beschreibt sich selbst als Sicherheitsgurt ohne Garantie gegenüber
+bösartigem Code \autocite{nodejs_permissions_2026}. Ein Ausbruch aus einem Node-Worker wäre nach
+dieser Festlegung kein zu behebender Fehler. Damit ist Node.js nicht schwach bewertet, sondern
+nicht bewertbar. Zu unterscheiden ist davon Node.js als Laufzeitumgebung innerhalb einer fremden
+Grenze. In dieser Rolle bleibt es tragfähig, weil die Grenze dann vom Container gezogen wird.
+
+\paragraph{Berechtigungsmodelle als Mandantengrenze.}
+Die Berechtigungsmodelle von Node.js und Deno wirken prozessweit und trennen keine Mandanten
+innerhalb eines Prozesses. Deno benennt zwei Umgehungen selbst: ein Skript, das einen neuen
+Deno-Prozess starten darf, kann diesen mit \texttt{-{}-allow-all} starten und verlässt die Sandbox
+vollständig, und eine über \ac{FFI} geladene native Bibliothek führt Maschinencode im selben Prozess
+aus und setzt Systemaufrufe direkt ab. Dieselbe Dokumentation empfiehlt für nicht vertrauenswürdigen
+Code zusätzlich Sandboxing auf Betriebssystemebene sowie gVisor oder Firecracker
+\autocite{deno_security_2026}.
+
+\paragraph{Bun.}
+Bun scheidet aus drei voneinander unabhängigen Gründen aus. Es liefert kein Berechtigungsmodell, der
+entsprechende Vorschlag ist ein offener Eintrag im Fehlerverfolgungssystem
+\autocite{bun_permissions_issue_2026}. Es lässt sich nicht einbetten, sodass ein Wirtsprogramm keine
+Isolate erzeugen, begrenzen oder beenden könnte \autocite{bun_embedding_issue_2026}. Schließlich
+verwendet Bun mit JavaScriptCore eine andere Ausführungsmaschine, wodurch die in dieser Arbeit
+herangezogene V8-spezifische Sicherheitsliteratur ihre Anwendbarkeit verliert.
+
+\paragraph{WebAssembly als Mandantensprache.}
+Ein Entwurf, in dem Mandanten ihre Logik selbst nach WebAssembly übersetzen, bricht den gesamten
+Bestand von 14.575 Skriptversionen und die Nutzung von 203 npm-Paketen. Er wird deshalb nicht weiter
+betrachtet.
+
+\subsubsection{Zurückgestellt: JavaScript in WebAssembly}
+\label{subsubsec:wasm-zurueckgestellt}
+
+Nicht ausgeschlossen, aber zurückgestellt wird der Ansatz, eine JavaScript-Maschine nach
+WebAssembly zu übersetzen und im Wasm-Sandkasten auszuführen. Zwei Gründe tragen die Zurückstellung.
+WebAssembly erlaubt keine Erzeugung und Ausführung von Maschinencode zur Laufzeit
+\autocite{haas_bringing_2017}, weshalb eine so übersetzte Maschine ohne \ac{JIT} interpretierend
+bleibt \autocite{igalia_five_years_js_wasm_2026}. Und der Betrieb auf Kubernetes erfordert eigene
+containerd-Shims und damit ein zweites Deployment-Substrat neben dem bestehenden.
+
+Gegen einen vollständigen Ausschluss sprechen zwei Punkte, die in Abschnitt~\ref{sec:evaluation}
+wieder aufgegriffen werden. Shillaker und Pietzuch zeigen für serverloses Rechnen, dass
+Wasm-basierte Isolation bei deutlich geringerem Ressourcenbedarf tragfähig ist
+\autocite{shillaker_faasm_2020}, und Mainas et al. übertragen den Ansatz auf mandantenfähige
+Umgebungen \autocite{mainas_sandboxing_2024}. Zugleich ist die Sicherheitsüberlegenheit begrenzt:
+Innerhalb des linearen Speichers fehlen Schutzmechanismen, die native Programme besitzen, darunter
+Adressraumverwürfelung, Schutzseiten und schreibgeschützte Datenbereiche
+\autocite{lehmann_everything_2020}. Sandbox-Ausbrüche aus der Laufzeitumgebung selbst sind
+dokumentiert \autocite{bytecode_alliance_advisories_2026}.
+
+Die Bedingung, unter der die Zurückstellung aufgehoben wird, ist vor dem Bau festzulegen und in
+Abschnitt~\ref{subsec:zielwerte} benannt.
+
+\subsubsection{Die Kompatibilitätsschranke als Auswahlkriterium}
+\label{subsubsec:kompatibilitaet}
+
+Die Bestandsanalyse liefert das Kriterium, das die Vorauswahl entscheidet. Von 1.718 Mandanten
+erreichen 713 (41,5\,\%) den harten Boden, können also ohne Host-Bindung nicht auf einer
+sprachbasierten Laufzeit ausgeführt werden. Die Auswertung der 27 transitiv geprüften npm-Pakete,
+die 87,9\,\% der npm-nutzenden Mandanten abdecken, zeigt eine deutliche Struktur dieser Schranke.
+
+\begin{table}[htbp]
+\centering
+\caption{Blockierende Paketfamilien im Hard-Floor-Bestand}
+\label{tab:blockierende-familien}
+\begin{tabular}{lrr}
+\hline
+Familie & Pakete & Mandanten \\
+\hline
+Benötigen \ac{HTTP} direkt & 14 & 629 \\
+Benötigen einen rohen \ac{TCP}- oder \ac{TLS}-Socket & 8 & 63 \\
+Schnittmenge beider Familien & & 44 \\
+\hline
+Vereinigung & 22 & 648 \\
+Hard Floor gesamt & & 713 \\
+\hline
+\end{tabular}
+\end{table}
+
+648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einer Netzwerkbindung und an nichts
+anderem. Weder Dateisystemzugriff noch Prozesserzeugung noch dynamische Codeerzeugung tragen
+nennenswert zur Schranke bei. Die Kompatibilitätsfrage ist damit kein diffuses Problem, sondern ein
+eng umrissenes: Ein Entwurf, der Netzwerkzugriff sauber vermittelt, adressiert den überwiegenden
+Teil des Bestands.
+
+Zwischen beiden Familien besteht ein Größenunterschied von etwa zehn zu eins. Die
+\ac{HTTP}-Familie wird von \texttt{axios} mit 579 Mandanten dominiert. Die Socket-Familie umfasst
+63 Mandanten, davon rund 58 auf Datenbanktreibern, die überwiegend \texttt{mssql} und dessen Treiber
+\texttt{tedious} einsetzen. Deren Protokoll verlangt eine Besonderheit: Die Verbindung wird im
+Klartext aufgebaut und erst danach auf \ac{TLS} umgestellt. Wie fehleranfällig die Nachbildung
+dieses Pfades ist, zeigt die Entwicklungsgeschichte der Node-Kompatibilitätsschicht von Deno, in der
+genau dieser Übergang mehrfach zurückfiel.
+
+Für die Vorauswahl folgt daraus eine Unterscheidung, die in Abschnitt~\ref{subsec:orchestrierung}
+ausgestaltet wird: Eine Schnittstelle kann nachgebildet oder durch eine gleichwertige Host-Bindung
+ersetzt werden. Für die \ac{HTTP}-Familie ist die Nachbildung angemessen, weil die benötigte
+Oberfläche klein ist und die Vermittlung erhalten bleibt. Für die Datenbanktreiber liegt der Ersatz
+näher, weil eine vermittelte \ac{SQL}-Bindung Zugangsdaten im Wirt hält, auf Anweisungsebene
+kontrolliert und keinen rohen Socket freigibt. Ein roher Socket erlaubt dagegen nur eine Prüfung von
+Zieladresse und Port zum Verbindungsaufbau.
+
+\subsubsection{Ergebnis der Vorauswahl}
+\label{subsubsec:vorauswahl-ergebnis}
+
+Nach Anwendung der Ausschlüsse und Randbedingungen verbleiben zwei Kandidaten, jeweils innerhalb
+einer gVisor-gesicherten äußeren Grenze.
+
+\begin{table}[htbp]
+\centering
+\caption{Verbleibende Kandidaten der Vorauswahl}
+\label{tab:kandidaten}
+\begin{tabular}{p{0.28\textwidth}p{0.30\textwidth}p{0.30\textwidth}}
+\hline
+ & Node.js, frischer Prozess je Ausführung & Sprachbasiertes Isolate je Ausführung \\
+\hline
+Zustandsfreiheit & gegeben & gegeben \\
+Mandantentrennung & über die äußere Grenze & über die äußere Grenze \\
+Vermittelter Netzwerkzugriff & nicht möglich & konstruktionsbedingt gegeben \\
+Migrationsaufwand & keiner & Host-Bindungen für 648 Mandanten \\
+\hline
+\end{tabular}
+\end{table}
+
+Beide Kandidaten stellen Zustandsfreiheit her und trennen Mandanten gleich gut, weil beide dieselbe
+äußere Grenze verwenden. Sie unterscheiden sich in einem Punkt, der für das Agentenprofil
+ausschlaggebend ist. Ein Skript mit vollständiger Node-\ac{API} kann jeden erreichbaren Endpunkt
+ansprechen, und ein Kontrollpunkt lässt sich nicht einziehen, weil die Laufzeitumgebung den Code als
+vertrauenswürdig behandelt \autocite{nodejs_security_policy_2026}. Für zur Laufzeit erzeugte
+Skripte ist das die maßgebliche Lücke: Greshake et al. zeigen, dass sich in solche Skripte über
+verarbeitete Inhalte fremde Anweisungen einschleusen lassen \autocite{greshake_not_2023}. Der
+dadurch mögliche Abfluss betrifft Daten, auf die das Skript ohnehin zugreifen darf, weshalb keine
+Mandantengrenze ihn verhindert.
+
+Die Vorauswahl fällt deshalb auf das sprachbasierte Isolate mit vermittelten Host-Bindungen,
+eingebettet in einen Prozess je Mandant innerhalb der bestehenden gVisor-Umgebung. Der Preis dieser
+Entscheidung ist benannt und quantifiziert: Host-Bindungen für zwei Paketfamilien und
+Anpassungsbedarf bei den Mandanten der Socket-Familie. Ob das konstruierte Modell die daran
+geknüpften Anforderungen einhält, ist Gegenstand der Evaluation in Abschnitt~\ref{sec:evaluation}
+und im Rahmen dieser Vorauswahl ausdrücklich nicht entschieden.
+
+% ---------------------------------------------------------------------------
+% HINWEIS, nicht Teil des Kapiteltextes:
+%
+% 2. Verweise auf andere Stellen der Arbeit, die dort als \label gesetzt sein
+%    muessen. Die Praefixe hier nehmen an, dass Kapitel 4 ein \section ist und
+%    4.2 entsprechend ein \subsection:
+%      subsec:orchestrierung   -> Abschnitt 4.2
+%      subsec:bestandsanalyse  -> Abschnitt 3.1, Bestandsanalyse
+%      subsec:zielwerte        -> Abschnitt 3.3, Festlegung der Zielwerte
+%      sec:evaluation          -> Kapitel 5
+%    Falls die tatsaechliche Gliederung abweicht, nur die Praefixe anpassen.
+%
+% 3. Bei sechs \subsubsection auf zwei bis drei Seiten ist die Gliederung
+%    vergleichsweise fein. 4.1.1 und 4.1.2 lassen sich zu einem Abschnitt
+%    "Ausgangslage und Randbedingungen" zusammenziehen, falls der Betreuer
+%    eine flachere Struktur bevorzugt.
+%
+% 4. Die Bibliografie-Schluessel stammen aus "Bachelor Thesis.bib" sowie aus
+%    "neue-quellen.bib". Vor dem Kompilieren zusammenfuehren und pruefen, ob
+%    Zotero eigene Schluessel vergeben hat.
+% ---------------------------------------------------------------------------

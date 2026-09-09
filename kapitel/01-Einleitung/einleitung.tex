@@ -1,0 +1,92 @@
+\section{Einleitung}
+\label{sec:Einleitung}
+
+% - Glossarquellen
+% - Oberfragen und Unterfragen: Teilen auf jedenfall konstruktiver und nicht per Literaturrecherche
+% - Konsistent halten der Hauptunterschriften
+% - Die machen das so und so
+% - Aufbau der Arbeit sollte Methodik und Aufbau heißen
+% - 30-40 Seiten. Kein Fünftes mal erklären
+% - Nicht über theoretische Grundlagen schreiben, welche man nicht braucht
+% - Meetings über Anforderungen
+% - Er hat eine Doktorarbeit über Performancemessung
+% - Sicher und performante: Mandatenisolation -> schneller als die aktuelle Lösung
+% - Schnell vs Durchsatz -> Starvation
+% - Firecracker darf direkt rausfliegen.
+
+\subsection{Forschungsfragen und Abgrenzung}
+\label{sec:forschungsfragen}
+
+Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die
+Anforderungen des eigenen Betriebs begründet, etwa Amazon Web Services mit Firecracker
+\autocite{agache_firecracker_2020} oder Cloudflare mit dem Isolationsmodell der
+Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten stellen jeweils eine
+Lösung vor. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
+erzeugter Funktionen konstruiert und anschließend gegen einen produktiven Ausgangszustand
+gemessen wird, liegt dagegen nicht vor. Die folgende Oberfrage ist deshalb als
+Gestaltungsfrage im Sinne der \ac{DSR} formuliert \autocite{osterle_memorandum_2010}. Sie
+fragt nicht danach, welches der bekannten Modelle am besten abschneidet, sondern danach, wie
+ein Modell beschaffen sein muss, das die genannten Eigenschaften zugleich erfüllt.
+
+\begin{description}
+  \item[FF] Wie muss ein Ausführungsmodell für nicht vertrauenswürdige, zur Laufzeit erzeugte
+    JavaScript-Funktionen gestaltet sein, damit es in einer bestehenden Kubernetes-Plattform
+    betreibbar bleibt, die Isolation zwischen Mandanten und die Zustandsfreiheit zwischen
+    aufeinanderfolgenden Ausführungen sicherstellt und die Kaltstartlatenz gegenüber
+    dem heutigen Betrieb der Fallstudie senkt?
+\end{description}
+
+Bezugspunkt der Frage ist der gemessene Ausgangszustand der Fallstudie und kein generischer
+Vergleichswert. Die Oberfrage wird über fünf Unterfragen bearbeitet, die den vier Phasen des
+Forschungsprozesses nach \textcite{osterle_memorandum_2010} folgen.
+
+\begin{description}
+  \item[U1] \label{rq:u1} Welche Anforderungen an ein solches Ausführungsmodell folgen aus dem
+    Bedrohungsmodell der mandantenübergreifenden Ausführung und aus der Struktur des
+    produktiven Skriptbestands der Fallstudie?
+
+  \item[U2] \label{rq:u2} Welche Kombination aus Isolationsgrenze, Zuordnungsgranularität und
+    Instanzverwaltung erfüllt diese Anforderungen, und wie lässt sie sich als lauffähiges
+    Ausführungsmodell in die bestehende Kubernetes-Umgebung integrieren?
+
+  \item[U3] \label{rq:u3} Hält das konstruierte Modell die geforderten Eigenschaften der
+    Isolation und der Zustandsfreiheit ein, wenn es mit Prüffällen konfrontiert wird, die aus
+    dem Bedrohungsmodell abgeleitet sind?
+
+  \item[U4] \label{rq:u4} Welche Kaltstartlatenz, welche warme Latenz in den Perzentilen P50,
+    P90, P95 und P99, welchen Durchsatz und welchen Speicherbedarf je Instanz erreicht der
+    Prototyp unter beiden Lastprofilen im Vergleich zum gemessenen Ausgangszustand?
+
+  \item[U5] \label{rq:u5} Welche über die Fallstudie hinaus übertragbaren Designprinzipien und
+    welcher Migrationspfad folgen aus Entwurf und Evaluation?
+\end{description}
+
+U1 legt den Bewertungsmaßstab fest und stützt sich dabei nicht allein auf die Literatur. In
+die Anforderungen geht eine Auswertung des produktiven Skriptbestands der Fallstudie ein, die
+1.718 Mandanten mit 14.575 Skriptversionen danach klassifiziert, welchen Teil der
+Node.js-Schnittstelle sie tatsächlich benötigen. U2 konstruiert das Artefakt. U3 und U4
+bewerten es entlang der beiden Achsen des untersuchten Zielkonflikts, wobei U3 die
+Sicherheitseigenschaften nicht aus den Herstellerangaben ableitet, sondern über ausgeführte
+Prüffälle nachweist. U5 löst das Ergebnis von der Fallstudie und überführt es in
+Designprinzipien.
+
+Damit das Artefakt seine eigenen Kriterien verfehlen kann, werden die Zielwerte gemeinsam mit
+dem Kriterienkatalog in Abschnitt~\ref{sec:kriterienkatalog} festgelegt, also vor dem Entwurf.
+Ein dokumentiertes Verfehlen dieser Werte ist ein gültiges Ergebnis der Arbeit.
+
+Nicht als Forschungsfrage geführt wird der Vergleich der bekannten Isolationstechnologien
+untereinander. Ihre Isolations- und Startkosten sind in der Literatur beschrieben
+\autocite{agache_firecracker_2020, young_true_2019, shillaker_faasm_2020}. Diese Angaben gehen
+als Vorarbeit in die Vorauswahl in Abschnitt~\ref{sec:vorauswahl} ein und werden dort als
+solche gekennzeichnet. Die Vorauswahl fällt dabei enger aus, als der Stand der Technik
+zunächst nahelegt, weil der Ausgangszustand der Fallstudie mit gVisor bereits einen
+User-Space-Kernel einsetzt, wie Abschnitt~\ref{sec:systemkontext} zeigt. Diese
+Technologiefamilie gehört damit zur Referenz und nicht zu den zu prüfenden Alternativen.
+Ebenfalls ausgeklammert bleibt eine erschöpfende Sicherheitsauditierung der einzelnen
+Laufzeitumgebungen. Die Prüffälle aus U3 belegen das Verhalten des konstruierten Modells an
+den Stellen, die das Bedrohungsmodell benennt, sie ersetzen keine systematische
+Schwachstellensuche in den verwendeten Laufzeitumgebungen. Nicht betrachtet werden schließlich
+die Qualität und die Korrektheit des erzeugten Codes sowie Maßnahmen, die das Modell selbst
+gegen Beeinflussung über seine Eingaben härten \autocite{greshake_not_2023}. Gegenstand der
+Arbeit ist allein die Frage, wie die Ausführung dieses Codes sicher und schnell erfolgen kann,
+unabhängig davon, wie er zustande gekommen ist.

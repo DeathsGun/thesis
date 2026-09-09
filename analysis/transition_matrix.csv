@@ -1,0 +1,11 @@
+"old_class","new_class","tenants"
+"self-contained","V8-viable (layer 1)",446
+"packages-only","V8-viable (layer 1)",291
+"packages-only","hard-floor",278
+"node-globals","hard-floor",253
+"node-globals","shimmable (node-globals)",252
+"node-builtins","hard-floor",159
+"node-builtins","shimmable (soft builtins only)",12
+"dynamic-code","hard-floor",3
+"unknown","hard-floor",20
+"unknown","unknown",4
