@@ -208,10 +208,28 @@ Eingaben beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin z
 Übrig bleiben zwei Kandidaten derselben Familie, die sich in der JavaScript-Engine
 unterscheiden und beide eine innere Grenze je Ausführung mit vermittelten Host-Bindings
 vorsehen. M5 ist für keinen der beiden aus der Vorauswahl heraus entscheidbar, weil es eine
-Messung am lauffähigen Modell voraussetzt. Die Gewichtung dieser beiden Kandidaten anhand der
-Soll-Kriterien S1 bis S8 leistet die Nutzwertanalyse in \autoref{sec:nutzwertanalyse}.
-Welche Kombination aus Zuordnungsgranularität und Instanzverwaltung sie tragen, ist Gegenstand
-von \autoref{sec:orchestrierung}.
+Messung am lauffähigen Modell voraussetzt.
+
+Für den V8-Kandidaten ist anzumerken, dass die Einbettung auf zwei Ebenen möglich ist und die
+Wahl der Ebene den Umsetzungsaufwand bestimmt. Die Bindungsschicht \texttt{rusty\_v8} stellt die
+Bausteine der Engine bereit, also Isolate, Context, Skript und Scopes, aber weder Ereignisschleife
+noch Modulauflösung noch einen Mechanismus, über den der Host Funktionen in das Isolate reicht.
+Alles oberhalb der Engine wäre selbst zu bauen. Darauf setzt \texttt{deno\_core} auf und liefert
+genau diese Schicht mit, einschließlich eines Mechanismus für Host-Bindings. Dieselbe Schicht bildet den Kern der
+Deno-Laufzeitumgebung, deren mandantenfähige Plattform in \autoref{sec:zwei-grenzen} bereits als
+Beleg für den mehrschichtigen Aufbau herangezogen wurde \autocite{deno_land_inc_how_2026}.
+
+Für M4 ist das mehr als eine Bequemlichkeit. Das Kriterium verlangt, dass Netz und Dateisystem
+ausschließlich über vermittelte Bindings erreichbar sind, und eine fertige Schicht für genau
+diese Vermittlung verkleinert die selbst zu schreibende und selbst abzusichernde Fläche. Dem
+steht entgegen, dass die Bausteine dieser Schicht als Vorabversionen und in kurzen Abständen
+veröffentlicht werden. Für ein Produkt mit langen Wartungszyklen ist das eine dauerhafte
+Bindung, die der Kriterienkatalog in seiner jetzigen Fassung nicht abbildet.
+
+Die Gewichtung der beiden Kandidaten anhand der Soll-Kriterien S1 bis S8 leistet die
+Nutzwertanalyse in \autoref{sec:nutzwertanalyse}. Welche Einbettungsebene und welche Kombination
+aus Zuordnungsgranularität und Instanzverwaltung das gewählte Modell trägt, ist Gegenstand von
+\autoref{sec:orchestrierung}.
 
 % ---------------------------------------------------------------------------
 % HINWEIS, nicht Teil des Kapiteltextes:
