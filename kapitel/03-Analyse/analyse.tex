@@ -89,14 +89,14 @@ Das Modell trifft die folgenden Vertrauensannahmen.
   \item[V5: Das codeerzeugende Modell liegt außerhalb der Kontrolle der Plattform.] Der Mandant
     kann ein eigenes, von ihm vollständig kontrolliertes Modell anbinden. Die Plattform hat
     damit keinen Zugriff auf die Erzeugung des Codes, weder auf die Gewichte noch auf die
-    Systemanweisung noch auf vorgelagerte Prüfungen. Aussagen über die Ausrichtung des Modells,
+    System Prompt noch auf vorgelagerte Prüfungen. Aussagen über das Alignment des Modells,
     seine Widerstandsfähigkeit gegen die in V2 beschriebene Beeinflussung oder die Einhaltung
     einer vorgegebenen Schnittstelle sind deshalb nicht möglich. Die Härtung des Modells ist
     der Plattform nicht nur nach der Abgrenzung entzogen, sondern strukturell.
 \end{description}
 
 Aus V5 folgt eine Randbedingung für den Entwurf. Eine Beschränkung der Fähigkeiten, die einem
-Skript zur Verfügung stehen, kann nicht über Systemanweisung oder Werkzeugschema erfolgen, weil
+Skript zur Verfügung stehen, kann nicht über System Prompt oder Tool Schema erfolgen, weil
 beides dem Mandanten gehört. Sie muss von der Ausführungsumgebung durchgesetzt werden. Für das
 Agentenprofil verbleibt der Plattform damit keine Schutzmaßnahme außerhalb der Isolationsgrenze.
 Die jüngere Forschung zur Sicherheit agentischer Systeme betrachtet diese Frage bislang
@@ -137,7 +137,17 @@ verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
 713 Mandanten (41,5\,\%) liegen auf dem Hard Floor, benötigen also eine Schnittstelle, die eine
 sprachbasierte Laufzeit ohne vermitteltes Binding nicht bereitstellt. Werden die Mandanten,
 deren Pakete vollständig außerhalb der geprüften Menge liegen, pessimistisch als nicht lauffähig
-gewertet, ergibt sich ein Viabilitätsintervall von 39,0\,\% bis 42,9\,\%.
+gewertet, ergibt sich ein Viabilitätsintervall von 39,0\,\% bis 42,9\,\%. \autoref{fig:hard-floor-einordnung}
+ordnet diesen Anteil in den Gesamtbestand ein und zeigt das Größenverhältnis der beiden
+blockierenden Paketfamilien.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{hard_floor_einordnung.png}
+  \caption{Anteil des Hard Floor am Gesamtbestand und Größenverhältnis der beiden
+    blockierenden Paketfamilien}
+  \label{fig:hard-floor-einordnung}
+\end{figure}
 
 Die blockierenden Pakete zerfallen in zwei Familien mit deutlich verschiedenem Bedarf.
 
@@ -161,10 +171,18 @@ Die blockierenden Pakete zerfallen in zwei Familien mit deutlich verschiedenem B
   \end{tabularx}
 \end{table}
 
-648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einer Netzwerkbindung und an
+648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einem Netzwerk-Binding und an
 nichts anderem. Dateisystemzugriff, Prozesserzeugung und dynamische Codeerzeugung tragen nur
 den Rest bei. Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen den beiden
-Familien liegt ein Größenunterschied von etwa zehn zu eins.
+Familien liegt ein Größenunterschied von etwa zehn zu eins. \autoref{fig:hard-floor-zusammensetzung}
+schlüsselt diese Zusammensetzung nach blockierender Ursache auf.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{hard_floor_zusammensetzung.png}
+  \caption{Zusammensetzung des Hard Floor nach blockierender Ursache}
+  \label{fig:hard-floor-zusammensetzung}
+\end{figure}
 
 Die kleinere Familie stellt die schwierigere Anforderung. Ihre Vertreter sind überwiegend
 Datenbanktreiber, die ein eigenes binäres Protokoll sprechen. Bei \texttt{mssql} und dem
@@ -200,14 +218,14 @@ Wer den Code verfasst, ist für diese Fähigkeit unerheblich. Nach V1 kann es ei
 Mandant sein, nach V2 im Agentenprofil auch ein Dritter, dessen Inhalte in den Kontext des
 Modells gelangen. Beide Urheber führen auf dieselbe technische Lage, nämlich bösartigen Code im
 Inneren einer Ausführung, und nur der Kreis möglicher Urheber unterscheidet sich. Die Ziele des
-Angreifers entsprechen den negierten Schutzzielen aus Abschnitt~\ref{sec:systemkontext}.
+Angreifers entsprechen den negierten Schutzzielen aus \autoref{sec:systemkontext}.
 
 Alles, was V3 der Plattform zurechnet, gehört nicht zu den Fähigkeiten des Angreifers, also
 weder physischer Zugriff noch ein Zugang auf dem Host außerhalb der Ausführungsumgebung noch
 eine Netzwerkposition im Plattforminneren. Die verbleibenden Angriffswege lassen sich nach der Schicht ordnen, auf der die
 ausgenutzte Ressource geteilt wird. Die Gliederung folgt der Einordnung der Angriffswege
 serverloser Plattformen nach Anwendungs- und Infrastrukturebene
-\autocite{marin_serverless_2022} und knüpft an Abschnitt~\ref{sec:schichtenmodell} an.
+\autocite{marin_serverless_2022} und knüpft an \autoref{sec:schichtenmodell} an.
 
 \subsubsection{Anwendungsebene: Zustand zwischen Ausführungen}
 
@@ -217,7 +235,7 @@ Ende ihrer Ausführung und können Daten späterer Ausführungen mitlesen
 \autocite{dvelop_ag_dvelop_2026}. Ebenso überdauern globale Variablen und Reste im Speicher.
 Das Zurücksetzen des Dateisystems greift nicht, weil der übertragene Zustand im Speicher liegt.
 Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb eines Mandanten.
-Seine Bewertung folgt der in Abschnitt~\ref{sec:systemkontext} beschriebenen Verschiebung der
+Seine Bewertung folgt der in \autoref{sec:systemkontext} beschriebenen Verschiebung der
 Vertrauenseinheit, im Webhook-Profil also als Verletzung der Zuverlässigkeit, im Agentenprofil
 als Verletzung der Vertraulichkeit. Derselbe geteilte Prozess trägt einen zweiten Weg,
 denn eine Ausführung kann Ressourcen so erschöpfen, dass die Instanz für folgende Ausführungen
@@ -229,7 +247,7 @@ Verbrauch bis zur Unbrauchbarkeit steigen ließ.
 
 Der zweite Weg greift eine Isolationsgrenze an, die innerhalb eines Prozesses verläuft und
 damit unterhalb der Softwareebene ansetzende Angriffe nicht abfangen kann. Über einen
-entfernten Zeitgeber ließ sich aus einem ko-lokierten Cloudflare Worker ein JSON Web Token mit
+entfernten Timer ließ sich aus einem ko-lokierten Cloudflare Worker ein JSON Web Token mit
 bis zu zwölf Bit pro Sekunde bei einer Genauigkeit von rund 99 Prozent auslesen, und zwar auf
 einer produktiven Plattform, die V8 Isolates einsetzt
 \autocite{schwarzl_remote-timer-as--service_2026}. Denselben Befund hatte zuvor die Einführung
@@ -266,7 +284,7 @@ Angreifer mit vorbereitetem Exploit wird der ausgeführte Workload selbst.
 Über alle drei Ebenen hinweg zeigt sich dieselbe Ursache: Der Ausgangszustand zieht seine
 Grenze auf der Ebene des Mandanten, während das Agentenprofil sie zwischen den einzelnen
 Ausführungen verlangt. Aus dieser Zuordnung von Angriffswegen zu geteilten Ressourcen leitet
-Abschnitt~\ref{sec:kriterienkatalog} die Bewertungskriterien ab.
+\autoref{sec:kriterienkatalog} die Bewertungskriterien ab.
 
 \subsection{Ableitung und Gewichtung der Bewertungskriterien}
 \label{sec:kriterienkatalog}
@@ -280,11 +298,14 @@ nicht aufgenommen.
 Der Katalog trennt zwei Arten. \emph{Muss-Kriterien} beschreiben Eigenschaften, ohne die ein
 Ausführungsmodell ausscheidet. Sie werden einzeln geprüft und nicht verrechnet.
 \emph{Soll-Kriterien} gehen gewichtet in die Nutzwertanalyse in
-Abschnitt~\ref{sec:nutzwertanalyse} ein. Diese Trennung ist Voraussetzung dafür, dass das
+\autoref{sec:nutzwertanalyse} ein. Diese Trennung ist Voraussetzung dafür, dass das
 Artefakt scheitern kann, denn ein Modell mit gutem Nutzwert, das ein Muss-Kriterium verletzt,
 ist keine Lösung.
 
 \subsubsection{Muss-Kriterien}
+
+\autoref{tab:musskriterien} führt die fünf Muss-Kriterien mit ihrer Herkunft und dem
+vorgesehenen Nachweis auf.
 
 \begin{table}[htbp]
   \caption{Muss-Kriterien, Herkunft und Nachweis}
@@ -323,6 +344,9 @@ Durchsetzungspunkt, den die Plattform kontrolliert.
 
 \subsubsection{Soll-Kriterien und Gewichtung}
 
+\autoref{tab:sollkriterien} listet die acht Soll-Kriterien mit ihrer Messgröße und ihrem
+Gewicht, absteigend sortiert.
+
 \begin{table}[htbp]
   \caption{Soll-Kriterien, Messgrößen und Gewichte, absteigend nach Gewicht}
   \label{tab:sollkriterien}
@@ -354,21 +378,22 @@ Skriptbestands die Kompatibilität als stärkste Gegenkraft zu einem Wechsel des
 Ausführungsmodells ausweist. S5 ist von M5 zu unterscheiden: M5 fordert das Ergebnis, S5
 bewertet die strukturelle Eigenschaft, die es erleichtert. Ob die Objektzahl die beobachtete
 Ausfallzeit verursacht oder die Verfügbarkeit der Steuerungsebene, ist zum Zeitpunkt der
-Katalogaufstellung offen und wird in Abschnitt~\ref{sec:messumgebung} geklärt. Ein
+Katalogaufstellung offen und wird in \autoref{sec:messumgebung} geklärt. Ein
 Muss-Kriterium an dieser Stelle würde eine noch nicht feststehende Ursache voraussetzen.
 
 Die Bewertung je Soll-Kriterium erfolgt auf einer Skala von null bis fünf. Der Nutzwert ist die
 mit den Gewichten gebildete Summe. Die Zuordnung von Messwerten zu Punktwerten legt
-Abschnitt~\ref{sec:nutzwertanalyse} offen, damit die Bewertung nicht von der Darstellung
+\autoref{sec:nutzwertanalyse} offen, damit die Bewertung nicht von der Darstellung
 abhängt.
 
 \subsubsection{Prüffallkatalog}
 
 Die Muss-Kriterien M2 und M4 lassen sich nicht durch Architekturbetrachtung allein belegen. Für
 sie wird ein Katalog von Prüffällen aufgestellt, der aus den Angriffswegen des
-Abschnitts~\ref{sec:angreifermodell} abgeleitet ist. Jeder Prüffall wird gegen den
+\autoref{sec:angreifermodell} abgeleitet ist. Jeder Prüffall wird gegen den
 Ausgangszustand und gegen das Artefakt ausgeführt, sodass die Gegenüberstellung zugleich
-belegt, welche Eigenschaften der Ausgangszustand bereits erfüllt.
+belegt, welche Eigenschaften der Ausgangszustand bereits erfüllt. \autoref{tab:prueffaelle}
+listet den Katalog.
 
 \begin{table}[htbp]
   \caption{Prüffälle zur Zustandsfreiheit und zur Durchsetzung der Fähigkeitsbeschränkung}
@@ -405,7 +430,7 @@ Ausführung $n$ in Ausführung $n+1$ gerade nicht mehr vorhanden ist. T4 prüft 
 Reset auch im Artefakt greift, und ist ein abgeleiteter, kein beobachteter Fall. Die übrigen
 Prüffälle ergänzen den Katalog um Wege, die aus derselben geteilten Ressource folgen, aber noch
 nicht beobachtet wurden. Damit steht fest, woran die
-Unterfragen aus Abschnitt~\ref{sec:forschungsfragen} beantwortet werden: U3 prüft M1 bis M4
+Unterfragen aus \autoref{sec:forschungsfragen} beantwortet werden: U3 prüft M1 bis M4
 über Prüffallkatalog und Architekturprüfung, U4 erhebt die Messgrößen S1 bis S4 sowie M5, und
 die Nutzwertanalyse führt die Soll-Kriterien zu einer Empfehlung zusammen, nachdem die
 Muss-Kriterien den Kandidatenkreis eingegrenzt haben.

@@ -5,16 +5,16 @@
 \label{sec:vorauswahl}
 
 Dieser Abschnitt engt den Kandidatenkreis ein, bevor die Nutzwertanalyse die verbleibenden
-Alternativen gewichtet und in Abschnitt~\ref{sec:orchestrierung} das Ausführungsmodell konstruiert
+Alternativen gewichtet und in \autoref{sec:orchestrierung} das Ausführungsmodell konstruiert
 wird. Er ist Vorarbeit und keine eigenständige Forschungsfrage. Angewendet werden die
-Muss-Kriterien M1 bis M5 aus Abschnitt~\ref{sec:kriterienkatalog}, ergänzt um zwei
+Muss-Kriterien M1 bis M5 aus \autoref{sec:kriterienkatalog}, ergänzt um zwei
 Randbedingungen der Zielplattform, die den Entwurfsraum unabhängig von jeder Bewertung verengen.
 Die Soll-Kriterien bleiben hier außer Betracht, sie gehen erst in die Nutzwertanalyse ein.
 
 Die Belege stammen aus zwei Quellenarten. Für Aussagen darüber, was eine Laufzeitumgebung
 zusichert, wird deren normative Herstellerdokumentation herangezogen, denn für einen Ausschluss
 ist die dokumentierte Zusicherung des Herstellers aussagekräftiger als eine Einzelmessung. Für Aussagen über den
-betroffenen Bestand dient die Auswertung aus Abschnitt~\ref{sec:bestandsanalyse}.
+betroffenen Bestand dient die Auswertung aus \autoref{sec:bestandsanalyse}.
 
 \subsubsection{Äußere und innere Isolationsgrenze}
 \label{sec:zwei-grenzen}
@@ -31,17 +31,17 @@ auch dann, wenn sie nicht eigens gewählt wird. Offen sind daher zwei andere Fra
 eine innere Grenze eingezogen wird, und wie viele Ausführungseinheiten sich eine Grenze jeweils
 teilen.
 
-Die Begründung für M1 findet sich in der Praxis der Anbieter. Reis et al. führten die
-Prozesstrennung in Chrome ein, weil die sprachbasierte Trennung mehrerer Origins innerhalb
-eines Prozesses nicht zuverlässig durchsetzbar blieb \autocite{reis_site_2019}. Cloudflare hält
+Die Begründung für M1 findet sich in der Praxis der Anbieter. \textcite{reis_site_2019} führten
+die Prozesstrennung in Chrome ein, weil die sprachbasierte Trennung mehrerer Origins innerhalb
+eines Prozesses nicht zuverlässig durchsetzbar blieb. \textcite{cloudflare_security_2026} hält
 für die eigene Isolate-Plattform fest, dass V8 selbst keinen Schutz gegen Spectre bietet, und
-ergänzt die Isolate um eine Prozesssandbox mit Namespaces und \texttt{seccomp}
-\autocite{cloudflare_security_2026}. Deno beschreibt für die eigene mandantenfähige Plattform
+ergänzt die Isolate um eine Prozesssandbox mit Namespaces und \texttt{seccomp}.
+\textcite{deno_land_inc_how_2026} beschreibt für die eigene mandantenfähige Plattform
 denselben Aufbau, mit einem Prozess je Deployment, Namespaces, seccomp, cgroups und einem
-Watchdog \autocite{deno_land_inc_how_2026}.
+Watchdog.
 
 Kein Kandidat erfüllt M1 also über die innere Grenze. Erfüllt wird es über die äußere, und die
-Fallstudie erfüllt es nach Abschnitt~\ref{sec:systemkontext} bereits, weil jeder Mandant einen
+Fallstudie erfüllt es nach \autoref{sec:systemkontext} bereits, weil jeder Mandant einen
 eigenen Ausführungsdienst erhält. M1 scheidet damit keinen Kandidaten aus. Es legt fest, dass die
 mandantenweise Prozessgrenze des Ausgangszustands in jedem Entwurf erhalten bleibt, und verschiebt
 die eigentliche Entwurfsfrage auf die innere Grenze und auf die Granularität.
@@ -55,8 +55,8 @@ Kriterien.
 Erstens steht kein Hypervisor zur Verfügung. Firecracker setzt Lese- und Schreibzugriff auf
 \texttt{/dev/kvm} voraus \autocite{the_firecracker_authors_getting_2026}, einen Zugriff, den der
 Zielcluster nicht bereitstellt. MicroVM-basierte Ansätze scheiden damit aus. Der Ausschluss ist
-ein Plattformausschluss und kein Sicherheitsurteil, denn die von Agache et al. beschriebene
-Grenze ist die stärkste der betrachteten \autocite{agache_firecracker_2020}.
+ein Plattformausschluss und kein Sicherheitsurteil, denn die von \textcite{agache_firecracker_2020}
+beschriebene Grenze ist die stärkste der betrachteten.
 
 Zweitens wird gVisor bereits produktiv eingesetzt. M3 ist gegen den Ausgangszustand als Baseline formuliert und
 untersagt, die dem Gastcode zugängliche Oberfläche des Host-Kernels gegenüber dem
@@ -68,22 +68,22 @@ Entscheidung des Ausgangszustands bereits eingegangen \autocite{young_true_2019}
 Für das Bedrohungsmodell hat die feste äußere Grenze zwei Folgen. Ein Ausbruch aus der
 V8-Sandbox endet in einer gVisor-Sandbox mit eingeschränkter System-\ac{API} und nicht auf dem
 Host-Kernel. Hardwareseitige Seitenkanäle deckt gVisor nach eigener Darstellung dagegen nicht ab
-\autocite{the_gvisor_authors_security_2026}, und der Sentry gehört selbst zur vertrauenswürdigen
-Rechenbasis, wie das gezielte Fuzzing von Li et al. zeigt \autocite{li_g-fuzz_2024}.
+\autocite{the_gvisor_authors_security_2026}, und der Sentry gehört selbst zur \ac{TCB},
+wie das gezielte Fuzzing von \textcite{li_g-fuzz_2024} zeigt.
 
 \subsubsection{Anwendung der Muss-Kriterien auf die Technologiefamilien}
 \label{sec:ausschluesse}
 
 \paragraph{Node.js als Vertrauensgrenze, Verstoß gegen M4.}
-M4 verlangt, dass Zugriff auf Netz und Dateisystem ausschließlich über Bindungen erfolgt, die die
+M4 verlangt, dass Zugriff auf Netz und Dateisystem ausschließlich über Bindings erfolgt, die die
 Ausführungsumgebung vermittelt, und dass keine Beschränkung auf der Mitwirkung des Modells
 beruht. Diese Forderung folgt unmittelbar aus V5. Node.js kann sie nicht erfüllen, und zwar nicht
 aufgrund einer Messung, sondern aufgrund der dokumentierten Zusicherung. Das Bedrohungsmodell des
 Projekts erklärt den ausgeführten Code ausdrücklich für vertrauenswürdig, einschließlich dynamisch
 geladenen Codes, und schließt daraus, dass ein Szenario, das ein bösartiges Modul voraussetzt,
 keine Schwachstelle in Node.js darstellen kann \autocite{the_nodejs_project_security_2026}. Ein
-Skript, das \texttt{require} aufrufen kann, erreicht Netz und Dateisystem an jeder vermittelten
-Bindung vorbei, und ein Ausbruch aus einem Worker wäre nach dieser Festlegung kein zu behebender
+Skript, das \texttt{require} aufrufen kann, erreicht Netz und Dateisystem an jedem vermittelten
+Binding vorbei, und ein Ausbruch aus einem Worker wäre nach dieser Festlegung kein zu behebender
 Fehler. Das seit Version 20 verfügbare Berechtigungsmodell bestätigt die Einordnung und
 bezeichnet sich selbst als \enquote{seat belt} ohne Garantie gegenüber bösartigem Code
 \autocite{the_nodejs_project_permissions_2026}.
@@ -95,8 +95,8 @@ erfüllt der Ausgangszustand M1 und M3.
 
 \paragraph{Berechtigungsmodelle als Mandantengrenze, Verstoß gegen M1 und M4.}
 Die Berechtigungsmodelle von Node.js und Deno wirken prozessweit und trennen keine Mandanten
-innerhalb eines Prozesses, womit sie M1 nicht erfüllen. Für M4 benennt Deno zwei Umgehungen
-selbst: ein Skript, das einen neuen Deno-Prozess starten darf, kann diesen mit
+innerhalb eines Prozesses, womit sie M1 nicht erfüllen. Für M4 nennt Deno selbst zwei Wege, die
+Vermittlung zu umgehen: Ein Skript, das einen neuen Deno-Prozess starten darf, kann diesen mit
 \texttt{-{}-allow-all} starten und verlässt die Sandbox vollständig, und eine über \ac{FFI}
 geladene native Bibliothek führt Maschinencode im selben Prozess aus und setzt Systemaufrufe
 direkt ab. Dieselbe Dokumentation empfiehlt für nicht vertrauenswürdigen Code zusätzlich
@@ -107,8 +107,6 @@ Bun liefert kein Berechtigungsmodell, der entsprechende Vorschlag ist ein offene
 im Repository \autocite{oven-shbun_contributors_bun_2026}. Unabhängig davon lässt es sich
 nicht als Bibliothek einbetten, sodass ein Host keine Isolate erzeugen, begrenzen oder beenden könnte
 \autocite{oven-shbun_contributors_feature_2026}. Ohne diese Kontrolle sind weder M2 noch M4 durchsetzbar.
-Hinzu kommt, dass Bun mit JavaScriptCore eine andere JavaScript-Engine verwendet, wodurch die
-in dieser Arbeit herangezogene V8-spezifische Sicherheitsliteratur ihre Anwendbarkeit verliert.
 
 \paragraph{WebAssembly als Mandantensprache, außerhalb des Gegenstands.}
 Ein Entwurf, in dem Mandanten ihre Logik selbst nach WebAssembly übersetzen, scheitert nicht an
@@ -131,9 +129,9 @@ bleibt \autocite{igalia_five_2026}. Das wirkt auf S2 und S4. Der Betrieb auf
 Kubernetes erfordert zudem eigene containerd-Shims und damit einen zweiten Deployment-Stack
 neben dem bestehenden, was auf S6 wirkt.
 
-Für den Ansatz sprechen der geringere Ressourcenbedarf, den Shillaker und Pietzuch für
-serverloses Rechnen zeigen \autocite{shillaker_faasm_2020} und den Mainas et al. auf
-mandantenfähige Umgebungen übertragen \autocite{mainas_sandboxing_2024}. Die
+Für den Ansatz sprechen der geringere Ressourcenbedarf, den \textcite{shillaker_faasm_2020} für
+serverloses Rechnen zeigen und den \textcite{mainas_sandboxing_2024} auf
+mandantenfähige Umgebungen übertragen. Die
 Sicherheitsüberlegenheit ist dagegen begrenzt. Innerhalb des linearen Speichers fehlen
 Schutzmechanismen, die native Programme besitzen, darunter \ac{ASLR}, Guard Pages, Stack Canaries
 und Read-only Memory \autocite{lehmann_everything_2020}, und Sandbox-Ausbrüche aus
@@ -143,19 +141,19 @@ Vorteil gegenüber dem V8-Isolate lässt sich daraus nicht ableiten, ein Nachtei
 \subsubsection{Die Kompatibilitätsschranke}
 \label{sec:kompatibilitaet}
 
-Die Kompatibilität des Bestands ist nach Abschnitt~\ref{sec:kriterienkatalog} kein
+Die Kompatibilität des Bestands ist nach \autoref{sec:kriterienkatalog} kein
 Muss-Kriterium, sondern geht als S7 und S8 gewichtet in die Nutzwertanalyse ein. Sie scheidet
 daher keinen Kandidaten aus. Ihre Struktur bestimmt aber, welcher Aufwand mit einer inneren
 Grenze verbunden ist, und geht deshalb in die Vorauswahl ein.
 
-Abschnitt~\ref{sec:bestandsanalyse} weist 713 Mandanten (41,5\,\%) auf dem Hard Floor aus.
-Nach Tabelle~\ref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einer
-Netzwerkbindung und an nichts anderem. Für die Vorauswahl ist damit die entscheidende Aussage
+\autoref{sec:bestandsanalyse} weist 713 Mandanten (41,5\,\%) auf dem Hard Floor aus.
+Nach \autoref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einem
+Netzwerk-Binding und an nichts anderem. Für die Vorauswahl ist damit die entscheidende Aussage
 getroffen: Der Aufwand einer inneren Grenze konzentriert sich auf eine einzige Fähigkeit, und er
 verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Familie und eine deutlich
 kleinere Socket-Familie.
 
-Für den Entwurf folgt daraus eine Unterscheidung, die Abschnitt~\ref{sec:orchestrierung}
+Für den Entwurf folgt daraus eine Unterscheidung, die \autoref{sec:orchestrierung}
 ausgestaltet. Eine Schnittstelle kann über einen Shim nachgebildet oder durch ein gleichwertiges
 Host-Binding ersetzt werden. Als Entwurfsoption naheliegend, aber an dieser Stelle noch nicht
 entschieden, ist Folgendes: Für die \ac{HTTP}-Familie könnte die Nachbildung angemessen sein,
@@ -163,12 +161,12 @@ weil die benötigte Oberfläche klein ist und die Vermittlung nach M4 erhalten b
 Datenbanktreiber läge der Ersatz näher, weil ein vermitteltes \ac{SQL}-Binding Zugangsdaten im
 Host halten und auf Statement-Ebene kontrollieren würde, während ein roher Socket nur eine
 Prüfung von Host und Port zum Verbindungsaufbau erlaubt und M4 damit nur teilweise ausschöpft.
-Abschnitt~\ref{sec:orchestrierung} trifft die endgültige Wahl.
+\autoref{sec:orchestrierung} trifft die endgültige Wahl.
 
 \subsubsection{Ergebnis der Vorauswahl}
 \label{sec:vorauswahl-ergebnis}
 
-Tabelle~\ref{tab:kandidaten} führt die Anwendung der Muss-Kriterien auf die verbliebenen
+\autoref{tab:kandidaten} führt die Anwendung der Muss-Kriterien auf die verbliebenen
 Familien zusammen. Alle behalten die mandantenweise Prozessgrenze des Ausgangszustands und die
 gVisor-Runtime-Klasse bei, weshalb M1 und M3 durchgängig erfüllt sind.
 
@@ -185,7 +183,7 @@ Ausgangszustand, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein &
   scheidet aus \\
 Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen &
   scheidet aus \\
-V8-Isolate je Ausführung mit vermittelten Bindungen & ja & ja & ja & ja & offen &
+V8-Isolate je Ausführung mit vermittelten Bindings & ja & ja & ja & ja & offen &
   Kandidat \\
 JavaScript in WebAssembly je Ausführung & ja & ja & ja & ja & offen &
   Kandidat \\
@@ -195,7 +193,7 @@ JavaScript in WebAssembly je Ausführung & ja & ja & ja & ja & offen &
 
 Der Ausgangszustand verletzt M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
 teilen, und M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Beide Befunde
-sind in Abschnitt~\ref{sec:systemkontext} hergeleitet.
+sind in \autoref{sec:systemkontext} hergeleitet.
 
 Die Variante mit einem frischen Node-Prozess je Ausführung stellt Zustandsfreiheit her und
 erfüllt M2, scheitert aber weiterhin an M4. Dieser Befund ist für die Arbeit wesentlich, weil er
@@ -211,9 +209,9 @@ Eingaben beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin z
 unterscheiden und beide eine innere Grenze je Ausführung mit vermittelten Host-Bindings
 vorsehen. M5 ist für keinen der beiden aus der Vorauswahl heraus entscheidbar, weil es eine
 Messung am lauffähigen Modell voraussetzt. Die Gewichtung dieser beiden Kandidaten anhand der
-Soll-Kriterien S1 bis S8 leistet die Nutzwertanalyse in Abschnitt~\ref{sec:nutzwertanalyse}.
+Soll-Kriterien S1 bis S8 leistet die Nutzwertanalyse in \autoref{sec:nutzwertanalyse}.
 Welche Kombination aus Zuordnungsgranularität und Instanzverwaltung sie tragen, ist Gegenstand
-von Abschnitt~\ref{sec:orchestrierung}.
+von \autoref{sec:orchestrierung}.
 
 % ---------------------------------------------------------------------------
 % HINWEIS, nicht Teil des Kapiteltextes:
