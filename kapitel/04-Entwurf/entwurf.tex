@@ -153,15 +153,13 @@ getroffen: Der Aufwand einer inneren Grenze konzentriert sich auf eine einzige F
 verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Familie und eine deutlich
 kleinere Socket-Familie.
 
-Für den Entwurf folgt daraus eine Unterscheidung, die \autoref{sec:orchestrierung}
-ausgestaltet. Eine Schnittstelle kann über einen Shim nachgebildet oder durch ein gleichwertiges
-Host-Binding ersetzt werden. Als Entwurfsoption naheliegend, aber an dieser Stelle noch nicht
-entschieden, ist Folgendes: Für die \ac{HTTP}-Familie könnte die Nachbildung angemessen sein,
-weil die benötigte Oberfläche klein ist und die Vermittlung nach M4 erhalten bliebe. Für die
-Datenbanktreiber läge der Ersatz näher, weil ein vermitteltes \ac{SQL}-Binding Zugangsdaten im
-Host halten und auf Statement-Ebene kontrollieren würde, während ein roher Socket nur eine
-Prüfung von Host und Port zum Verbindungsaufbau erlaubt und M4 damit nur teilweise ausschöpft.
-\autoref{sec:orchestrierung} trifft die endgültige Wahl.
+Für den Entwurf folgt daraus, dass beide Familien über einen Shim nachgebildet werden, der die
+vorhandene Netzwerk-\ac{API} des Bestands abbildet. Ziel ist nicht, eine Abstraktion etwa einer
+\ac{SQL}-Verbindung anzubieten, sondern dass die bestehenden Skripte unverändert weiterlaufen.
+Der Shim gibt daher, wie das Original, einen rohen Socket frei und prüft dabei Host und Port
+gegen die je Mandant hinterlegte Erlaubnis, bevor die Verbindung nach außen geht. Die Vermittlung
+nach M4 liegt damit auf Ebene des Verbindungsaufbaus, nicht auf Ebene des Anwendungsprotokolls.
+\autoref{sec:orchestrierung} legt die Umsetzung im Einzelnen fest.
 
 \subsubsection{Ergebnis der Vorauswahl}
 \label{sec:vorauswahl-ergebnis}
@@ -170,7 +168,7 @@ Prüfung von Host und Port zum Verbindungsaufbau erlaubt und M4 damit nur teilwe
 Familien zusammen. Alle behalten die mandantenweise Prozessgrenze des Ausgangszustands und die
 gVisor-Runtime-Klasse bei, weshalb M1 und M3 durchgängig erfüllt sind.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \caption{Anwendung der Muss-Kriterien auf die Kandidaten}
 \label{tab:kandidaten}
