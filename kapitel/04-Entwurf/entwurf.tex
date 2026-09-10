@@ -45,7 +45,7 @@ Watchdog.
 
 Kein Kandidat erfüllt M1 also über die innere Grenze. Erfüllt wird es über die äußere, und die
 Fallstudie erfüllt es nach \autoref{sec:systemkontext} bereits, weil jeder Mandant einen
-eigenen Ausführungsdienst erhält. M1 scheidet damit keinen Kandidaten aus. Es legt fest, dass die
+eigenen Execution Service erhält. M1 scheidet damit keinen Kandidaten aus. Es legt fest, dass die
 mandantenweise Prozessgrenze des Ausgangszustands in jedem Entwurf erhalten bleibt, und verschiebt
 die eigentliche Entwurfsfrage auf die innere Grenze und auf die Granularität.
 
@@ -78,7 +78,7 @@ wie das gezielte Fuzzing von \textcite{li_g-fuzz_2024} zeigt.
 Mit diesen beiden Randbedingungen steht der Rahmen fest, innerhalb dessen sich die innere Grenze
 bewegen muss: kein Hypervisor, aber eine bereits vorhandene, zu erhaltende Sandbox-Laufzeit.
 
-\subsubsection{Anwendung der Muss-Kriterien auf die Technologiefamilien}
+\subsubsection{Anwendung der Muss-Kriterien auf die Technologiegruppen}
 \label{sec:ausschluesse}
 
 \paragraph{Node.js als Vertrauensgrenze, Verstoß gegen M4.}
@@ -125,7 +125,7 @@ sie nicht, und es bricht zugleich den gesamten Bestand von 14.575 Skriptversione
 \autoref{sec:bestandsanalyse}. Der Ansatz wird deshalb nicht als Kandidat geführt.
 
 Nach diesen vier Ausschlüssen bleibt für die innere Grenze eine einzige tragfähige Bauart übrig:
-eine in den Ausführungsdienst eingebettete JavaScript-Engine, die eine eigene Isolate-Grenze je
+eine in den Execution Service eingebettete JavaScript-Engine, die eine eigene Isolate-Grenze je
 Ausführung zieht und Netz sowie Dateisystem über vermittelte Bindings freigibt. Zwei technische
 Wege führen zu einer solchen Engine, und der folgende Abschnitt entscheidet zwischen ihnen.
 
@@ -134,7 +134,7 @@ Wege führen zu einer solchen Engine, und der folgende Abschnitt entscheidet zwi
 
 Der erste Weg bettet V8 unmittelbar ein und zieht die Isolate-Grenze nativ, mit
 Just-in-Time-Übersetzung. Der zweite übersetzt eine JavaScript-Engine selbst nach WebAssembly
-und führt sie in einer Wasm-Sandbox aus; die Mandanten schreiben in beiden Fällen weiterhin
+und führt sie in einer Wasm-Sandbox aus. Die Mandanten schreiben in beiden Fällen weiterhin
 JavaScript, betroffen ist nur die Bauart der Engine. Beide Wege erfüllen M1 bis M4, weil beide
 eine Isolate-Grenze je Ausführung mit vermittelten Host-Bindings vorsehen. Sie lassen sich damit
 nicht über die Muss-Kriterien trennen, wohl aber über einen Dominanzvergleich: Erreicht der
@@ -142,7 +142,7 @@ zweite Weg auf keinem der einschlägigen Kriterien ein besseres Ergebnis als der
 auf mehreren ein schlechteres erreicht, ist er dem ersten gegenüber dominiert und scheidet aus,
 ohne dass es einer Gewichtung bedarf.
 
-Für den Sicherheitsgewinn, das einzige Kriterium, an dem der zweite Weg überhaupt ansetzen
+Beim Sicherheitsgewinn, dem einzigen Kriterium, an dem der zweite Weg überhaupt ansetzen
 könnte, zeigt sich kein Vorsprung. WebAssembly erlaubt keine Erzeugung und Ausführung von
 Maschinencode zur Laufzeit \autocite{haas_bringing_2017}, was Angriffe erschwert, die auf
 erzeugten und anschließend ausgeführten Code zielen. Innerhalb des linearen Speichers fehlen
@@ -158,17 +158,17 @@ Auf den übrigen Kriterien unterliegt der zweite Weg dagegen klar. Ohne \ac{JIT}
 übersetzte Maschine interpretierend \autocite{igalia_five_2026}, was unmittelbar gegen S2 und S4
 wirkt, also gegen warme Latenz und Durchsatz. Der Betrieb auf Kubernetes erfordert zudem eigene
 containerd-Shims und damit einen zweiten Deployment-Stack neben dem bestehenden, statt die
-vorhandene Umgebung der Fallstudie weiterzunutzen; das wirkt gegen S5, die Integrierbarkeit.
+vorhandene Umgebung der Fallstudie weiterzunutzen. Das wirkt gegen S5, die Integrierbarkeit.
 Für serverloses Rechnen belegen \textcite{shillaker_faasm_2020} zwar einen geringeren
 Ressourcenbedarf gegenüber Container-Isolation, und \textcite{mainas_sandboxing_2024}
-übertragen den Befund auf mandantenfähige Umgebungen; beide Untersuchungen vergleichen jedoch
+übertragen den Befund auf mandantenfähige Umgebungen. Beide Untersuchungen vergleichen jedoch
 gegen Container-Isolation und nicht gegen ein bereits eingebettetes, JIT-fähiges Isolate wie
 V8, sodass sich der Befund nicht auf den hier zu entscheidenden Vergleich überträgt.
 
 Damit erreicht der Wasm-Weg auf keinem Kriterium ein besseres Ergebnis als der V8-Weg und auf
 mehreren ein schlechteres. Er scheidet bereits in der Vorauswahl aus. Eine quantitative
 Nutzwertanalyse zwischen zwei derart ungleichen Kandidaten würde keinen zusätzlichen
-Erkenntnisgewinn liefern; sie ist deshalb nicht Gegenstand von \autoref{sec:nutzwertanalyse}.
+Erkenntnisgewinn liefern. Sie ist deshalb nicht Gegenstand von \autoref{sec:nutzwertanalyse}.
 
 \subsubsection{Die Kompatibilitätsschranke}
 \label{sec:kompatibilitaet}
@@ -181,10 +181,10 @@ welchem Aufwand der gewählte V8-Weg umzusetzen ist, und gehört deshalb bereits
 \autoref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einem
 Netzwerk-Binding und an nichts anderem. Für die Umsetzung ist damit die entscheidende Aussage
 getroffen: Der Aufwand der inneren Grenze konzentriert sich auf eine einzige Fähigkeit, und er
-verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Familie und eine deutlich
-kleinere Socket-Familie.
+verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Gruppe und eine deutlich
+kleinere Socket-Gruppe.
 
-Für den Entwurf folgt daraus, dass beide Familien über einen Shim nachgebildet werden, der die
+Für den Entwurf folgt daraus, dass beide Gruppen über einen Shim nachgebildet werden, der die
 vorhandene Netzwerk-\ac{API} des Bestands abbildet. Ziel ist nicht, eine Abstraktion etwa einer
 \ac{SQL}-Verbindung anzubieten, sondern dass die bestehenden Skripte unverändert weiterlaufen.
 Der Shim gibt daher, wie das Original, einen rohen Socket frei und prüft dabei Host und Port
@@ -196,7 +196,7 @@ nach M4 liegt damit auf Ebene des Verbindungsaufbaus, nicht auf Ebene des Anwend
 \label{sec:vorauswahl-ergebnis}
 
 \autoref{tab:kandidaten} führt die Anwendung der Muss-Kriterien und des Dominanzvergleichs auf
-die geprüften Familien zusammen. Alle verbliebenen Zeilen behalten die mandantenweise
+die geprüften Kandidaten zusammen. Alle verbliebenen Zeilen behalten die mandantenweise
 Prozessgrenze des Ausgangszustands und die gVisor-Runtime-Klasse bei, weshalb M1 und M3
 durchgängig erfüllt sind.
 
@@ -236,11 +236,11 @@ Eingaben beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin z
 \autocite{greshake_not_2023}. Keine Mandantengrenze verhindert das.
 
 Damit legt die Vorauswahl die Engine fest: ein V8-Isolate je Ausführung, eingebettet in den
-bestehenden, mandantenweisen Ausführungsdienst innerhalb der unveränderten gVisor-Sandbox, mit
+bestehenden, mandantenweisen Execution Service innerhalb der unveränderten gVisor-Sandbox, mit
 vermittelten Netzwerk-Bindings nach dem in \autoref{sec:kompatibilitaet} beschriebenen Zuschnitt.
 
 Für die Einbettung selbst ist die Ebene zu wählen, auf der sie ansetzt, was den
-Umsetzungsaufwand bestimmt. Die Bindungsschicht \texttt{rusty\_v8} stellt die Bausteine der
+Umsetzungsaufwand bestimmt. Der Binding Layer \texttt{rusty\_v8} stellt die Bausteine der
 Engine bereit, also Isolate, Context, Skript und Scopes, aber weder Ereignisschleife noch
 Modulauflösung noch einen Mechanismus, über den der Host Funktionen in das Isolate reicht.
 Alles oberhalb der Engine wäre selbst zu bauen. Darauf setzt \texttt{deno\_core} auf und liefert
@@ -250,8 +250,8 @@ zugleich den Kern der in \autoref{sec:zwei-grenzen} bereits herangezogenen Deno-
 verlangt, dass Netz und Dateisystem ausschließlich über vermittelte Bindings erreichbar sind,
 und eine fertige Schicht für genau diese Vermittlung verkleinert die selbst zu schreibende und
 selbst abzusichernde Fläche. Die Einbettung des gewählten Modells erfolgt deshalb über
-\texttt{deno\_core}. Offen bleibt dabei ein Wartungsrisiko: Die Bausteine dieser Schicht
-erscheinen als Vorabversionen und in kurzen Abständen, was für ein Produkt mit langen
+\texttt{deno\_core}. Offen bleibt dabei ein Wartungsrisiko: Die Bausteine dieser Schicht werden
+als Vorabversionen und in kurzen Abständen veröffentlicht, was für ein Produkt mit langen
 Wartungszyklen eine dauerhafte Bindung darstellt, die in \autoref{sec:orchestrierung} bei der
 Betriebsplanung zu berücksichtigen ist. Diese Randbedingung betrifft die Wartung der gewählten
 Engine, nicht ihre Wahl.
