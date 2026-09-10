@@ -1,8 +1,17 @@
 \newpage
-\section{Bedrohungsmodell und Ableitung des Kriterienkatalogs}
+\section{Analyse des Ausgangszustands und Ableitung des Kriterienkatalogs}
 \label{sec:bedrohungsmodell}
 
-\subsection{Systemkontext und Vertrauensannahmen}
+Dieses Kapitel arbeitet in vier Schritten. \autoref{sec:systemkontext} beschreibt, mit welchem
+Konzept die Scripting-Engine heute betrieben wird, und legt darüber die Vertrauensannahmen
+fest, unter denen das gesuchte Ausführungsmodell arbeiten muss.
+\autoref{sec:bestandsanalyse} ergänzt die zweite Hälfte der Ausgangslage: was die Mandanten von
+der Node.js-Schnittstelle tatsächlich nutzen. Beides zusammen bestimmt, welche Angriffswege in
+\autoref{sec:angreifermodell} relevant sind. \autoref{sec:kriterienkatalog} übersetzt Konzept,
+Bestand und Angriffswege abschließend in den Kriterienkatalog, an dem \autoref{sec:Entwurf} die
+Vorauswahl der Technologie vornimmt.
+
+\subsection{Aktuelles Konzept: Systemkontext und Vertrauensannahmen}
 \label{sec:systemkontext}
 
 Gegenstand der Betrachtung ist die Scripting-Engine der Fallstudie als mandantenfähiger
@@ -17,16 +26,17 @@ konstruierende Artefakt, das beide Profile dauerhaft tragen muss. Da für das vo
 keine Betriebsdaten vorliegen, werden die Aussagen dazu aus dem Interaktionsmuster eines
 Agenten hergeleitet und als Annahme gekennzeichnet.
 
-Aus dem Aufbau ergeben sich die geteilten Ressourcen, an denen eine Mandantengrenze verlaufen
-muss. Auf der untersten Ebene teilen sich alle Ausführungen den Host-Kernel, doch ist diese
-Grenze für die Fallstudie nicht die alleinige Isolationsschicht. Der Ausführungsdienst schaltet
-für seine Runner-Pods eine gVisor-Runtime-Klasse vor, ergänzt um eine gehärtete Konfiguration
-des Sicherheitskontexts, bei der die Rechteeskalation unterbunden ist, sämtliche Capabilities
-entzogen sind, das seccomp-Standardprofil greift und kein Service-Account-Token automatisch
-eingebunden wird.\footnote{Die Angaben zur Konfiguration des Ausführungsdienstes beruhen auf
-einer eigenen Auswertung des Quellcodes der Plattform, Stand September 2026.} Der rohe Zugriff
-auf die Systemaufrufe des Host-Kernels, den generische Containerisierung offenlegt
-\autocite{souppaya_application_2017}, wird dadurch verkleinert, aber nicht beseitigt.
+So betrieben, teilen sich die Ausführungen mehrere Ressourcen, an denen eine Mandantengrenze
+verlaufen muss. Auf der untersten Ebene teilen sich alle Ausführungen den Host-Kernel, doch ist
+diese Grenze für die Fallstudie nicht die alleinige Isolationsschicht. Der Ausführungsdienst
+schaltet für seine Runner-Pods eine gVisor-Runtime-Klasse vor, ergänzt um eine gehärtete
+Konfiguration des Sicherheitskontexts, bei der die Rechteeskalation unterbunden ist, sämtliche
+Capabilities entzogen sind, das seccomp-Standardprofil greift und kein
+Service-Account-Token automatisch eingebunden wird.\footnote{Die Angaben zur Konfiguration des
+Ausführungsdienstes beruhen auf einer eigenen Auswertung des Quellcodes der Plattform, Stand
+September 2026.} Der rohe Zugriff auf die Systemaufrufe des Host-Kernels, den generische
+Containerisierung offenlegt \autocite{souppaya_application_2017}, wird dadurch verkleinert,
+aber nicht beseitigt.
 
 Innerhalb dieser Sandbox verbleibt eine zweite geteilte Ressource. Jeder Mandant erhält einen
 eigenen Ausführungsdienst, sodass Instanzen mandantenübergreifend nicht wiederverwendet werden.
@@ -35,9 +45,11 @@ dass je Ausführung ein eigener Unterprozess entsteht, und die Nebenläufigkeit 
 Ausführung zur Zeit begrenzt. Aufeinanderfolgende Ausführungen desselben Mandanten teilen sich
 damit den Speicher dieses Prozesses. Das Dateisystem, ein bei jeder Anfrage geleertes
 temporäres Verzeichnis, wird vor jeder Ausführung zurückgesetzt. Der Prozessspeicher mit Heap
-und globalen Variablen bleibt bestehen.
+und globalen Variablen bleibt bestehen. Dieses Konzept, ein Node.js-Prozess je Mandant statt je
+Ausführung, ist der Ausgangspunkt, gegen den sich jedes im Folgenden geprüfte Ausführungsmodell
+messen lassen muss.
 
-Die Schutzziele leiten sich aus der Mandantenfähigkeit ab. \emph{Vertraulichkeit} und
+Aus diesem Konzept leiten sich die Schutzziele ab. \emph{Vertraulichkeit} und
 \emph{Integrität} verlangen, dass eine Ausführung Daten, Code und Verarbeitung anderer
 Mandanten weder einsehen noch verändern kann. Die \emph{Verfügbarkeit} verlangt, dass sie die
 Bedienung anderer Mandanten nicht beeinträchtigt. Hinzu tritt ein viertes Ziel, das aus dem
@@ -57,7 +69,7 @@ Zustandsübertrag wird damit auch innerhalb eines Mandanten zu einer Vertraulich
 Die Vertrauenseinheit verschiebt sich mit dem zweiten Lastprofil vom Mandanten auf die einzelne
 Ausführung, und die Isolationsgrenze muss dieser Verschiebung folgen.
 
-Das Modell trifft die folgenden Vertrauensannahmen.
+Damit lassen sich die Vertrauensannahmen festhalten, unter denen das Modell arbeiten muss.
 
 \begin{description}
   \item[V1: Der ausgeführte Code ist nicht vertrauenswürdig.] Im Webhook-Profil hinterlegt der
@@ -104,13 +116,16 @@ Die jüngere Forschung zur Sicherheit agentischer Systeme betrachtet diese Frage
 \autocite{christodorescu_systems_2025}. Genau diese systemseitige Perspektive nimmt die
 vorliegende Arbeit ein.
 
-\subsection{Struktur des produktiven Skriptbestands}
+Damit steht die eine Hälfte der Ausgangslage fest: das Konzept, unter dem die Engine heute
+läuft, und die Annahmen, die daraus folgen. Die andere Hälfte liefert die Auswertung des
+Skriptbestands im nächsten Abschnitt.
+
+\subsection{Was die Mandanten nutzen: Struktur des produktiven Skriptbestands}
 \label{sec:bestandsanalyse}
 
-Die zweite Quelle der Anforderungen ist der Bestand selbst. Ein Ausführungsmodell, das den
-heutigen Skripten die benötigte Schnittstelle entzieht, ist unabhängig von seinen
-Isolationseigenschaften nicht einführbar. Dieser Abschnitt erhebt deshalb, welchen Teil der
-Node.js-Schnittstelle der Bestand tatsächlich braucht.
+Ein Ausführungsmodell, das den heutigen Skripten die benötigte Schnittstelle entzieht, ist
+unabhängig von seinen Isolationseigenschaften nicht einführbar. Dieser Abschnitt erhebt
+deshalb, welchen Teil der Node.js-Schnittstelle der Bestand tatsächlich braucht.
 
 \subsubsection{Datengrundlage und Vorgehen}
 
@@ -121,11 +136,11 @@ entfernt 269 Inhalte, 519 Skriptversionen und 25 Mandanten, die ausschließlich 
 vorhalten. Eine Gegenrechnung ohne diesen Filter verschiebt die Kennzahlen um gut einen
 Prozentpunkt und ändert die Aussage nicht.
 
-Jedes Skript wird anhand seiner Importe klassifiziert, wobei die härteste Einschränkung
-zählt. Ein Mandant erhält die Einstufung seines härtesten Skripts, nicht den Durchschnitt. Die
-Analyse ist statisch, sie sieht also weder dynamisch zusammengesetzte Modulnamen noch
-gebündeltes Kompilat. Von den Skripten fallen 24 als Parse-Fehler an und werden vorsorglich als
-blockierend geführt.
+Jedes Skript wird anhand seiner Importe klassifiziert, wobei die härteste Einschränkung zählt.
+Ein Mandant erhält die Einstufung seines härtesten Skripts, nicht den Durchschnitt. Die Analyse
+ist statisch, sie sieht also weder dynamisch zusammengesetzte Modulnamen noch gebündeltes
+Kompilat. Von den Skripten fallen 24 als Parse-Fehler an und werden vorsorglich als blockierend
+geführt.
 
 Ein Import allein sagt nichts darüber, was ein npm-Paket seinerseits benötigt. Für die Pakete
 mit nennenswertem Mandantengewicht wurde deshalb der ausgelieferte Quelltext gelesen, nicht die
@@ -134,12 +149,12 @@ verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
 
 \subsubsection{Ergebnis}
 
-713 Mandanten (41,5\,\%) liegen auf dem Hard Floor, benötigen also eine Schnittstelle, die eine
-sprachbasierte Laufzeit ohne vermitteltes Binding nicht bereitstellt. Werden die Mandanten,
-deren Pakete vollständig außerhalb der geprüften Menge liegen, pessimistisch als nicht lauffähig
-gewertet, ergibt sich ein Viabilitätsintervall von 39,0\,\% bis 42,9\,\%. \autoref{fig:hard-floor-einordnung}
-ordnet diesen Anteil in den Gesamtbestand ein und zeigt das Größenverhältnis der beiden
-blockierenden Paketfamilien.
+713 Mandanten (41,5\,\%) benötigen eine Schnittstelle, die eine sprachbasierte Laufzeit ohne
+vermitteltes Binding nicht bereitstellt; dieser Anteil wird im Folgenden als Hard Floor
+bezeichnet. Werden die Mandanten, deren Pakete vollständig außerhalb der geprüften Menge
+liegen, pessimistisch als nicht lauffähig gewertet, ergibt sich ein Viabilitätsintervall von
+39,0\,\% bis 42,9\,\%. \autoref{fig:hard-floor-einordnung} ordnet diesen Anteil in den
+Gesamtbestand ein und zeigt das Größenverhältnis der beiden blockierenden Paketfamilien.
 
 \begin{figure}[H]
   \centering
@@ -174,8 +189,9 @@ Die blockierenden Pakete zerfallen in zwei Familien mit deutlich verschiedenem B
 648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einem Netzwerk-Binding und an
 nichts anderem. Dateisystemzugriff, Prozesserzeugung und dynamische Codeerzeugung tragen nur
 den Rest bei. Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen den beiden
-Familien liegt ein Größenunterschied von etwa zehn zu eins. \autoref{fig:hard-floor-zusammensetzung}
-schlüsselt diese Zusammensetzung nach blockierender Ursache auf.
+Familien liegt ein Größenunterschied von etwa zehn zu eins.
+\autoref{fig:hard-floor-zusammensetzung} schlüsselt diese Zusammensetzung nach blockierender
+Ursache auf.
 
 \begin{figure}[H]
   \centering
@@ -186,8 +202,8 @@ schlüsselt diese Zusammensetzung nach blockierender Ursache auf.
 
 Die kleinere Familie stellt die schwierigere Anforderung. Ihre Vertreter sind überwiegend
 Datenbanktreiber, die ein eigenes binäres Protokoll sprechen. Bei \texttt{mssql} und dem
-darunterliegenden \texttt{tedious} wird die Verbindung im Klartext aufgebaut und erst danach auf
-\ac{TLS} umgestellt. Ein bereitgestelltes \texttt{fetch} hilft dieser Familie nicht.
+darunterliegenden \texttt{tedious} wird die Verbindung im Klartext aufgebaut und erst danach
+auf \ac{TLS} umgestellt. Ein bereitgestelltes \texttt{fetch} hilft dieser Familie nicht.
 
 \subsubsection{Grenzen der Auswertung}
 
@@ -198,9 +214,14 @@ und als Annahme gekennzeichnet.
 
 Aufrufzahlen enthält der Datensatz nicht. Ein Mandant mit einem Skript pro Monat wiegt so
 schwer wie einer mit hoher Aufruffrequenz, weshalb die Mandantenquote eine Obergrenze der
-praktischen Betroffenheit ist und keine Schätzung. Die transitive Hülle ist zudem unvollständig,
-was das angegebene Intervall abbildet. Die Auswertung erfolgte aggregiert, ohne Codeausschnitte
-und ohne Mandantenkennungen.
+praktischen Betroffenheit ist und keine Schätzung. Die transitive Hülle ist zudem
+unvollständig, was das angegebene Intervall abbildet. Die Auswertung erfolgte aggregiert, ohne
+Codeausschnitte und ohne Mandantenkennungen.
+
+Konzept und Bestand zusammen ergeben die Angriffsfläche: Ein Modell muss die
+Vertrauensannahmen aus \autoref{sec:systemkontext} durchsetzen, ohne dabei die in diesem
+Abschnitt erhobene Netzwerknutzung des Bestands zu brechen. Welche Angriffswege daraus konkret
+folgen, ordnet der nächste Abschnitt.
 
 \subsection{Angreifermodell und relevante Angriffswege}
 \label{sec:angreifermodell}
@@ -222,26 +243,26 @@ Angreifers entsprechen den negierten Schutzzielen aus \autoref{sec:systemkontext
 
 Alles, was V3 der Plattform zurechnet, gehört nicht zu den Fähigkeiten des Angreifers, also
 weder physischer Zugriff noch ein Zugang auf dem Host außerhalb der Ausführungsumgebung noch
-eine Netzwerkposition im Plattforminneren. Die verbleibenden Angriffswege lassen sich nach der Schicht ordnen, auf der die
-ausgenutzte Ressource geteilt wird. Die Gliederung folgt der Einordnung der Angriffswege
-serverloser Plattformen nach Anwendungs- und Infrastrukturebene
-\autocite{marin_serverless_2022} und knüpft an \autoref{sec:schichtenmodell} an.
+eine Netzwerkposition im Plattforminneren. Die verbleibenden Angriffswege lassen sich nach der
+Schicht ordnen, auf der die ausgenutzte Ressource geteilt wird, entsprechend der Einordnung von
+Angriffswegen serverloser Plattformen nach Anwendungs- und Infrastrukturebene
+\autocite{marin_serverless_2022}.
 
 \subsubsection{Anwendungsebene: Zustand zwischen Ausführungen}
 
-Der erste Weg nutzt den geteilten Prozessspeicher. Weil der Code in denselben Prozess geladen
-wird, überdauern über \texttt{setTimeout} oder \texttt{setInterval} registrierte Callbacks das
-Ende ihrer Ausführung und können Daten späterer Ausführungen mitlesen
-\autocite{dvelop_ag_dvelop_2026}. Ebenso überdauern globale Variablen und Reste im Speicher.
-Das Zurücksetzen des Dateisystems greift nicht, weil der übertragene Zustand im Speicher liegt.
-Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb eines Mandanten.
-Seine Bewertung folgt der in \autoref{sec:systemkontext} beschriebenen Verschiebung der
-Vertrauenseinheit, im Webhook-Profil also als Verletzung der Zuverlässigkeit, im Agentenprofil
-als Verletzung der Vertraulichkeit. Derselbe geteilte Prozess trägt einen zweiten Weg,
-denn eine Ausführung kann Ressourcen so erschöpfen, dass die Instanz für folgende Ausführungen
-unbrauchbar wird. Der Ausgangszustand belegt das an einem Vorfall, bei dem ein
-Verfügbarkeitstest im Minutentakt eine Instanz dauerhaft aktiv hielt und ein Speicherleck ihren
-Verbrauch bis zur Unbrauchbarkeit steigen ließ.
+Der erste Weg nutzt den geteilten Prozessspeicher, den \autoref{sec:systemkontext} beschreibt.
+Weil der Code in denselben Prozess geladen wird, überdauern über \texttt{setTimeout} oder
+\texttt{setInterval} registrierte Callbacks das Ende ihrer Ausführung und können Daten
+späterer Ausführungen mitlesen \autocite{dvelop_ag_dvelop_2026}. Ebenso überdauern globale
+Variablen und Reste im Speicher. Das Zurücksetzen des Dateisystems greift nicht, weil der
+übertragene Zustand im Speicher liegt. Da eine Instanz genau einen Mandanten bedient, verläuft
+dieser Weg innerhalb eines Mandanten. Seine Bewertung folgt der in \autoref{sec:systemkontext}
+beschriebenen Verschiebung der Vertrauenseinheit, im Webhook-Profil also als Verletzung der
+Zuverlässigkeit, im Agentenprofil als Verletzung der Vertraulichkeit. Derselbe geteilte Prozess
+trägt einen zweiten Weg, denn eine Ausführung kann Ressourcen so erschöpfen, dass die Instanz
+für folgende Ausführungen unbrauchbar wird. Der Ausgangszustand belegt das an einem Vorfall,
+bei dem ein Verfügbarkeitstest im Minutentakt eine Instanz dauerhaft aktiv hielt und ein
+Speicherleck ihren Verbrauch bis zur Unbrauchbarkeit steigen ließ.
 
 \subsubsection{Sprachebene: geteilte Laufzeit im selben Prozess}
 
@@ -283,22 +304,23 @@ Angreifer mit vorbereitetem Exploit wird der ausgeführte Workload selbst.
 
 Über alle drei Ebenen hinweg zeigt sich dieselbe Ursache: Der Ausgangszustand zieht seine
 Grenze auf der Ebene des Mandanten, während das Agentenprofil sie zwischen den einzelnen
-Ausführungen verlangt. Aus dieser Zuordnung von Angriffswegen zu geteilten Ressourcen leitet
-\autoref{sec:kriterienkatalog} die Bewertungskriterien ab.
+Ausführungen verlangt. Konzept, Bestand und diese drei Angriffswege liegen damit vollständig
+vor. \autoref{sec:kriterienkatalog} übersetzt sie in den Kriterienkatalog.
 
-\subsection{Ableitung und Gewichtung der Bewertungskriterien}
+\subsection{Kriterienkatalog}
 \label{sec:kriterienkatalog}
 
-Der Kriterienkatalog übersetzt die vorangegangenen Abschnitte in einen Maßstab für
-Entwurfsalternativen und für das konstruierte Artefakt. Jedes Kriterium ist auf seine Herkunft
-zurückführbar, also auf einen Angriffsweg, eine Vertrauensannahme, die Auswertung des
-Skriptbestands oder eine Anforderung aus dem Betrieb. Kriterien ohne solche Herkunft werden
-nicht aufgenommen.
+Der Kriterienkatalog übersetzt \autoref{sec:systemkontext} bis \autoref{sec:angreifermodell} in
+einen Maßstab für Entwurfsalternativen und für das konstruierte Artefakt. Jedes Kriterium ist
+auf seine Herkunft zurückführbar, also auf einen Angriffsweg, eine Vertrauensannahme, die
+Auswertung des Skriptbestands oder eine Anforderung aus dem Betrieb. Kriterien ohne solche
+Herkunft werden nicht aufgenommen, damit der Katalog straff bleibt.
 
 Der Katalog trennt zwei Arten. \emph{Muss-Kriterien} beschreiben Eigenschaften, ohne die ein
 Ausführungsmodell ausscheidet. Sie werden einzeln geprüft und nicht verrechnet.
-\emph{Soll-Kriterien} gehen gewichtet in die Nutzwertanalyse in
-\autoref{sec:nutzwertanalyse} ein. Diese Trennung ist Voraussetzung dafür, dass das
+\emph{Soll-Kriterien} gehen gewichtet in die Nutzwertanalyse in \autoref{sec:nutzwertanalyse}
+ein, mit der die verbleibenden Freiheitsgrade des Entwurfs, etwa die Zuordnungsgranularität und
+die Instanzverwaltung, entschieden werden. Diese Trennung ist Voraussetzung dafür, dass das
 Artefakt scheitern kann, denn ein Modell mit gutem Nutzwert, das ein Muss-Kriterium verletzt,
 ist keine Lösung.
 
@@ -340,12 +362,16 @@ M3 ist gegen den Ausgangszustand als Baseline formuliert, weil dieser mit gVisor
 User-Space-Kernel einsetzt. Ein Modell, das diese Schicht aufgibt, um Startzeit zu gewinnen,
 wäre auf der Infrastrukturebene ein Rückschritt, auch bei besserem Nutzwert. M4 folgt
 unmittelbar aus V5, denn die Schnittstelle zur Ausführungsumgebung ist der einzige
-Durchsetzungspunkt, den die Plattform kontrolliert.
+Durchsetzungspunkt, den die Plattform kontrolliert. Diese fünf Kriterien allein entscheiden die
+Vorauswahl der Technologie in \autoref{sec:vorauswahl}; einige Technologien, etwa solche mit
+Hypervisor-Anforderung, scheiden dort schon vor jeder Einzelprüfung anhand einer
+Randbedingung der Zielplattform aus.
 
 \subsubsection{Soll-Kriterien und Gewichtung}
 
-\autoref{tab:sollkriterien} listet die acht Soll-Kriterien mit ihrer Messgröße und ihrem
-Gewicht, absteigend sortiert.
+\autoref{tab:sollkriterien} listet die sieben Soll-Kriterien mit ihrer Messgröße und ihrem
+Gewicht, absteigend sortiert. Ein achtes, orchestrierungsbezogenes Kriterium wird bewusst nicht
+hier, sondern erst mit der Orchestrierung selbst eingeführt, um die Themen getrennt zu halten.
 
 \begin{table}[H]
   \caption{Soll-Kriterien, Messgrößen und Gewichte, absteigend nach Gewicht}
@@ -355,16 +381,14 @@ Gewicht, absteigend sortiert.
     \hline
     Nr. & Kriterium & Messgröße & Gewicht \\
     \hline
-    S1 & Kaltstartlatenz & Zeit bis zum Ausführungsbeginn ohne warme Instanz, P95 & 0,25 \\
-    S7 & Kompatibilität des Bestands & Anteil unverändert lauffähiger Mandanten und
-         Skripte & 0,20 \\
-    S5 & Skalierung der Orchestrierung & Zahl dauerhaft verwalteter Orchestrierungsobjekte je
-         Mandant & 0,15 \\
-    S2 & Warme Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,10 \\
+    S1 & Kaltstartlatenz & Zeit bis zum Ausführungsbeginn ohne warme Instanz, P95 & 0,30 \\
+    S6 & Kompatibilität des Bestands & Anteil unverändert lauffähiger Mandanten und
+         Skripte & 0,25 \\
+    S2 & Warme Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
     S3 & Speicherbedarf & Bedarf je Ausführung und je Mandant im Ruhezustand & 0,10 \\
-    S8 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
+    S7 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,05 \\
-    S6 & Integrierbarkeit & Anteil der an vorhandene Bausteine abgebbaren Aufgaben & 0,05 \\
+    S5 & Integrierbarkeit & Anteil der an vorhandene Bausteine abgebbaren Aufgaben & 0,05 \\
     \hline
     \multicolumn{3}{@{}l}{Summe} & 1,00 \\
     \hline
@@ -373,18 +397,15 @@ Gewicht, absteigend sortiert.
 
 Die Gewichte sind eine begründete Setzung und kein Messergebnis. S1 erhält das höchste Gewicht,
 weil die Kaltstartzeit im Agentenprofil in die Wartezeit der anfragenden Person eingeht und
-sich über die Aufrufe einer Aufgabe summiert. S7 folgt darauf, weil die Auswertung des
-Skriptbestands die Kompatibilität als stärkste Gegenkraft zu einem Wechsel des
-Ausführungsmodells ausweist. S5 ist von M5 zu unterscheiden: M5 fordert das Ergebnis, S5
-bewertet die strukturelle Eigenschaft, die es erleichtert. Ob die Objektzahl die beobachtete
-Ausfallzeit verursacht oder die Verfügbarkeit der Steuerungsebene, ist zum Zeitpunkt der
-Katalogaufstellung offen und wird in \autoref{sec:messumgebung} geklärt. Ein
-Muss-Kriterium an dieser Stelle würde eine noch nicht feststehende Ursache voraussetzen.
+sich über die Aufrufe einer Aufgabe summiert. S6 folgt darauf, weil \autoref{sec:bestandsanalyse}
+die Kompatibilität als stärkste Gegenkraft zu einem Wechsel des Ausführungsmodells ausweist. Die
+übrigen fünf Kriterien wiegen deutlich leichter, weil sie entweder die Ausführung selbst
+betreffen, ohne die Wartezeit im gleichen Maß zu prägen wie S1, oder weil sie Restgrößen
+abdecken, deren Größenordnung bereits durch S6 begrenzt ist.
 
 Die Bewertung je Soll-Kriterium erfolgt auf einer Skala von null bis fünf. Der Nutzwert ist die
 mit den Gewichten gebildete Summe. Die Zuordnung von Messwerten zu Punktwerten legt
-\autoref{sec:nutzwertanalyse} offen, damit die Bewertung nicht von der Darstellung
-abhängt.
+\autoref{sec:nutzwertanalyse} offen, damit die Bewertung nicht von der Darstellung abhängt.
 
 \subsubsection{Prüffallkatalog}
 
@@ -429,8 +450,10 @@ Verzeichnis vor jeder Ausführung mittels \texttt{rm -rf} zurück, weshalb eine 
 Ausführung $n$ in Ausführung $n+1$ gerade nicht mehr vorhanden ist. T4 prüft also, ob dieser
 Reset auch im Artefakt greift, und ist ein abgeleiteter, kein beobachteter Fall. Die übrigen
 Prüffälle ergänzen den Katalog um Wege, die aus derselben geteilten Ressource folgen, aber noch
-nicht beobachtet wurden. Damit steht fest, woran die
-Unterfragen aus \autoref{sec:forschungsfragen} beantwortet werden: U3 prüft M1 bis M4
-über Prüffallkatalog und Architekturprüfung, U4 erhebt die Messgrößen S1 bis S4 sowie M5, und
-die Nutzwertanalyse führt die Soll-Kriterien zu einer Empfehlung zusammen, nachdem die
-Muss-Kriterien den Kandidatenkreis eingegrenzt haben.
+nicht beobachtet wurden.
+
+Damit steht fest, woran die Unterfragen aus \autoref{sec:forschungsfragen} beantwortet werden:
+U3 prüft M1 bis M4 über Prüffallkatalog und Architekturprüfung, U4 erhebt die Messgrößen S1 bis
+S4 sowie M5, und die Nutzwertanalyse führt die Soll-Kriterien zu einer Empfehlung für die
+verbleibenden Entwurfsfreiheiten zusammen, nachdem die Muss-Kriterien und die Randbedingungen
+der Zielplattform in \autoref{sec:Entwurf} die Technologie bereits festgelegt haben.

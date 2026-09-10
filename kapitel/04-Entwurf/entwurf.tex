@@ -4,17 +4,20 @@
 \subsection{Vorauswahl des Ausführungsmodells}
 \label{sec:vorauswahl}
 
-Dieser Abschnitt engt den Kandidatenkreis ein, bevor die Nutzwertanalyse die verbleibenden
-Alternativen gewichtet und in \autoref{sec:orchestrierung} das Ausführungsmodell konstruiert
-wird. Er ist Vorarbeit und keine eigenständige Forschungsfrage. Angewendet werden die
-Muss-Kriterien M1 bis M5 aus \autoref{sec:kriterienkatalog}, ergänzt um zwei
-Randbedingungen der Zielplattform, die den Entwurfsraum unabhängig von jeder Bewertung verengen.
-Die Soll-Kriterien bleiben hier außer Betracht, sie gehen erst in die Nutzwertanalyse ein.
+Dieser Abschnitt legt die JavaScript-Engine des Ausführungsmodells fest. Er wendet dazu drei
+Filter in fester Reihenfolge an: die Muss-Kriterien M1 bis M5 aus \autoref{sec:kriterienkatalog},
+zwei Randbedingungen der Zielplattform, die den Entwurfsraum unabhängig von jeder Bewertung
+verengen, und, wo mehrere Kandidaten dieselben Muss-Kriterien erfüllen, einen
+Dominanzvergleich, der keine Gewichtung benötigt. Die Soll-Kriterien selbst bleiben hier außer
+Betracht, sie gehen erst in \autoref{sec:nutzwertanalyse} in die Entscheidung über
+Zuordnungsgranularität und Instanzverwaltung ein, sobald die Engine feststeht. Die
+Orchestrierung des gewählten Modells ist nicht Gegenstand dieses Abschnitts, sie folgt in
+\autoref{sec:orchestrierung}.
 
 Die Belege stammen aus zwei Quellenarten. Für Aussagen darüber, was eine Laufzeitumgebung
 zusichert, wird deren normative Herstellerdokumentation herangezogen, denn für einen Ausschluss
-ist die dokumentierte Zusicherung des Herstellers aussagekräftiger als eine Einzelmessung. Für Aussagen über den
-betroffenen Bestand dient die Auswertung aus \autoref{sec:bestandsanalyse}.
+ist die dokumentierte Zusicherung des Herstellers aussagekräftiger als eine Einzelmessung. Für
+Aussagen über den betroffenen Bestand dient die Auswertung aus \autoref{sec:bestandsanalyse}.
 
 \subsubsection{Äußere und innere Isolationsgrenze}
 \label{sec:zwei-grenzen}
@@ -49,17 +52,18 @@ die eigentliche Entwurfsfrage auf die innere Grenze und auf die Granularität.
 \subsubsection{Randbedingungen der Zielplattform}
 \label{sec:randbedingungen}
 
-Zwei Eigenschaften der bestehenden Umgebung verengen den Entwurfsraum unabhängig von den
-Kriterien.
+Zwei Eigenschaften der bestehenden Umgebung verengen den Entwurfsraum, bevor überhaupt eine
+Engine im Einzelnen geprüft wird.
 
 Erstens steht kein Hypervisor zur Verfügung. Firecracker setzt Lese- und Schreibzugriff auf
 \texttt{/dev/kvm} voraus \autocite{the_firecracker_authors_getting_2026}, einen Zugriff, den der
-Zielcluster nicht bereitstellt. MicroVM-basierte Ansätze scheiden damit aus. Der Ausschluss ist
-ein Plattformausschluss und kein Sicherheitsurteil, denn die von \textcite{agache_firecracker_2020}
-beschriebene Grenze ist die stärkste der betrachteten.
+Zielcluster nicht bereitstellt. MicroVM-basierte Ansätze scheiden damit aus, bevor ihre
+Isolationseigenschaften überhaupt bewertet werden. Der Ausschluss ist ein Plattformausschluss
+und kein Sicherheitsurteil, denn die von \textcite{agache_firecracker_2020} beschriebene Grenze
+ist die stärkste der betrachteten.
 
-Zweitens wird gVisor bereits produktiv eingesetzt. M3 ist gegen den Ausgangszustand als Baseline formuliert und
-untersagt, die dem Gastcode zugängliche Oberfläche des Host-Kernels gegenüber dem
+Zweitens wird gVisor bereits produktiv eingesetzt. M3 ist gegen den Ausgangszustand als Baseline
+formuliert und untersagt, die dem Gastcode zugängliche Oberfläche des Host-Kernels gegenüber dem
 Ausgangszustand zu vergrößern. Damit ist die äußere Grenze gesetzt und keine Entwurfsvariable
 mehr. Ein Modell, das diese Schicht zugunsten kürzerer Startzeiten aufgäbe, verletzte M3, auch
 wenn es die Soll-Kriterien besser bediente. Der Aufwand dieser Schicht ist bekannt und in die
@@ -70,6 +74,9 @@ V8-Sandbox endet in einer gVisor-Sandbox mit eingeschränkter System-\ac{API} un
 Host-Kernel. Hardwareseitige Seitenkanäle deckt gVisor nach eigener Darstellung dagegen nicht ab
 \autocite{the_gvisor_authors_security_2026}, und der Sentry gehört selbst zur \ac{TCB},
 wie das gezielte Fuzzing von \textcite{li_g-fuzz_2024} zeigt.
+
+Mit diesen beiden Randbedingungen steht der Rahmen fest, innerhalb dessen sich die innere Grenze
+bewegen muss: kein Hypervisor, aber eine bereits vorhandene, zu erhaltende Sandbox-Laufzeit.
 
 \subsubsection{Anwendung der Muss-Kriterien auf die Technologiefamilien}
 \label{sec:ausschluesse}
@@ -100,56 +107,80 @@ Vermittlung zu umgehen: Ein Skript, das einen neuen Deno-Prozess starten darf, k
 \texttt{-{}-allow-all} starten und verlässt die Sandbox vollständig, und eine über \ac{FFI}
 geladene native Bibliothek führt Maschinencode im selben Prozess aus und setzt Systemaufrufe
 direkt ab. Dieselbe Dokumentation empfiehlt für nicht vertrauenswürdigen Code zusätzlich
-Sandboxing auf Betriebssystemebene sowie gVisor oder Firecracker \autocite{the_deno_authors_security_2026}.
+Sandboxing auf Betriebssystemebene sowie gVisor oder Firecracker
+\autocite{the_deno_authors_security_2026}.
 
 \paragraph{Bun, Verstoß gegen M4 und fehlende Embedding-API.}
 Bun liefert kein Berechtigungsmodell, der entsprechende Vorschlag ist ein offener Issue
 im Repository \autocite{oven-shbun_contributors_bun_2026}. Unabhängig davon lässt es sich
-nicht als Bibliothek einbetten, sodass ein Host keine Isolate erzeugen, begrenzen oder beenden könnte
-\autocite{oven-shbun_contributors_feature_2026}. Ohne diese Kontrolle sind weder M2 noch M4 durchsetzbar.
+nicht als Bibliothek einbetten, sodass ein Host keine Isolate erzeugen, begrenzen oder beenden
+könnte \autocite{oven-shbun_contributors_feature_2026}. Ohne diese Kontrolle sind weder M2 noch
+M4 durchsetzbar.
 
 \paragraph{WebAssembly als Mandantensprache, außerhalb des Gegenstands.}
 Ein Entwurf, in dem Mandanten ihre Logik selbst nach WebAssembly übersetzen, scheitert nicht an
 einem Muss-Kriterium, sondern an der Oberfrage. Diese fragt nach einem Ausführungsmodell für
 JavaScript-Funktionen. Ein Modell, das von den Mandanten eine andere Sprache verlangt, beantwortet
-sie nicht, und es bricht zugleich den gesamten Bestand von 14.575 Skriptversionen. Der Ansatz wird
-deshalb nicht als Kandidat geführt.
+sie nicht, und es bricht zugleich den gesamten Bestand von 14.575 Skriptversionen aus
+\autoref{sec:bestandsanalyse}. Der Ansatz wird deshalb nicht als Kandidat geführt.
 
-\subsubsection{Zurückgestellt: JavaScript in WebAssembly}
+Nach diesen vier Ausschlüssen bleibt für die innere Grenze eine einzige tragfähige Bauart übrig:
+eine in den Ausführungsdienst eingebettete JavaScript-Engine, die eine eigene Isolate-Grenze je
+Ausführung zieht und Netz sowie Dateisystem über vermittelte Bindings freigibt. Zwei technische
+Wege führen zu einer solchen Engine, und der folgende Abschnitt entscheidet zwischen ihnen.
+
+\subsubsection{V8-Isolate gegen eine nach WebAssembly übersetzte Engine}
 \label{sec:wasm-zurueckgestellt}
 
-Davon zu trennen ist der Ansatz, eine JavaScript-Engine nach WebAssembly zu übersetzen und in der
-Wasm-Sandbox auszuführen. Die Mandanten schreiben dabei weiterhin JavaScript. Der Ansatz
-verletzt kein Muss-Kriterium und bleibt deshalb im Kandidatenkreis, allerdings mit zwei
-Vorbehalten, die in der Nutzwertanalyse zu berücksichtigen sind.
+Der erste Weg bettet V8 unmittelbar ein und zieht die Isolate-Grenze nativ, mit
+Just-in-Time-Übersetzung. Der zweite übersetzt eine JavaScript-Engine selbst nach WebAssembly
+und führt sie in einer Wasm-Sandbox aus; die Mandanten schreiben in beiden Fällen weiterhin
+JavaScript, betroffen ist nur die Bauart der Engine. Beide Wege erfüllen M1 bis M4, weil beide
+eine Isolate-Grenze je Ausführung mit vermittelten Host-Bindings vorsehen. Sie lassen sich damit
+nicht über die Muss-Kriterien trennen, wohl aber über einen Dominanzvergleich: Erreicht der
+zweite Weg auf keinem der einschlägigen Kriterien ein besseres Ergebnis als der erste, während er
+auf mehreren ein schlechteres erreicht, ist er dem ersten gegenüber dominiert und scheidet aus,
+ohne dass es einer Gewichtung bedarf.
 
-WebAssembly erlaubt keine Erzeugung und Ausführung von Maschinencode zur Laufzeit
-\autocite{haas_bringing_2017}, weshalb eine so übersetzte Maschine ohne \ac{JIT} interpretierend
-bleibt \autocite{igalia_five_2026}. Das wirkt auf S2 und S4. Der Betrieb auf
-Kubernetes erfordert zudem eigene containerd-Shims und damit einen zweiten Deployment-Stack
-neben dem bestehenden, was auf S6 wirkt.
+Für den Sicherheitsgewinn, das einzige Kriterium, an dem der zweite Weg überhaupt ansetzen
+könnte, zeigt sich kein Vorsprung. WebAssembly erlaubt keine Erzeugung und Ausführung von
+Maschinencode zur Laufzeit \autocite{haas_bringing_2017}, was Angriffe erschwert, die auf
+erzeugten und anschließend ausgeführten Code zielen. Innerhalb des linearen Speichers fehlen
+jedoch Schutzmechanismen, die native Programme besitzen, darunter \ac{ASLR}, Guard Pages, Stack
+Canaries und Read-only Memory \autocite{lehmann_everything_2020}, und Sandbox-Ausbrüche aus der
+Laufzeitumgebung selbst sind dokumentiert \autocite{bytecode_alliance_wasmtimes_2026}. Ein
+Vorteil gegenüber dem V8-Isolate lässt sich aus dieser Gegenüberstellung nicht ableiten, ein
+Nachteil ebenso wenig: Beide Wege laufen ohnehin innerhalb derselben gVisor-Sandbox, die nach
+\autoref{sec:randbedingungen} bestehen bleibt, sodass ein zusätzlicher Sicherheitsgewinn der
+zweiten Sandbox-Schicht keine der beiden Grenzen ersetzt, sondern sie verdoppelt.
 
-Für den Ansatz sprechen der geringere Ressourcenbedarf, den \textcite{shillaker_faasm_2020} für
-serverloses Rechnen zeigen und den \textcite{mainas_sandboxing_2024} auf
-mandantenfähige Umgebungen übertragen. Die
-Sicherheitsüberlegenheit ist dagegen begrenzt. Innerhalb des linearen Speichers fehlen
-Schutzmechanismen, die native Programme besitzen, darunter \ac{ASLR}, Guard Pages, Stack Canaries
-und Read-only Memory \autocite{lehmann_everything_2020}, und Sandbox-Ausbrüche aus
-der Laufzeitumgebung selbst sind dokumentiert \autocite{bytecode_alliance_wasmtimes_2026}. Ein
-Vorteil gegenüber dem V8-Isolate lässt sich daraus nicht ableiten, ein Nachteil ebenso wenig.
+Auf den übrigen Kriterien unterliegt der zweite Weg dagegen klar. Ohne \ac{JIT} bleibt eine so
+übersetzte Maschine interpretierend \autocite{igalia_five_2026}, was unmittelbar gegen S2 und S4
+wirkt, also gegen warme Latenz und Durchsatz. Der Betrieb auf Kubernetes erfordert zudem eigene
+containerd-Shims und damit einen zweiten Deployment-Stack neben dem bestehenden, statt die
+vorhandene Umgebung der Fallstudie weiterzunutzen; das wirkt gegen S5, die Integrierbarkeit.
+Für serverloses Rechnen belegen \textcite{shillaker_faasm_2020} zwar einen geringeren
+Ressourcenbedarf gegenüber Container-Isolation, und \textcite{mainas_sandboxing_2024}
+übertragen den Befund auf mandantenfähige Umgebungen; beide Untersuchungen vergleichen jedoch
+gegen Container-Isolation und nicht gegen ein bereits eingebettetes, JIT-fähiges Isolate wie
+V8, sodass sich der Befund nicht auf den hier zu entscheidenden Vergleich überträgt.
+
+Damit erreicht der Wasm-Weg auf keinem Kriterium ein besseres Ergebnis als der V8-Weg und auf
+mehreren ein schlechteres. Er scheidet bereits in der Vorauswahl aus. Eine quantitative
+Nutzwertanalyse zwischen zwei derart ungleichen Kandidaten würde keinen zusätzlichen
+Erkenntnisgewinn liefern; sie ist deshalb nicht Gegenstand von \autoref{sec:nutzwertanalyse}.
 
 \subsubsection{Die Kompatibilitätsschranke}
 \label{sec:kompatibilitaet}
 
-Die Kompatibilität des Bestands ist nach \autoref{sec:kriterienkatalog} kein
-Muss-Kriterium, sondern geht als S7 und S8 gewichtet in die Nutzwertanalyse ein. Sie scheidet
-daher keinen Kandidaten aus. Ihre Struktur bestimmt aber, welcher Aufwand mit einer inneren
-Grenze verbunden ist, und geht deshalb in die Vorauswahl ein.
+Die Kompatibilität des Bestands ist kein Muss-Kriterium, sie geht als S6 und S7 gewichtet in die
+Nutzwertanalyse ein und scheidet deshalb keinen Kandidaten aus. Ihre Struktur bestimmt aber, mit
+welchem Aufwand der gewählte V8-Weg umzusetzen ist, und gehört deshalb bereits hierher.
 
-\autoref{sec:bestandsanalyse} weist 713 Mandanten (41,5\,\%) auf dem Hard Floor aus.
-Nach \autoref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einem
-Netzwerk-Binding und an nichts anderem. Für die Vorauswahl ist damit die entscheidende Aussage
-getroffen: Der Aufwand einer inneren Grenze konzentriert sich auf eine einzige Fähigkeit, und er
+\autoref{sec:bestandsanalyse} weist 713 Mandanten (41,5\,\%) auf dem Hard Floor aus. Nach
+\autoref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einem
+Netzwerk-Binding und an nichts anderem. Für die Umsetzung ist damit die entscheidende Aussage
+getroffen: Der Aufwand der inneren Grenze konzentriert sich auf eine einzige Fähigkeit, und er
 verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Familie und eine deutlich
 kleinere Socket-Familie.
 
@@ -164,16 +195,17 @@ nach M4 liegt damit auf Ebene des Verbindungsaufbaus, nicht auf Ebene des Anwend
 \subsubsection{Ergebnis der Vorauswahl}
 \label{sec:vorauswahl-ergebnis}
 
-\autoref{tab:kandidaten} führt die Anwendung der Muss-Kriterien auf die verbliebenen
-Familien zusammen. Alle behalten die mandantenweise Prozessgrenze des Ausgangszustands und die
-gVisor-Runtime-Klasse bei, weshalb M1 und M3 durchgängig erfüllt sind.
+\autoref{tab:kandidaten} führt die Anwendung der Muss-Kriterien und des Dominanzvergleichs auf
+die geprüften Familien zusammen. Alle verbliebenen Zeilen behalten die mandantenweise
+Prozessgrenze des Ausgangszustands und die gVisor-Runtime-Klasse bei, weshalb M1 und M3
+durchgängig erfüllt sind.
 
 \begin{table}[H]
 \centering
-\caption{Anwendung der Muss-Kriterien auf die Kandidaten}
+\caption{Anwendung der Muss-Kriterien und des Dominanzvergleichs auf die Kandidaten}
 \label{tab:kandidaten}
 \small
-\begin{tabular}{@{}p{0.26\textwidth}ccccc p{0.17\textwidth}@{}}
+\begin{tabular}{@{}p{0.30\textwidth}ccccc p{0.15\textwidth}@{}}
 \hline
 Kandidat & M1 & M2 & M3 & M4 & M5 & Ergebnis \\
 \hline
@@ -181,10 +213,10 @@ Ausgangszustand, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein &
   scheidet aus \\
 Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen &
   scheidet aus \\
-V8-Isolate je Ausführung mit vermittelten Bindings & ja & ja & ja & ja & offen &
-  Kandidat \\
 JavaScript in WebAssembly je Ausführung & ja & ja & ja & ja & offen &
-  Kandidat \\
+  dominiert, scheidet aus \\
+V8-Isolate je Ausführung mit vermittelten Bindings & ja & ja & ja & ja & offen &
+  \textbf{gewählt} \\
 \hline
 \end{tabular}
 \end{table}
@@ -203,39 +235,31 @@ Für zur Laufzeit erzeugte Skripte ist das nach V2 die maßgebliche Lücke, denn
 Eingaben beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin zugreifen darf
 \autocite{greshake_not_2023}. Keine Mandantengrenze verhindert das.
 
-Übrig bleiben zwei Kandidaten derselben Familie, die sich in der JavaScript-Engine
-unterscheiden und beide eine innere Grenze je Ausführung mit vermittelten Host-Bindings
-vorsehen. M5 ist für keinen der beiden aus der Vorauswahl heraus entscheidbar, weil es eine
-Messung am lauffähigen Modell voraussetzt.
+Damit legt die Vorauswahl die Engine fest: ein V8-Isolate je Ausführung, eingebettet in den
+bestehenden, mandantenweisen Ausführungsdienst innerhalb der unveränderten gVisor-Sandbox, mit
+vermittelten Netzwerk-Bindings nach dem in \autoref{sec:kompatibilitaet} beschriebenen Zuschnitt.
 
-Für den V8-Kandidaten ist anzumerken, dass die Einbettung auf zwei Ebenen möglich ist und die
-Wahl der Ebene den Umsetzungsaufwand bestimmt. Die Bindungsschicht \texttt{rusty\_v8} stellt die
-Bausteine der Engine bereit, also Isolate, Context, Skript und Scopes, aber weder Ereignisschleife
-noch Modulauflösung noch einen Mechanismus, über den der Host Funktionen in das Isolate reicht.
+Für die Einbettung selbst ist die Ebene zu wählen, auf der sie ansetzt, was den
+Umsetzungsaufwand bestimmt. Die Bindungsschicht \texttt{rusty\_v8} stellt die Bausteine der
+Engine bereit, also Isolate, Context, Skript und Scopes, aber weder Ereignisschleife noch
+Modulauflösung noch einen Mechanismus, über den der Host Funktionen in das Isolate reicht.
 Alles oberhalb der Engine wäre selbst zu bauen. Darauf setzt \texttt{deno\_core} auf und liefert
-genau diese Schicht mit, einschließlich eines Mechanismus für Host-Bindings. Dieselbe Schicht bildet den Kern der
-Deno-Laufzeitumgebung, deren mandantenfähige Plattform in \autoref{sec:zwei-grenzen} bereits als
-Beleg für den mehrschichtigen Aufbau herangezogen wurde \autocite{deno_land_inc_how_2026}.
+genau diese Schicht mit, einschließlich eines Mechanismus für Host-Bindings, und bildet damit
+zugleich den Kern der in \autoref{sec:zwei-grenzen} bereits herangezogenen Deno-Laufzeitumgebung
+\autocite{deno_land_inc_how_2026}. Für M4 ist das mehr als eine Bequemlichkeit: Das Kriterium
+verlangt, dass Netz und Dateisystem ausschließlich über vermittelte Bindings erreichbar sind,
+und eine fertige Schicht für genau diese Vermittlung verkleinert die selbst zu schreibende und
+selbst abzusichernde Fläche. Die Einbettung des gewählten Modells erfolgt deshalb über
+\texttt{deno\_core}. Offen bleibt dabei ein Wartungsrisiko: Die Bausteine dieser Schicht
+erscheinen als Vorabversionen und in kurzen Abständen, was für ein Produkt mit langen
+Wartungszyklen eine dauerhafte Bindung darstellt, die in \autoref{sec:orchestrierung} bei der
+Betriebsplanung zu berücksichtigen ist. Diese Randbedingung betrifft die Wartung der gewählten
+Engine, nicht ihre Wahl.
 
-Für M4 ist das mehr als eine Bequemlichkeit. Das Kriterium verlangt, dass Netz und Dateisystem
-ausschließlich über vermittelte Bindings erreichbar sind, und eine fertige Schicht für genau
-diese Vermittlung verkleinert die selbst zu schreibende und selbst abzusichernde Fläche. Dem
-steht entgegen, dass die Bausteine dieser Schicht als Vorabversionen und in kurzen Abständen
-veröffentlicht werden. Für ein Produkt mit langen Wartungszyklen ist das eine dauerhafte
-Bindung, die der Kriterienkatalog in seiner jetzigen Fassung nicht abbildet.
-
-Die Gewichtung der beiden Kandidaten anhand der Soll-Kriterien S1 bis S8 leistet die
-Nutzwertanalyse in \autoref{sec:nutzwertanalyse}. Welche Einbettungsebene und welche Kombination
-aus Zuordnungsgranularität und Instanzverwaltung das gewählte Modell trägt, ist Gegenstand von
+Nicht mehr Gegenstand dieses Abschnitts ist, mit welcher Zuordnungsgranularität und
+Instanzverwaltung das V8-Isolate betrieben wird, also ob und wie mehrere Isolates sich einen
+Prozess teilen, und wie sie in die bestehende Kubernetes-Umgebung eingebunden werden. Diese
+Fragen entscheidet die Nutzwertanalyse in \autoref{sec:nutzwertanalyse} anhand der
+Soll-Kriterien aus \autoref{sec:kriterienkatalog}, aufbauend auf der hier getroffenen
+Festlegung der Engine. Die Orchestrierung des Ergebnisses behandelt
 \autoref{sec:orchestrierung}.
-
-% ---------------------------------------------------------------------------
-% HINWEIS, nicht Teil des Kapiteltextes:
-%
-% Akronyme und Bibliografie-Schluessel sind bereits ergaenzt (siehe
-% abkuerzungen/acronyms.tex, literatur/literatur.bib).
-%
-% Noch undefinierte Labels, auf die dieser Abschnitt verweist:
-%      sec:orchestrierung   -> Abschnitt 4.2, noch zu schreiben
-%      sec:nutzwertanalyse  -> Abschnitt 4.3, noch zu schreiben
-% ---------------------------------------------------------------------------
