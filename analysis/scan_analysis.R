@@ -790,3 +790,11 @@ p_policy_comparison <- ggplot(comparison,
   theme(legend.position = "bottom")
 save_plot(p_policy_comparison, "policy_comparison.png", width = 9, height = 5.5)
 p_policy_comparison
+
+
+# in R, after tenant_hardest and content_bucket exist
+targets <- scripts %>%
+  semi_join(content_bucket %>% filter(bucket == "packages-only"), by = "contentHash") %>%
+  select(tenantId, scriptId, versionId)
+
+write.csv(targets, "s3_paths.csv", row.names = FALSE)

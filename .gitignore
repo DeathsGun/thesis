@@ -64,4 +64,6 @@ abbildungen/_to_delete/
 # Lokale Arbeitskopien von Claude Code. Eine spaetere .claude/settings.json
 # bleibt bewusst versionierbar.
 .claude/worktrees/
-.Rproj.user
+/analysis/.RData
+/analysis/.Rhistory
+/analysis/.Rproj.user/*
