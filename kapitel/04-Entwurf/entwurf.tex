@@ -185,8 +185,7 @@ verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Gruppe und
 kleinere Socket-Gruppe.
 
 Für den Entwurf folgt daraus, dass beide Gruppen über einen Shim nachgebildet werden, der die
-vorhandene Netzwerk-\ac{API} des Bestands abbildet. Ziel ist nicht, eine Abstraktion etwa einer
-\ac{SQL}-Verbindung anzubieten, sondern dass die bestehenden Skripte unverändert weiterlaufen.
+vorhandene Netzwerk-\ac{API} des Bestands abbildet. Ziel ist, dass die bestehenden Skripte unverändert weiterlaufen.
 Der Shim gibt daher, wie das Original, einen rohen Socket frei und prüft dabei Host und Port
 gegen die je Mandant hinterlegte Erlaubnis, bevor die Verbindung nach außen geht. Die Vermittlung
 nach M4 liegt damit auf Ebene des Verbindungsaufbaus, nicht auf Ebene des Anwendungsprotokolls.
