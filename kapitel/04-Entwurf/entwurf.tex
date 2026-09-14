@@ -263,3 +263,248 @@ Fragen entscheidet die Nutzwertanalyse in \autoref{sec:nutzwertanalyse} anhand d
 Soll-Kriterien aus \autoref{sec:kriterienkatalog}, aufbauend auf der hier getroffenen
 Festlegung der Engine. Die Orchestrierung des Ergebnisses behandelt
 \autoref{sec:orchestrierung}.
+
+% Hinweis: \subsection{Nutzwertanalyse} \label{sec:nutzwertanalyse} gehoert vor den
+% folgenden Abschnitt, siehe Verweise in sec:vorauswahl.
+
+\subsection{Orchestrierung des Ausführungsmodells}
+\label{sec:orchestrierung}
+
+Die Vorauswahl in \autoref{sec:vorauswahl} legt die Engine fest, die Nutzwertanalyse in
+\autoref{sec:nutzwertanalyse} die Zuordnungsgranularität und die Instanzverwaltung. Dieser
+Abschnitt führt beides zu einem lauffähigen Modell zusammen und beantwortet damit den zweiten
+Teil von U2, die Frage nach der Integration in die bestehende Kubernetes-Umgebung. Behandelt
+werden die Ebenen, auf denen Ausführungen voneinander getrennt werden, das Fähigkeitsmodell, über
+das Skripte die Außenwelt erreichen, der Zuschnitt der Kompatibilitätsschicht, die Begrenzung der
+Ressourcen und der Lebenszyklus einer einzelnen Ausführung. Den Abschluss bildet die
+Betriebsplanung einschließlich des in \autoref{sec:vorauswahl-ergebnis} benannten
+Wartungsrisikos.
+
+\subsubsection{Ebenen der Ausführung}
+\label{sec:ebenen}
+
+Das Modell trennt auf vier Ebenen, die von außen nach innen jeweils kurzlebiger und billiger
+werden. Jede Ebene erfüllt genau eine Aufgabe, und keine übernimmt die Aufgabe einer anderen.
+
+\begin{table}[H]
+\centering
+\caption{Ebenen des Ausführungsmodells und ihre jeweilige Aufgabe}
+\label{tab:ebenen}
+\small
+\begin{tabular}{@{}p{0.22\textwidth}p{0.30\textwidth}p{0.38\textwidth}@{}}
+\hline
+Ebene & Zuschnitt & Erfüllt \\
+\hline
+Pod aus einem vorgehaltenen Pool & mandantenneutral bis zur Zuweisung, gVisor-Runtime-Klasse &
+  M3, und hält die Startzeit eines Pods vom Anfragepfad fern \\
+Prozess & je Mandant und Lastprofil, eigenes cgroup & M1, harte Ressourcengrenze \\
+Thread & je Prozess, ein Watchdog zusätzlich & Abbruch laufender Ausführungen \\
+Isolate & je Ausführung, aus einem Snapshot & M2 \\
+\hline
+\end{tabular}
+\end{table}
+
+Der vorgehaltene Pool folgt der von \textcite{lin_mitigating_2019} beschriebenen Vorgehensweise,
+Kaltstarts durch vorgehaltene Instanzen zu verdecken, statt den Start selbst zu beschleunigen.
+Entscheidend ist dabei die Regel, dass das Nachziehen des Pools einer Vorratspolitik folgt und
+niemals auf dem Anfragepfad liegt. Wird sie verletzt, trägt eine Anfrage wieder die volle
+Startzeit eines Pods, und der in \autoref{sec:systemkontext} gemessene Ausgangszustand ist
+wiederhergestellt. Das Verhalten des Ausgangszustands, bei fehlender Last auf null zu skalieren
+\autocite{the_knative_authors_configuring_2026}, wird für dieses Profil also aufgegeben und durch
+eine Untergrenze ersetzt.
+
+Die Prozessgrenze trägt nach \autoref{sec:zwei-grenzen} die Mandantentrennung und bleibt gegenüber
+dem Ausgangszustand erhalten. Neu ist der zweite Teil des Schlüssels, das Lastprofil. Er ergibt
+sich nicht aus der Isolation, sondern aus der Menge der Fähigkeiten, die ein Prozess bereitstellen
+muss: Skripte des Webhook-Profils benötigen nach \autoref{sec:kompatibilitaet} Sockets, zur
+Laufzeit erzeugte Agentenskripte benötigen sie nicht. Lägen beide in einem Prozess, liefe
+derjenige Code, der nach \autoref{sec:angreifermodell} am ehesten fremdbeeinflusst ist, in einem
+Prozess, in dem die Socket-Bindings vorhanden und registriert sind. Die Trennung nach Profil hält
+die Angriffsfläche dort klein, wo das Angreifermodell sie am stärksten belastet. Der Preis ist
+eine höhere Zahl von Prozessen, deren Wirkung auf S3 in \autoref{sec:nutzwertanalyse} bewertet
+wird.
+
+Die Bindung an einen Thread ist keine Entwurfsentscheidung, sondern eine Eigenschaft der
+gewählten Einbettung. Eine Laufzeitinstanz von \texttt{deno\_core} ist nicht zwischen Threads
+versetzbar und bleibt an denjenigen Thread gebunden, auf dem sie erzeugt wurde. Ein Thread kann
+mehrere Instanzen nacheinander und nebenläufig betreiben, solange diese ein- und ausgabegebunden
+sind. Rechenintensive Ausführungen blockieren dabei ihre Nachbarn auf demselben Thread, weshalb
+ein gesonderter Watchdog-Thread nötig ist, der den Abbruch auslösen kann, ohne selbst auf die
+Ereignisschleife angewiesen zu sein.
+
+Die Isolate-Grenze je Ausführung erfüllt M2. Eine schwächere Variante, bei der ein Isolate
+bestehen bleibt und lediglich ein frischer Kontext erzeugt wird, wäre erheblich billiger, stellt
+Zustandsfreiheit aber nicht her, weil mehrere Kontexte innerhalb eines Isolates denselben Heap
+verwenden. Sie wird deshalb nicht verwendet.
+
+\subsubsection{Fähigkeitsmodell und Mandantenkontext}
+\label{sec:faehigkeitsmodell}
+
+M4 verlangt, dass Netz und Dateisystem ausschließlich über vermittelte Bindings erreichbar sind.
+Die gewählte Einbettung erfüllt diese Forderung strukturell: Eine Laufzeitinstanz erreicht die
+Außenwelt nur über diejenigen Bindings, die der Host bei ihrer Erzeugung registriert hat. Ohne
+registriertes Binding existiert kein Weg nach außen, auch kein fehlerhaft abgesicherter. Die
+Menge der registrierten Bindings ist damit die Grenze selbst und nicht deren Bewachung.
+
+Der Mandantenkontext, also Kennung, Profil, die zulässigen Ziele für ausgehende Verbindungen und
+die Kontingente, liegt in dem Zustandsobjekt, das der Host jeder Laufzeitinstanz zuordnet. Die
+Bindings lesen ihn dort aus dem Host-Code. Im JavaScript-Heap existiert er nicht, weshalb ein
+Skript ihn weder auslesen noch überschreiben noch vortäuschen kann. Gegenüber dem Ausgangszustand
+ist das der wesentliche Unterschied, denn dort trägt das Skript selbst die Angaben, mit denen es
+sich ausweist. Für das Angreifermodell nach V2 ist die Eigenschaft zentral: Ein über seine
+Eingaben beeinflusstes Skript kann die Frage, in wessen Namen es handelt, nicht beantworten und
+damit auch nicht falsch beantworten.
+
+Welche Bindings eine Skriptversion erhält, wird nicht je Mandant konfiguriert, sondern aus dem
+Bundling abgeleitet. Der Ausgangszustand fasst jedes Kundenskript samt seiner Abhängigkeiten
+bereits zu einer einzigen Datei zusammen. Dieser Schritt löst den vollständigen
+Abhängigkeitsgraphen auf und weiß daher, welche Node-Schnittstellen eine Skriptversion
+tatsächlich erreicht. Aus dieser Information folgt die Menge der zu registrierenden Bindings
+mechanisch. Eine Skriptversion, die keine Socket-Schnittstelle einbindet, erhält kein
+Socket-Binding.
+
+Damit wird die in \autoref{sec:bestandsanalyse} als Entwurfsvariable identifizierte Granularität
+zweistufig umgesetzt. Die Sicherheitsgrenze bleibt grob und verläuft je Mandant, weil sie den
+Prozess kostet. Die Rechtevergabe verläuft fein und je Skriptversion, weil sie im Bundling ohnehin
+anfällt. Ein Skript erhält so genau diejenigen Fähigkeiten, die sein Abhängigkeitsgraph belegt.
+
+Zwei Eigenschaften dieses Vorgehens sind für die Bewertung festzuhalten. Fehlende Kompatibilität
+tritt als Fehler beim Bundling auf und nennt die fehlende Schnittstelle, statt sich erst zur
+Laufzeit als Fehlverhalten zu zeigen. Und die Auflösung entzieht sich dem Mandanten, weil dieser
+den Bundling-Schritt nicht kontrolliert. Nicht erfasst wird dynamisch aus Zeichenketten
+zusammengesetztes Nachladen, das statisch nicht auflösbar ist und nach
+\autoref{sec:bestandsanalyse} drei Mandanten betrifft.
+
+\subsubsection{Zuschnitt der Kompatibilitätsschicht}
+\label{sec:kompatibilitaetsschicht}
+
+Nach \autoref{sec:kompatibilitaet} verteilt sich der Kompatibilitätsaufwand auf zwei Familien im
+Verhältnis von etwa zehn zu eins. Beide werden über einen Shim nachgebildet, der die vorhandene
+Netzwerkschnittstelle auf ein vermitteltes Binding abbildet, sodass die bestehenden Skripte
+unverändert weiterlaufen.
+
+Eine naheliegende Abkürzung besteht darin, die fertige Node-Kompatibilitätsschicht der
+Deno-Laufzeitumgebung einzubinden, statt die benötigten Teile selbst zu schreiben. Sie wird nicht
+gewählt. Diese Schicht bringt neben den benötigten Netzwerkschnittstellen auch Bausteine für
+Prozesse, Dateisystem und Betriebssystemzugriff mit und stellt damit genau diejenige
+Umgebungsautorität wieder her, wegen der Node.js in \autoref{sec:ausschluesse} als
+Vertrauensgrenze ausgeschieden ist. Abgesichert wäre sie allein durch dasselbe prozessweite
+Berechtigungsmodell, dessen Umgehungen der Hersteller selbst dokumentiert
+\autocite{the_deno_authors_security_2026}. Ein selbst geschriebener Shim deckt dagegen nur
+diejenige Oberfläche ab, die der Bestand tatsächlich benötigt.
+
+Ob dieser Zuschnitt trägt, ist nicht durch Architekturbetrachtung zu klären. Die Machbarkeit
+wurde deshalb vorab an derjenigen Stelle des Bestands geprüft, die die größte Oberfläche
+verlangt, nämlich am meistgenutzten Treiber der Socket-Gruppe. Dieser bindet nicht nur einen
+rohen Socket ein, sondern stellt eine bereits bestehende Verbindung mitten im Datenstrom auf
+\ac{TLS} um, ein Vorgehen, das zu den aufwendigeren Teilen einer Node-Kompatibilitätsschicht
+zählt.
+
+Beide Teile sind in einer Vorstudie belegt. Der unveränderte Treiber verbindet sich über einen
+selbst geschriebenen Socket-Shim mit einer echten Datenbankinstanz und führt eine Abfrage aus,
+wobei host-seitig ein einziges neues Binding für den Verbindungsaufbau nötig war, weil die
+gewählte Einbettung die übrigen Operationen bereits generisch bereitstellt. Die
+\ac{TLS}-Umstellung gelingt über eine Zustandsmaschine ohne eigene Ein- und Ausgabe, die
+ausschließlich über synchrone Bindings angesprochen wird und die Ver- und Entschlüsselung
+übernimmt, während der Treiber die Paketrahmung des \ac{TDS}-Protokolls weiterhin selbst
+verantwortet. Beide Ergebnisse sind mehrfach reproduziert und gegen Negativkontrollen geprüft.
+\autoref{sec:Evaluation} führt sie im Einzelnen aus.
+
+Der Vermittlungspunkt liegt bei der Socket-Gruppe auf Ebene des Verbindungsaufbaus. Geprüft
+werden Zielhost und Zielport gegen die je Mandant hinterlegte Erlaubnis, bevor die Verbindung
+zustande kommt. Nach dem Aufbau besteht keine Einsicht in den Datenstrom mehr, weil dieser ein
+mandanteneigenes Protokoll trägt und im Fall der \ac{TLS}-Umstellung zusätzlich verschlüsselt
+ist. Für die \ac{HTTP}-Gruppe liegt der Vermittlungspunkt dagegen auf Ebene der einzelnen
+Anfrage. Diese Ungleichheit ist eine Eigenschaft des Entwurfs und keine Lücke in seiner
+Umsetzung, sie gehört als solche in die Bewertung von M4.
+
+\subsubsection{Begrenzung der Ressourcen}
+\label{sec:ressourcenbegrenzung}
+
+Die Begrenzung erfolgt auf zwei Ebenen, weil keine der beiden für sich genommen trägt.
+
+Auf Ebene des Isolates greifen drei Mechanismen. Eine Obergrenze für den JavaScript-Heap, die
+über einen Rückruf durchgesetzt wird, sobald sie erreicht ist. Ein zählender Allokator für
+Speicher, den die Engine außerhalb dieses Heaps anfordert. Und ein Watchdog, der eine laufende
+Ausführung abbricht.
+
+Jeder dieser Mechanismen hat eine benennbare Grenze, und diese Grenzen begründen die zweite
+Ebene. Die Heap-Obergrenze wird an den Haltepunkten der Speicherbereinigung geprüft und ist damit
+eine Näherung, keine erzwungene Schranke. Sie erfasst zudem ausschließlich den JavaScript-Heap:
+Speicher, den die Engine für Binärpuffer außerhalb dieses Heaps anfordert, zählt nicht gegen sie,
+weshalb der zählende Allokator als zweiter Mechanismus nötig ist. Der Abbruch durch den Watchdog
+wirkt an den Prüfpunkten der Engine und damit nicht innerhalb eines laufenden nativen Aufrufs.
+Vollständigkeit entsteht bei allen dreien durch Aufzählung der abgedeckten Pfade, und ein nicht
+aufgezählter Pfad bleibt offen.
+
+Auf Ebene des Prozesses greift deshalb ein eigenes cgroup je Mandantenprozess. Es erfasst jeden
+Allokationspfad, auch die nicht aufgezählten, und stellt damit die harte Schranke dar. Ein cgroup
+allein auf Ebene des Pods genügt nicht, weil der Kern bei Überschreitung ein Opfer nach eigener
+Bewertung auswählt und dieses nicht der Verursacher sein muss. Ein Mandant könnte so die
+Ausführung eines anderen beenden, ohne dessen Prozessgrenze zu verletzen. Dieselbe Aufteilung
+findet sich bei \textcite{deno_land_inc_how_2026}, wo cgroups neben Namespaces und seccomp als
+eigene Schicht geführt werden.
+
+Die Aufgabenteilung zwischen beiden Ebenen ist damit festgelegt. Die Mechanismen auf Ebene des
+Isolates liefern die Zuordnung zum verursachenden Mandanten und einen im Skript abfangbaren
+Fehler, also eine Reaktion, die den Prozess nicht beendet. Das cgroup liefert die Garantie. Die
+Belastbarkeit dieser Aufteilung prüft \autoref{sec:Evaluation} anhand der Prüffälle aus
+\autoref{tab:prueffaelle}.
+
+\subsubsection{Lebenszyklus einer Ausführung}
+\label{sec:lebenszyklus}
+
+Trifft eine Anfrage ein, sucht die Zuteilung einen Prozess für das Paar aus Mandant und Profil.
+Besteht dieser bereits, wird eine frische Laufzeitinstanz aus einem für die Skriptversion
+vorbereiteten Abbild erzeugt, die Ausführung darin durchgeführt und die Instanz anschließend
+verworfen. Besteht er nicht, wird er in einem Pod des Pools gestartet, wobei das Abbild einmalig
+entsteht. Nur wenn der Pool keine Kapazität mehr hat, wird er nachgezogen, was der
+Vorratspolitik aus \autoref{sec:ebenen} unterliegt.
+
+Das vorbereitete Abbild folgt dem von \textcite{ustiugov_benchmarking_2021} untersuchten Vorgehen,
+den Zustand einer initialisierten Instanz festzuhalten und für spätere Starts wiederzuverwenden.
+Es entsteht im selben Schritt wie das Bundle aus \autoref{sec:faehigkeitsmodell} und wird ebenso
+je Skriptversion vorgehalten. Damit entfällt das wiederholte Auflösen und Übersetzen des
+Abhängigkeitsgraphen bei jeder Ausführung. Ein Abbild hält allerdings Zustand fest, weshalb zu
+prüfen ist, ob ein auf Modulebene festgehaltener Wert über zwei Ausführungen hinweg derselbe
+bleibt. Wäre das der Fall, verletzte das Abbild selbst M2. \autoref{tab:prueffaelle} enthält
+diesen Fall als T3.
+
+Für das Ende einer Ausführung gilt eine Festlegung, die aus der Vorstudie folgt. Eine Ausführung
+endet nicht, wenn das Skript zurückkehrt, sondern wenn die Ereignisschleife der Instanz leer ist.
+Eine noch ausstehende Leseoperation hält eine eigene Referenz auf ihre Ressource, sodass das
+Schließen der Ressource weder den Socket verwirft noch die Leseoperation beendet. Jede Ressource
+führt deshalb eine Abbruchmöglichkeit mit, die beim Schließen ausgelöst wird, und jede im
+Hintergrund laufende Operation wird so gekennzeichnet, dass sie die Instanz nicht am Leben hält.
+Ohne diese Festlegung trüge ein Skript mit hängender Leseoperation seine Ausführung über deren
+Ende hinaus, was T3 und T5 aus \autoref{tab:prueffaelle} unmittelbar berührt.
+
+\subsubsection{Betriebsplanung und Wartungsrisiko}
+\label{sec:betriebsplanung}
+
+Für M5 ist maßgeblich, dass die Zuteilung beim Entzug eines Knotens laufende Ausführungen
+abschließen lässt und neue auf verbleibende Pods leitet. Weil eine Ausführung nach
+\autoref{sec:lebenszyklus} kurz ist und keinen Zustand über ihr Ende hinaus trägt, ist ein
+Abbruch verkraftbar und die Wiederholung einer abgebrochenen Ausführung unbedenklich. Die
+Untergrenze des Pools ist so zu wählen, dass der Entzug eines Knotens nicht dazu führt, dass
+Anfragen auf das Nachziehen warten.
+
+Das in \autoref{sec:vorauswahl-ergebnis} benannte Wartungsrisiko betrifft die Bausteine der
+Einbettung. Sie erscheinen als Vorabversionen in kurzen Abständen, was für ein Produkt mit langen
+Wartungszyklen eine dauerhafte Bindung bedeutet. Der Entwurf begrenzt diese Bindung auf zwei
+Wegen. Zum einen wird nur die Kernschicht der Einbettung übernommen und nicht die darauf
+aufbauende Kompatibilitätsschicht, wodurch die Zahl der nachzuführenden Bausteine erheblich
+kleiner ausfällt, wie \autoref{sec:kompatibilitaetsschicht} ausführt. Zum anderen bleiben die
+selbst geschriebenen Shims und Bindings unter eigener Kontrolle und sind von Änderungen an den
+übernommenen Bausteinen nur dort betroffen, wo diese ihre eigene Schnittstelle ändern.
+
+Eine weitere Randbedingung betrifft die Härtung der Engine. Die von ihren Entwicklern
+bereitgestellte Speichersandbox ist über den regulären Auslieferungsweg der gewählten
+Einbettung derzeit nicht erreichbar, sie erfordert eine vollständige Übersetzung der Engine aus
+dem Quelltext. Für den Prototyp wird deshalb nur die Zeigerkompression aktiviert, die als
+vorgefertigtes Artefakt vorliegt und bereits einen Teil der Eindämmung leistet, indem sie
+Zeiger innerhalb des Heaps auf einen begrenzten Adressbereich festlegt. Die vollständige
+Speichersandbox bleibt eine offene Maßnahme. Sie ist für M1 bis M5 nicht erforderlich, weil die
+Mandantentrennung nach \autoref{sec:zwei-grenzen} über die Prozessgrenze und nicht über die
+Engine läuft, und sie wirkt gegen gewöhnliche Speicherfehler und nicht gegen Seitenkanäle, die
+nach \autoref{sec:randbedingungen} ohnehin außerhalb des Betrachtungsrahmens liegen.
