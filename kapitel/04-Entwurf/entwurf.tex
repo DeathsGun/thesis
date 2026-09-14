@@ -154,31 +154,8 @@ geringeren Ressourcenbedarf für serverloses Rechnen, und \textcite{mainas_sandb
 Container-Isolation und nicht gegen ein eingebettetes, JIT-fähiges Isolate, sodass sich der
 Befund auf den hier zu entscheidenden Vergleich nicht überträgt.
 
-Damit erreicht der Wasm-Weg auf keinem Kriterium ein besseres Ergebnis als der V8-Weg und auf
-mehreren ein schlechteres. Er scheidet bereits in der Vorauswahl aus. Eine quantitative
-Nutzwertanalyse zwischen zwei derart ungleichen Kandidaten würde keinen zusätzlichen
-Erkenntnisgewinn liefern. Sie ist deshalb nicht Gegenstand von \autoref{sec:nutzwertanalyse}.
-
-\subsubsection{Die Kompatibilitätsschranke}
-\label{sec:kompatibilitaet}
-
-Die Kompatibilität des Bestands ist kein Muss-Kriterium, sie geht als S6 und S7 gewichtet in die
-Nutzwertanalyse ein und scheidet deshalb keinen Kandidaten aus. Ihre Struktur bestimmt aber, mit
-welchem Aufwand der gewählte V8-Weg umzusetzen ist, und gehört deshalb bereits hierher.
-
-\autoref{sec:bestandsanalyse} weist 713 Mandanten (41,5\,\%) auf dem Hard Floor aus. Nach
-\autoref{tab:blockierende-familien} scheitern davon 648, also 90,9\,\%, an einem
-Netzwerk-Binding und an nichts anderem. Für die Umsetzung ist damit die entscheidende Aussage
-getroffen: Der Aufwand der inneren Grenze konzentriert sich auf eine einzige Fähigkeit, und er
-verteilt sich im Verhältnis von etwa zehn zu eins auf eine \ac{HTTP}-Gruppe und eine deutlich
-kleinere Socket-Gruppe.
-
-Für den Entwurf folgt daraus, dass beide Gruppen über einen Shim nachgebildet werden, der die
-vorhandene Netzwerk-\ac{API} des Bestands abbildet. Ziel ist, dass die bestehenden Skripte unverändert weiterlaufen.
-Der Shim gibt daher, wie das Original, einen rohen Socket frei und prüft dabei Host und Port
-gegen die je Mandant hinterlegte Erlaubnis, bevor die Verbindung nach außen geht. Die Vermittlung
-nach M4 liegt damit auf Ebene des Verbindungsaufbaus, nicht auf Ebene des Anwendungsprotokolls.
-\autoref{sec:orchestrierung} legt die Umsetzung im Einzelnen fest.
+Der Wasm-Weg erreicht damit auf keinem Kriterium ein besseres Ergebnis und auf mehreren ein
+schlechteres. Er ist dominiert und scheidet aus.
 
 \subsubsection{Ergebnis der Vorauswahl}
 \label{sec:vorauswahl-ergebnis}
@@ -409,9 +386,8 @@ Nach \autoref{sec:bestandsanalyse} scheitern 648 der 713 blockierten Mandanten a
 Netzwerk-Binding, verteilt auf eine \ac{HTTP}-Gruppe und eine etwa zehnmal kleinere
 Socket-Gruppe. Der Umsetzungsaufwand der inneren Grenze konzentriert sich damit auf eine einzige
 Fähigkeit. Beide Gruppen werden über einen Shim nachgebildet, der die vorhandene
-Netzwerkschnittstelle auf ein vermitteltes Binding abbildet, sodass die bestehenden Skripte
-unverändert weiterlaufen. Ziel ist ausdrücklich nicht, eine Abstraktion etwa einer
-\ac{SQL}-Verbindung anzubieten.
+Netzwerkschnittstelle auf ein vermitteltes Binding abbildet. Ziel ist, dass die bestehenden
+Skripte unverändert weiterlaufen.
 
 Die fertige Node-Kompatibilitätsschicht der Deno-Laufzeitumgebung einzubinden wäre die
 naheliegende Abkürzung, wird aber nicht gewählt. Sie bringt neben den benötigten
@@ -590,7 +566,47 @@ dieser bisher bei jeder Ausführung voll bezahlt. Wie groß sie ausfallen, misst
 \subsubsection{Lebenszyklus einer Ausführung}
 \label{sec:lebenszyklus}
 
-Eine Ausführung läuft damit so ab. Die Zuteilung sucht den Pod des Mandanten und weist andernfalls
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    box/.style   ={draw, rounded corners=2pt, align=left, inner sep=4pt,
+                   font=\scriptsize, text width=5.0cm, fill=white, anchor=center},
+    check/.style ={box, fill=black!6},
+    side/.style  ={box, text width=5.4cm},
+    lbl/.style   ={font=\scriptsize\itshape, inner sep=1.5pt, fill=white},
+  ]
+    \node[box]   (a) at (0, 0)    {Aufruf trifft ein: Mandant, Inhaltskennung des Bundles,
+                                   vorsignierte URL};
+    \node[check] (b) at (0,-1.5)  {Ist dem Mandanten bereits ein Pod zugewiesen?};
+    \node[check] (c) at (0,-3.9)  {Liegt das Bundle unter dieser Kennung im Zwischenspeicher?};
+    \node[box]   (d) at (0,-6.2)  {Isolate aus dem Laufzeit-Snapshot erzeugen, Bindings
+                                   registrieren, Mandantenkontext in \texttt{OpState} ablegen};
+    \node[box]   (e) at (0,-7.8)  {Bundle auswerten und Einstiegspunkt aufrufen};
+    \node[box]   (f) at (0,-9.2)  {Event Loop leerlaufen lassen, danach das Isolate verwerfen.
+                                   Der Zwischenspeicher bleibt bestehen.};
+
+    \node[side]  (b2) at (7.1,-1.5) {Pod aus dem vorgehaltenen Pool zuweisen, Prozess starten
+                                     und die aktuell aufgerufenen Bundles vorladen};
+    \node[side]  (c2) at (7.1,-3.9) {über die vorsignierte URL laden, gegen die Inhaltskennung
+                                     prüfen und aufnehmen, sofern die Herkunft cachefähig ist
+                                     und das Budget es zulässt};
+
+    \draw[->] (a) -- (b);
+    \draw[->] (b) -- node[lbl,pos=0.25]{ja} (c);
+    \draw[->] (c) -- node[lbl,pos=0.25]{ja} (d);
+    \draw[->] (d) -- (e);
+    \draw[->] (e) -- (f);
+
+    \draw[->] (b.east) -- node[lbl,above]{nein} (b2.west);
+    \draw[->] (c.east) -- node[lbl,above]{nein} (c2.west);
+    \draw     (b2.south) |- (0,-2.75);
+    \draw     (c2.south) |- (0,-5.15);
+  \end{tikzpicture}
+  \caption{Ablauf einer einzelnen Ausführung mit Pod-Zuweisung und Zwischenspeicher}
+  \label{fig:ablauf}
+\end{figure}
+
+\autoref{fig:ablauf} fasst den Ablauf zusammen. Die Zuteilung sucht den Pod des Mandanten und weist andernfalls
 einen Pod des Pools zu. Der Prozess schlägt die mit dem Aufruf übergebene Inhaltskennung im
 Zwischenspeicher nach und lädt das Bundle nur bei einem Fehltreffer über die vorsignierte URL,
 prüft es gegen die Kennung und nimmt es auf, soweit Herkunft und Budget das zulassen. Aus dem
