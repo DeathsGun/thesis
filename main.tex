@@ -1,3 +1,4 @@
+% !TEX program = lualatex
 %TC:ignore - ignoriert die folgnden Wörter beim Wordcount in Overleaf 
 %-----------------------------------
 % Define document and include general packages
@@ -91,6 +92,17 @@
 \usepackage{rotating} % vertikal schreiben
 \usepackage{mdwlist}
 \usepackage{tabularx}% für Breitenangabe
+
+%-----------------------------------
+% Zeichnungen im Fließtext
+%-----------------------------------
+% Muss nach xcolor stehen, da tikz xcolor selbst nachlädt und das
+% sonst mit der hier gesetzten Option [table] kollidiert.
+\usepackage{tikz}
+\usetikzlibrary{fit,positioning,backgrounds}
+% Eigene Zeichenebenen, damit umschließende Kästen die inneren nicht überdecken.
+\pgfdeclarelayer{lproc}\pgfdeclarelayer{lpod}\pgfdeclarelayer{lnode}
+\pgfsetlayers{lnode,lpod,lproc,main}
 
 %-----------------------------------
 % sauber formatierter Quelltext

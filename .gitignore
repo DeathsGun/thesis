@@ -1,3 +1,67 @@
+#-----------------------------------
+# System
+#-----------------------------------
 .DS_Store
-*.pdf
 
+#-----------------------------------
+# Ausgabe
+#-----------------------------------
+# PDFs werden grundsaetzlich ignoriert, damit main.pdf nicht im Repo landet.
+# Abbildungen sind davon ausgenommen, sonst muessten sie mit "git add -f"
+# erzwungen werden.
+*.pdf
+!abbildungen/*.pdf
+!abbildungen/**/*.pdf
+# Von epstopdf erzeugte Zwischenfassungen bleiben trotzdem draussen.
+*-eps-converted-to.pdf
+
+#-----------------------------------
+# LaTeX-Zwischendateien
+#-----------------------------------
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.lol
+
+# biblatex mit biber
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+
+# latexmk
+*.fls
+*.fdb_latexmk
+
+# listofsymbols
+*.suc
+*.syc
+
+# acronym und glossaries
+*.acn
+*.acr
+*.alg
+*.glg
+*.glo
+*.gls
+*.ist
+
+# SyncTeX und sonstige Engine-Ausgaben
+*.synctex*
+*.xdv
+
+#-----------------------------------
+# Reste
+#-----------------------------------
+abbildungen/_to_delete/
+
+#-----------------------------------
+# Werkzeuge
+#-----------------------------------
+# Lokale Arbeitskopien von Claude Code. Eine spaetere .claude/settings.json
+# bleibt bewusst versionierbar.
+.claude/worktrees/
+.Rproj.user
