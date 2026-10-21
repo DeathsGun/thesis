@@ -1,3 +1,169 @@
 \newpage
 \section{Diffusion} \label{sec:Diffusion}
 
+Dieses Kapitel löst die Ergebnisse von der Fallstudie. Es beantwortet die Oberfrage und die fünf
+Unterfragen aus \autoref{sec:einleitung:zielsetzung}, benennt die Grenzen der Ergebnisse, formuliert
+die übertragbaren Designprinzipien und den Migrationspfad, nach denen U5 fragt, und schließt mit
+den Fragen, die die Arbeit geöffnet hat.
+
+\subsection{Fazit}
+\label{sec:diffusion:fazit}
+
+Die Oberfrage verlangte ein Ausführungsmodell, das in einer bestehenden Kubernetes-Plattform
+betreibbar bleibt, Mandanten voneinander und aufeinanderfolgende Ausführungen voneinander trennt
+und schneller startet als der heutige Betrieb. Die Antwort der Arbeit ist ein Modell mit zwei
+Grenzen: Die Mandantengrenze bleibt der Pod unter gVisor, wie im Ausgangszustand, und innerhalb des
+Pods erhält jede Ausführung ein eigenes V8-Isolate, das nach dem Lauf verworfen wird. Die Startzeit
+nimmt ein Pool vorgehaltener Pods vom Anfragepfad, den eine Control Plane über das vorhandene
+Messaging-System zuteilt. Ein Skript erreicht die Außenwelt nur über Bindings, die der Host beim
+Erzeugen des Isolates registriert, und eine Kompatibilitätsschicht bildet die Node-Schnittstellen
+nach, die der Bestand tatsächlich nutzt.
+
+U1 fragte nach den Anforderungen. Sie stammen aus zwei Quellen der Fallstudie, dem heutigen
+Betriebskonzept mit seinen Vertrauensannahmen und der Auswertung von 1.718 Mandanten mit 14.575
+Skriptversionen. Der Kern des Problems ist die Verschiebung der Vertrauenseinheit vom Mandanten auf
+die einzelne Ausführung, sobald der Code von einem Agenten stammt. Daraus folgen fünf
+Muss-Kriterien, die ein Modell einzeln erfüllen muss, und sechs gewichtete Soll-Kriterien
+(\autoref{sec:kriterienkatalog}).
+
+U2 fragte nach der Kombination aus Isolationsgrenze, Zuordnungsgranularität und Instanzverwaltung.
+Die Muss-Kriterien scheiden Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun
+und workerd aus. Eine nach WebAssembly kompilierte Engine ist zurückgestellt, nicht widerlegt
+(\autoref{sec:vorauswahl}). Die Zuordnung ist grob bei der Sicherheitsgrenze, ein Pod je Mandant,
+und fein bei den Rechten, feste Bindings je Profil mit einer mandantenweiten Freischaltung für
+rohe Sockets. Die Instanzverwaltung hält die Zuteilung vom Anfragepfad fern und entkoppelt die
+Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
+
+U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Die neun Prüffälle, die aus dem
+Bedrohungsmodell abgeleitet sind, besteht der Prototyp alle, der Ausgangszustand sieben nicht
+(\autoref{sec:pruefung-isolation}). Zustand überdauert keine Ausführung, ein erschöpfter Heap
+trifft nur die verursachende Ausführung, Netz und Dateisystem sind nur über die Bindings
+erreichbar, und eine Ausführung kann ihre Identität nicht fälschen. M3 gilt als erfüllt, weil
+der Pod in keinem Sicherheitsfeld lockerer ist als der Ausgangszustand (\autoref{tab:m3}).
+
+U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben Cluster und unter
+gVisor startet der Prototyp mit Pool im Median in 375\,ms statt 2,54 Sekunden und bedient 86 statt
+10 von 90 Mandanten innerhalb von zwei Sekunden. Ohne Pool startet er so schnell wie der
+Ausgangszustand, der Vorsprung stammt also aus der Vorhaltung (\autoref{sec:kaltstart}). Der
+Overhead im Lastprofil liegt im Median bei 127 statt 259\,ms und im 99.\ Perzentil bei 268\,ms
+statt 4,57 Sekunden (\autoref{sec:warm}). Ein Worker-Pod belegt mit 46\,MiB etwa die Hälfte eines
+Runner-Pods, die Steuerung ein Neuntel von Knative Serving, der Pool kostet dauerhaft 1,9\,GiB
+(\autoref{sec:durchsatz}). Der Durchsatz liegt bei 500 statt 100 Aufrufen je Sekunde und wird von der Datenbank begrenzt. Beim Knotenentzug
+war der Prototyp in acht Läufen höchstens 1,37 Sekunden ohne Ausführungsfähigkeit gegen 1,9 Sekunden
+im Ausgangszustand, ohne verlorene Aufträge (\autoref{sec:pruefung-m5}). In der Zusammenführung erreicht der Prototyp auf
+allen sechs Kriterien die Höchstpunktzahl (\autoref{sec:nutzwert}).
+
+U5 beantworten die beiden folgenden Abschnitte. Zuvor gehören die Grenzen der Ergebnisse benannt,
+die \autoref{sec:messaufbau} im Einzelnen begründet. Die Lastläufe wurden nicht wiederholt, Konfidenzintervalle
+fehlen. Der Vergleich trägt
+neben den Modellen auch die verschiedenen Begleitdienste. S6 ist aus der Bestandsanalyse
+abgeleitet, nicht durch Ausführen des Bestands gemessen. Das Agentenprofil, für das die
+Zustandsfreiheit zur Sicherheitsfrage wird, ist nicht gemessen, weil es keinen Vergleichswert hat.
+Und die Zuverlässigkeit der Zustellung ruht unter höchstens einmaliger Zustellung auf der Disziplin
+des Workers, wie sechs Fehlerfälle in \autoref{sec:zuverlaessigkeit} gezeigt haben.
+
+Gegenüber den bekannten Plattformen liegt der Beitrag nicht in einer neuen Isolationstechnik.
+Firecracker setzt einen Hypervisor voraus, den der Cluster der Fallstudie nicht bietet. Die
+Workers-Plattform und workerd bedienen viele Anfragen in einem Isolate, was die Zustandsfreiheit je
+Ausführung gerade nicht herstellt. Der Beitrag liegt in der Kombination für eine Plattform ohne
+Zugriff auf \acs{KVM}, die über Messaging skaliert, und darin, dass diese Kombination gegen einen
+produktiven Ausgangszustand gemessen wurde statt gegen generische Vergleichswerte.
+
+\subsection{Designprinzipien und Migrationspfad}
+\label{sec:diffusion:prinzipien}
+
+Ein Designprinzip im Sinne von \textcite[S.~1633--1634]{gregor_research_2020} benennt ein Ziel für
+einen Nutzer in einem Kontext, die Mechanismen, mit denen ein Implementierer es erreicht, und eine
+Begründung dafür, dass die Mechanismen das Ziel erreichen. Für die folgenden Prinzipien ist der
+Implementierer der Betreiber einer mandantenfähigen Plattform, der Nutzer der Mandant und die
+Ausführungsumgebung der Akteur, der die Mechanismen ausführt. Aufgenommen wird nur, was ein
+Schutzziel, einen Mechanismus, eine Kontextbedingung und einen Beleg aus \autoref{sec:Evaluation}
+hat. Was nur in dieser Fallstudie gilt oder nicht geprüft wurde, bleibt eine Eigenschaft des
+Prototyps.
+
+\begin{description}
+  \item[P1 Zwei Grenzen für zwei Schutzziele.] Ziel: Mandanten voneinander und aufeinanderfolgende
+    Ausführungen voneinander trennen. Mechanismus: eine vom Kernel durchgesetzte Grenze je Mandant
+    und eine Sprachgrenze je Ausführung innerhalb davon. Kontext: fremder Code, dessen
+    Vertrauenseinheit die einzelne Ausführung ist. Beleg: Architekturprüfung für die äußere Grenze,
+    T1 bis T9 für die innere. Die Sprachgrenze trägt keine Mandantentrennung, die Kernelgrenze
+    keine Zustandsfreiheit zu vertretbaren Kosten. Jede Grenze trägt genau das Ziel, für das sie
+    billig genug ist.
+  \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
+    Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Instanzen, aus einem
+    Snapshot erzeugt, dessen Nachfüllen nie auf dem Anfragepfad liegt. Kontext: die Größe des
+    Vorrats ist von der Zahl der Mandanten entkoppelt, und es gibt kein Skalieren auf null. Beleg:
+    S1a, S1b und der Lauf mit leerem Pool, der zeigt, dass der Vorsprung aus der Vorhaltung
+    stammt, nicht aus einem schnelleren Start. Die Wiederverwendung endet an der Grenze, die das
+    Schutzziel trägt: Ein Isolate wird nie über Ausführungen, ein Pod nie über Mandanten
+    wiederverwendet, und gecacht wird nur Unveränderliches, nie Heap-Zustand.
+  \item[P3 Die Fähigkeitsmenge folgt aus der Vertrauensklasse des Codes.] Ziel: einem Skript nur
+    die Außenwelt zu öffnen, die seine Herkunft rechtfertigt. Mechanismus: eine feste Menge
+    registrierter Bindings je Vertrauensklasse, die die Grenze selbst ist. Die Prüfung der Ziele in
+    den Bindings ist die zweite Linie. Kontext: der Inhalt des Codes taugt nicht als Grundlage,
+    weil er im Agentenprofil von dem geschrieben wird, dessen Beeinflussbarkeit das
+    Bedrohungsmodell beschreibt. Beleg: T7 und T8.
+  \item[P4 Der Mandantenkontext liegt außerhalb des Heaps.] Ziel: dass eine Ausführung die Frage,
+    in wessen Namen sie handelt, nicht beantworten und damit nicht falsch beantworten kann.
+    Mechanismus: Kennung, Profil und zulässige Ziele liegen im Zustand des Hosts, die Bindings
+    lesen sie dort, und alles, was das Skript sieht, sind Kopien, die kein Binding liest. Kontext:
+    jede eingebettete Engine mit einem Host-Zustand je Instanz. Beleg: T9, in dem jede Kopie
+    überschrieben wird und keine Entscheidung sich ändert.
+  \item[P5 Ressourcenbegrenzung auf zwei Ebenen.] Ziel: dass eine Ausführung die Ressourcen
+    anderer nicht erschöpft und die verursachende Ausführung benannt werden kann. Mechanismus: die
+    Mechanismen der Engine, Heap-Limit, zählender Allokator und Watchdog, liefern die Zuordnung und
+    einen abfangbaren Fehler. Die Grenze des Betriebssystems je Mandant liefert die Garantie.
+    Kontext: Mechanismen der Engine wirken nur an aufgezählten Pfaden. Beleg: T6, in dem der
+    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt, gegen den
+    Prozessabsturz des Ausgangszustands.
+\end{description}
+
+Drei Eigenschaften des Prototyps wurden geprüft und nicht aufgenommen. Höchstens einmalige
+Zustellung folgt aus der fehlenden Idempotenz von Skriptausführungen und ist eine Eigenschaft der
+Domäne, keine Entwurfsleistung, und ihre Alternative wurde nicht abgewogen. Der Verzicht auf neue
+Bausteine gehört zum Migrationspfad. Und die Regel, den
+Weg zu wählen, der die Alternative offen hält, ist eine Entscheidungsheuristik, die den Ausblick
+begründet, kein Prinzip für Ausführungsmodelle.
+
+Der Migrationspfad nutzt, dass das Modell keine neuen Bausteine einführt und je Mandant
+umschaltbar ist: Welcher Stack die Aufrufe eines Mandanten bedient, entscheidet die Adresse der
+App in seiner Konfiguration, derselbe Mechanismus, mit dem \autoref{sec:Evaluation} beide Modelle
+nacheinander auf demselben Cluster gemessen hat. Die Umstellung erfolgt schrittweise über ein
+Feature-Flag: zuerst ein Prozent der Mandanten, dann in Stufen mehr, bis alle umgestellt sind,
+wobei nach jeder Stufe Last und Fehlerrate der Plattform gegen die Werte aus
+\autoref{sec:Evaluation} geprüft werden. Mandanten, deren Skripte rohe Sockets brauchen, erhalten
+die mandantenweite Freischaltung vor ihrer Stufe. Ein Mandant, dessen Prüfskripte
+\texttt{child\_process} ausführen, bleibt bewusst auf dem bisherigen Betrieb. Vor der ersten
+Stufe sind die offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem der
+Standardwert der Socket-Freischaltung, der Egress-Default des Agentenprofils und die Ablauffrist
+auf synchronen Aufträgen.
+
+\subsection{Ausblick}
+\label{sec:diffusion:ausblick}
+
+Vier Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft die Engine. Eine
+nach WebAssembly kompilierte Engine ist in \autoref{sec:vorauswahl} zurückgestellt, weil ihr
+sicherer Nachteil bei der Kompatibilität einem möglichen Vorteil beim Speicher gegenübersteht und
+weil V8 WebAssembly innerhalb derselben Isolate-Grenze ausführt. Das gewählte Modell kann eine
+solche Engine deshalb später aufnehmen, ohne Grenze und Zuteilung zu ändern, und könnte dann S3 und
+die Startkosten je Ausführung auf Engine-Ebene messen, die hier nicht gemessen sind. Dringlicher
+geworden ist die Frage durch die Ankündigung des Deno-Teams, zu Cloudflare zu wechseln: Die
+Bindung an \texttt{deno\_core} ist damit eine Abhängigkeit mit absehbarem Ende, und der Ersatz der
+Einbettungsschicht ist nach \autoref{sec:betriebsplanung} benennbar, aber nicht geschätzt.
+
+Die zweite Frage betrifft die Zustellung. Höchstens einmalige Zustellung verliert eine Ausführung
+beim Absturz eines Workers still, im Hintergrundprofil ohne Rückmeldung. Mindestens einmalige
+Zustellung mit einer Startmarke je Nachricht machte den Verlust sichtbar, zum Preis eines
+Redis-Zugriffs je Ausführung auf dem Anfragepfad. Welcher Preis die Fehlerrate aus
+\autoref{sec:zuverlaessigkeit} rechtfertigt, ist zu messen, nicht zu entscheiden.
+
+Die dritte Frage betrifft das Agentenprofil, für das das Modell entworfen wurde und das nicht
+gemessen ist. Sobald ein Agent Skripte erzeugt, lassen sich Kaltstart und Overhead für sein
+Profil erheben, und erst dann zeigt sich, ob die Isolate-Erzeugung, die nach
+\autoref{sec:warm} vier Fünftel einer warmen Ausführung kostet, bei kurzen, einmaligen Skripten
+ins Gewicht fällt. Ein vorab erzeugtes, noch unbenutztes Isolate je Slot nähme diesen Posten vom
+Anfragepfad, ohne M2 aufzugeben.
+
+Die vierte Frage betrifft die Messung selbst. Wiederholte Läufe gleicher Konfiguration würden die Ergebnisse von
+Einzelmessungen zu Intervallen machen. Erst damit ließe sich sagen, wie viel des Vorsprungs das
+Modell trägt und wie viel die Begleitdienste.

@@ -1,0 +1,123 @@
+\section{Parameter des Prototyps}
+\label{anh:parameter}
+
+Die Tabelle nennt die im Quellcode des Prototyps hinterlegten Vorgaben, auf die
+\autoref{sec:Entwurf} verweist, Stand 15. Oktober 2026, konfigurierbare Werte mit ihrem Standardwert
+und, wo die Integrationsumgebung abweicht, mit deren Wert.
+
+\begin{table}[H]
+  \caption{Parameter des Prototyps nach Komponente}
+  \label{tab:parameter}
+  \scriptsize
+  \renewcommand{\arraystretch}{1.0}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.13\textwidth}
+    >{\RaggedRight\arraybackslash}p{0.30\textwidth} >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Komponente & Parameter & Wert \\
+    \hline
+    Runtime & \texttt{deno\_core} & Version 0.412, exakt festgelegt \\
+    & Node-Quellcode der Vendor-Bundles & Version 26.10.0, per Commit festgelegt \\
+    & Laufzeit-Snapshot & rund 1,6\,MB \\
+    & lazy geladene Bundles & Node-Module rund 690\,KB, Web Streams rund 480\,KB \\[2pt]
+    Worker & Slots je Pod & 4 \\
+    & Heap je Isolate & Pod-Limit / (2 $\times$ Slots), mindestens 64\,MB, ebenso viel als Limit für Puffer außerhalb des Heaps \\
+    & Headroom nach Erreichen des Heap-Limits & 32\,MB \\
+    & Frist synchron / Hintergrund & 50\,s / 830\,s \\
+    & Body inline / maximal & 64\,KiB / 100\,MiB \\
+    & Bundle entpackt, maximal & 64\,MB \\
+    & Bundle-Cache & 128\,MB je Prozess, Schlüssel SHA-256, Verdrängung des am
+      längsten nicht genutzten Eintrags \\
+    & Selbstbeendigung ohne Auftrag & 1\,min (Umgebungsvariable), geprüft alle 30\,s, nur im zugewiesenen Zustand und nur
+      zwischen zwei Pulls \\
+    & Mandanten-Consumer & dauerhaft, Repliken wie der Stream (drei), höchstens eine Zustellung, Bestätigungsfrist
+      900\,s, gelöscht nach 300\,s ohne Nutzung, offene Zustellungen höchstens Slots $\times$ 10,
+      ein Pull je Nachricht mit Frist 2\,s, Warten auf den Leader bis 2\,s \\
+    & Lesen des Consumers & Frist 2\,s, drei Versuche, Reconnect nach einem Versuch ohne Antwort \\
+    & NATS-Verbindung beim Start & 500\,ms je Versuch, Wiederholung bis 30\,s, danach höchstens 66
+      Reconnects, Wartezeit bis 5\,s \\
+    & Bundle-Abruf & 3 Versuche (50\,ms, 200\,ms) bei Transportfehlern, 5xx und 429 \\
+    & Callback und Log-Upload & 3 Versuche (500\,ms, 1\,s) bei Transportfehlern und 5xx, je 30\,s Frist \\
+    & Metriken & \ac{OTLP}-Push alle 10\,s, Buckets 1\,ms bis 30\,s \\
+    & Readiness-Probe & \texttt{/ready}, alle 10\,s \\[2pt]
+    Gateway & Wartezeit synchron & 53\,s, unter den 55\,s des Edge-Proxys \\[2pt]
+        Control Plane & Pool-Zielgröße & 3 (Code), 40 (Integrationsumgebungen) \\
+    & Kommando an einen Worker (assign, unassign) & Redis-Liste je Worker, Antwort in einer
+      Reply-Liste, Frist 10\,s \\
+    & Reserve für Erweiterungen & Zielgröße / 2 \\
+    & Rotation & nach 1\,h Zuweisungsdauer, geprüft alle 10\,s \\
+    & Pods ohne Eintrag & gelöscht nach 5\,min \\
+    & Neuzuweisung nach Pod-Tod & sofort, falls Aufträge warten, Wiederholung nach 1, 2, 4, 8,
+      16\,s \\
+    & Anlegen beim Erstkontakt & höchstens eines je Mandant in 30\,s, Warten auf Anmeldung
+      bis 20\,s, geprüft je 1\,s \\
+    & Watcher-Consumer & bis zu 20 Zustellungen \\
+    & Lastskalierung je Mandant & Ziel-Auslastung 0,5 (Code) bzw.\ 0,75 (Integrationsumgebungen)
+      der Slots, höchstens 10 Pods, mindestens
+      1, Lastprüfung alle 250\,ms, erste Erweiterung frühestens 2\,s nach dem Erstkontakt, Abstand
+      zwischen Erweiterungen 2\,s, Pool danach auf Zielgröße aufgefüllt \\
+    & Metriken & \ac{OTLP}-Push alle 15\,s \\[2pt]
+    Pod & Ressourcen & \ac{CPU}-Request 10\,m ohne Limit, Speicher 32\,Mi Request und 512\,Mi
+      Limit in der Integrationsumgebung, 128\,Mi Request im Code \\
+    & Grace Period & 900\,s \\
+    & Service Mesh & Sidecar-Injection deaktiviert \\
+    & Egress & Internet nur TCP 443, NATS und Redis über Labels der Cluster-Richtlinien \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\section{Header-Filter und Pod-Zustände}
+\label{anh:header-zustaende}
+
+\autoref{tab:header} nennt die Header, die der Worker nach \autoref{sec:bausteine} vor dem Skript
+verbirgt oder aus dessen Antwort entfernt. \autoref{tab:podzustaende} führt die Zustände eines
+Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
+
+\begin{table}[H]
+  \caption{Vom Worker gefilterte Header}
+  \label{tab:header}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.26\textwidth}
+    >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Richtung & Header \\
+    \hline
+    Request, vor dem Skript verborgen & Signaturen der Plattform, Identität des Service Mesh,
+      Proxy-Header der Zwischenschritte \\[2pt]
+    Response, verworfen & Cookies sowie \ac{CORS}, \ac{CSP}, \ac{HSTS} und der Schutz gegen
+      Framing, mit denen ein Skript die Richtlinien der Plattform-Origin schwächen könnte \\[2pt]
+    \texttt{fetch}, bei Redirects & Header, die den Aufrufer ausweisen, folgen keinem Redirect zu
+      einer anderen Origin \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Zustände eines Worker-Pods und ihre Übergänge}
+  \label{tab:podzustaende}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X
+    >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Zustand & Bedeutung & Übergänge \\
+    \hline
+    angelegt & über die Kubernetes-\acs{API} erzeugt, noch nicht angemeldet, in keiner der drei
+      Mengen & nach Anmeldung \emph{frei}, ohne Anmeldung nach der Schonfrist aus
+      \autoref{tab:parameter} gelöscht \\[2pt]
+    frei & angemeldet, im Pool & beim Erstkontakt in einem atomaren Schritt nach
+      \emph{reserviert} \\[2pt]
+    reserviert & Zuweisung läuft, Kommando über Redis, Antwort innerhalb der Frist & bei
+      Bestätigung \emph{zugewiesen}, bei einem fehlgeschlagenen Schritt zurück nach \emph{frei} \\[2pt]
+    zugewiesen & genau einem Mandanten zugeordnet, nie wieder im Pool & Rotation nach Ablauf
+      der Zuweisungsdauer, Selbstbeendigung ohne Auftrag oder Entzug des Knotens, jeweils nach
+      \emph{beendet}, nie zurück nach \emph{frei} \\[2pt]
+    beendet & Pod hat einen \texttt{DeletionTimestamp} bekommen oder ist gestorben, ein Informer
+      meldet es & aus jedem Zustand. War es der letzte Pod
+      eines Mandanten und warten Aufträge, Neuzuweisung sofort, Wiederholung mit wachsendem
+      Abstand nach \autoref{tab:parameter} \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Nach einem Neustart liest die Control Plane den Zustand aus Redis zurück, entfernt zuerst Pods, die
+es nicht mehr gibt, und wiederholt offene Zuweisungen. Das ist möglich, weil der Worker eine
+wiederholte Zuweisung an denselben Mandanten als Bestätigung behandelt.

@@ -14,17 +14,69 @@
 % - Schnell vs Durchsatz -> Starvation
 % - Firecracker darf direkt rausfliegen.
 
-\subsection{Forschungsfragen und Abgrenzung}
-\label{sec:forschungsfragen}
+Die Arbeit entwirft ein Ausführungsmodell für fremden JavaScript-Code und misst es gegen den
+heutigen Betrieb einer Fallstudie. Dieses Kapitel ordnet die Fallstudie ein, benennt die Probleme
+des heutigen Betriebs und leitet daraus die Forschungsfrage ab. Danach legt es Ziel, Abgrenzung
+und methodisches Vorgehen fest und gibt einen Überblick über die folgenden Kapitel.
+
+\subsection{Motivation und Einordnung}
+\label{sec:einleitung:motivation}
+
+Serverlose Plattformen führen Code aus, den nicht ihr Betreiber geschrieben hat. Der Betreiber
+stellt die Laufzeitumgebung, der Kunde liefert die Funktion, und die Grenze zwischen beiden muss
+die Plattform selbst durchsetzen \autocite[S.~419]{agache_firecracker_2020}. Die Fallstudie dieser
+Arbeit ist die Scripting-Engine eines Dokumentenmanagementsystems, ein mandantenfähiger Dienst,
+der von Kunden hinterlegte JavaScript-Funktionen ausführt, sobald Ereignisse im \ac{DMS} sie
+auslösen \autocite{dvelop_ag_dvelop_2026}. Heute läuft dafür je Mandant ein Node.js-Runner auf
+Knative in einem Kubernetes-Cluster, der ohne Last auf null skaliert und beim nächsten Aufruf
+neu startet \autocite{the_knative_authors_configuring_2026}. Dieselbe Engine soll künftig als
+Werkzeug eines KI-Agenten dienen, der kurze Skripte zur Laufzeit erzeugt und sofort ausführen
+lässt \autocite[S.~50208]{wang_executable_2024}. Damit ändert sich, wer den Code verantwortet. Im
+Webhook-Fall ist es der Mandant, der ihn geschrieben hat. Im Agentenfall hat ihn vor seinem
+einzigen Lauf niemand gelesen.
+
+\subsection{Problemstellung und Forschungsfrage}
+\label{sec:einleitung:problemstellung}
+
+Der heutige Betrieb genügt in zwei Punkten nicht. Der erste ist die Zeit bis zur ersten
+Ausführung. Ein Runner, der auf null skaliert war, braucht mehrere Sekunden, bis er den ersten
+Aufruf bedient, und Mandanten, deren Webhooks selten ausgelöst werden, zahlen diese Zeit bei fast
+jedem Aufruf. Unter Last kommt hinzu, dass ein Runner Aufrufe nacheinander abarbeitet. Beides
+hat zu Rückmeldungen von Kunden geführt und war der Anlass für diese Arbeit. Der zweite Punkt ist
+der Betrieb. Jedes rollierende Update der Clusterknoten, im Jahr etwa vier, trifft die gerade
+warmen Runner, die sich nicht übergeben lassen, und die Scripting-Engine ist in dieser Zeit für
+die betroffenen Mandanten nicht ausführungsfähig. Hinter beiden Punkten steht ein dritter, der
+nicht als Maßstab geführt wird: Die Wartbarkeit des heutigen Runners ist gering, lässt sich
+aber nicht auf dieselbe Weise messen wie Startzeit und Verfügbarkeit.
+
+Ein Wechsel des Ausführungsmodells darf dabei nicht hinter die heutige Sicherheit zurückfallen,
+und für das Agentenprofil reicht sie nicht einmal aus. Alle Ausführungen eines Mandanten teilen
+sich heute einen Node.js-Prozess, sodass Variablen, Timer und offene Verbindungen eine
+Ausführung überdauern. Solange der Mandant seinen Code selbst schreibt, stört das nur die
+folgenden Ausführungen. Stammt der Code von einem Agenten, dessen Eingaben Dritte beeinflussen
+können, wird aus dem übernommenen Zustand ein Vertraulichkeitsproblem innerhalb des Mandanten.
+Gesucht ist deshalb ein Modell, das schneller startet und zugleich jede Ausführung für sich
+isoliert.
 
 Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die
 Anforderungen des eigenen Betriebs begründet, etwa Amazon Web Services mit Firecracker
-\autocite{agache_firecracker_2020} oder Cloudflare mit dem Isolationsmodell der
+\autocite[S.~419]{agache_firecracker_2020} oder Cloudflare mit dem Isolationsmodell der
 Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten stellen jeweils eine
 Lösung vor. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
 erzeugter Funktionen konstruiert und anschließend gegen einen produktiven Ausgangszustand
-gemessen wird, liegt dagegen nicht vor. Die folgende Oberfrage ist deshalb als
-Gestaltungsfrage im Sinne der \ac{DSR} formuliert \autocite{osterle_memorandum_2010}. Sie
+gemessen wird, liegt dagegen nicht vor. Das ergab eine Suche vom 19.\,Oktober 2026 über
+Websuche, Crossref und arXiv nach Ausführungsmodellen, die ein Isolate je Ausführung, einen
+Pool vorgehaltener Pods in Kubernetes und eine Messung gegen einen produktiven Ausgangszustand
+verbinden. Die nächsten Vorarbeiten sind sprachbasierte Isolation je Funktion
+\autocite[S.~645]{boucher_putting_2018}, WebAssembly-Isolation mit geteiltem Zustand
+\autocite[S.~419]{shillaker_faasm_2020}, das Sandboxing von Funktionen in mandantenfähigen
+Serverless-Umgebungen \autocite[S.~25]{mainas_sandboxing_2024}, die Isolation der Anwendungen
+eines Agentensystems \autocite[S.~1]{wu_isolategpt_2025}, ein Sandbox-Dienst für Agenten
+\autocite[S.~1]{piao_agentbay_2025} und der Pool vorgehaltener Sandbox-Pods des
+Kubernetes-Projekts Agent Sandbox \autocite{kuo_running_2026}. Keine davon
+zieht ein Isolate je Ausführung, und keine misst gegen einen produktiven Ausgangszustand.
+Die folgende Oberfrage ist deshalb als
+Gestaltungsfrage im Sinne der \ac{DSR} formuliert \autocite[S.~664--665]{osterle_memorandum_2010}. Sie
 fragt nicht danach, welches der bekannten Modelle am besten abschneidet, sondern danach, wie
 ein Modell beschaffen sein muss, das die genannten Eigenschaften zugleich erfüllt.
 
@@ -37,8 +89,23 @@ ein Modell beschaffen sein muss, das die genannten Eigenschaften zugleich erfül
 \end{description}
 
 Bezugspunkt der Frage ist der gemessene Ausgangszustand der Fallstudie und kein generischer
-Vergleichswert. Die Oberfrage wird über fünf Unterfragen bearbeitet, die den vier Phasen des
-Forschungsprozesses nach \textcite{osterle_memorandum_2010} folgen.
+Vergleichswert.
+
+\subsection{Zielsetzung und Abgrenzung}
+\label{sec:einleitung:zielsetzung}
+
+Ziel der Arbeit ist ein lauffähiges Ausführungsmodell, das die Oberfrage für die Fallstudie
+beantwortet und gegen deren heutigen Betrieb gemessen ist. Der Ansatz dafür trennt zwei Grenzen, die heute zusammenfallen. Die Grenze zwischen Mandanten
+bleibt der Pod unter gVisor, wie im Ausgangszustand. Innerhalb des Pods erhält jede Ausführung ein
+eigenes V8-Isolate, das nach dem Lauf verworfen wird, sodass kein Zustand die nächste Ausführung
+erreicht. Die Engine ist über \texttt{deno\_core} eingebettet, und ein Skript erreicht Netz und
+Dateisystem nur über Bindings, die der Host beim Erzeugen des Isolates registriert. Die Startzeit
+nimmt ein Pool vorgehaltener Pods vom Anfragepfad, den eine Control Plane über das vorhandene
+Messaging-System der Plattform zuteilt. Damit der Bestand unverändert weiterläuft, bildet eine
+Kompatibilitätsschicht diejenigen Node-Schnittstellen nach, die die gespeicherten Skripte
+tatsächlich nutzen. Der Prototyp wird auf demselben Cluster gegen den heutigen Betrieb gemessen.
+
+Die Oberfrage wird dazu über fünf Unterfragen bearbeitet.
 
 \begin{description}
   \item[U1] \label{rq:u1} Welche Anforderungen an ein solches Ausführungsmodell folgen aus dem
@@ -70,13 +137,17 @@ Sicherheitseigenschaften nicht aus den Herstellerangaben ableitet, sondern über
 Prüffälle nachweist. U5 löst das Ergebnis von der Fallstudie und überführt es in
 Designprinzipien.
 
-Damit das Artefakt seine eigenen Kriterien verfehlen kann, werden die Zielwerte gemeinsam mit
-dem Kriterienkatalog in \autoref{sec:kriterienkatalog} festgelegt, also vor dem Entwurf.
-Ein dokumentiertes Verfehlen dieser Werte ist ein gültiges Ergebnis der Arbeit.
+
+
+Damit das Artefakt seine eigenen Kriterien verfehlen kann, legt \autoref{sec:kriterienkatalog}
+vor dem Entwurf fest, welche Messgrößen zählen und dass der Prototyp bei Kaltstart und warmer
+Latenz den heutigen Betrieb unterbieten muss. Der Ausgangszustand selbst wird erst in
+\autoref{sec:Evaluation} unter denselben Lastprofilen gemessen, die Vergleichswerte sind also vor
+dem Entwurf nicht bekannt. Ein dokumentiertes Verfehlen ist ein gültiges Ergebnis der Arbeit.
 
 Nicht als Forschungsfrage geführt wird der Vergleich der bekannten Isolationstechnologien
 untereinander. Ihre Isolations- und Startkosten sind in der Literatur beschrieben
-\autocite{agache_firecracker_2020, young_true_2019, shillaker_faasm_2020}. Diese Angaben gehen
+\autocites[S.~420]{agache_firecracker_2020}[S.~1]{young_true_2019}[S.~419]{shillaker_faasm_2020}. Diese Angaben gehen
 als Vorarbeit in die Vorauswahl in \autoref{sec:vorauswahl} ein und werden dort als
 solche gekennzeichnet. Die Vorauswahl fällt dabei enger aus, als der Stand der Technik
 zunächst nahelegt, weil der Ausgangszustand der Fallstudie mit gVisor bereits einen
@@ -87,6 +158,42 @@ Laufzeitumgebungen. Die Prüffälle aus U3 belegen das Verhalten des konstruiert
 den Stellen, die das Bedrohungsmodell benennt, sie ersetzen keine systematische
 Schwachstellensuche in den verwendeten Laufzeitumgebungen. Nicht betrachtet werden schließlich
 die Qualität und die Korrektheit des erzeugten Codes sowie Maßnahmen, die das Modell selbst
-gegen Beeinflussung über seine Eingaben härten \autocite{greshake_not_2023}. Gegenstand der
+gegen Beeinflussung über seine Eingaben härten \autocite[S.~79]{greshake_not_2023}. Gegenstand der
 Arbeit ist allein die Frage, wie die Ausführung dieses Codes sicher und schnell erfolgen kann,
 unabhängig davon, wie er zustande gekommen ist.
+
+\subsection{Methodisches Vorgehen}
+\label{sec:einleitung:methodik}
+
+Die fünf Unterfragen folgen den vier Phasen des Forschungsprozesses nach
+\textcite[S.~667--668]{osterle_memorandum_2010}, also Analyse, Entwurf, Evaluation und Diffusion.
+Das Memorandum gibt den Rahmen vor, weil seine Phasen den Aufbau dieser Arbeit unmittelbar
+abbilden. Die Analysephase erhebt die Problemstellung in der Praxis und formuliert daraus die
+Forschungsziele \autocite[S.~667]{osterle_memorandum_2010}, die Evaluation prüft das Artefakt
+gegen genau diese anfangs definierten Ziele \autocite[S.~668]{osterle_memorandum_2010}. Als
+Methoden nennt es für den Entwurf die Konstruktion von Prototypen und für die Evaluation das
+Laborexperiment und die Pilotierung eines Prototyps \autocite[S.~668]{osterle_memorandum_2010},
+also das Vorgehen dieser Arbeit. Nach der Einteilung von
+\textcite[S.~80--81]{venable_feds_2016} ist diese Evaluation summativ, weil sie das fertige
+Artefakt gegen die vorab festgelegten Kriterien beurteilt, und artifiziell, weil sie im
+Laborexperiment unter nachgespieltem Lastprofil misst und nicht im laufenden Betrieb. Das Laborexperiment zählt
+auch bei \textcite[S.~86]{hevner_design_2004} zu den experimentellen Evaluationsmethoden der
+gestaltungsorientierten Forschung. Das Prozessmodell von \textcite[S.~55--56]{peffers_design_2007}
+wäre ebenso anwendbar, denn auch dort werden die Ziele einer Lösung aus dem Problem abgeleitet und
+in der Evaluation mit den beobachteten Ergebnissen verglichen. Es trennt zusätzlich eine
+Demonstration von der Evaluation und erlaubt mehrere Einstiegspunkte in den Prozess. Für eine
+Arbeit, die beim Problem beginnt und das Artefakt im selben Messaufbau prüft, in dem der
+Ausgangszustand gemessen wird, bringt das keinen Unterschied.
+
+\subsection{Aufbau der Arbeit}
+\label{sec:einleitung:aufbau}
+
+Die Kapitel folgen den vier Phasen. \autoref{sec:grundlagen} erklärt die Begriffe, die die folgenden
+Kapitel voraussetzen. \autoref{sec:bedrohungsmodell} bildet die Analysephase und beantwortet U1:
+Aus dem heutigen Betriebskonzept, dem Angreifermodell und der Auswertung des Skriptbestands
+entsteht der Kriterienkatalog. \autoref{sec:Entwurf} ist der Entwurf und beantwortet U2, zuerst
+mit der Vorauswahl der Engine anhand der Muss-Kriterien, dann mit dem Aufbau des Ausführungsmodells
+und seiner Umsetzung im Prototyp. \autoref{sec:Evaluation} prüft das Artefakt gegen den Katalog
+und gegen den gemessenen Ausgangszustand, U3 über die Prüffälle, U4 über die Lastläufe.
+\autoref{sec:Diffusion} beantwortet U5, löst die Ergebnisse von der Fallstudie und schließt mit
+Fazit und Ausblick.

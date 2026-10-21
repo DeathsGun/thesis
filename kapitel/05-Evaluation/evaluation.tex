@@ -1,3 +1,789 @@
 \newpage
 \section{Evaluation} \label{sec:Evaluation}
 
+Dieses Kapitel prüft das Artefakt aus \autoref{sec:Entwurf} gegen den Kriterienkatalog aus
+\autoref{sec:kriterienkatalog}. U4 erhebt die Messgrößen S1 bis S4 und M5, U3 prüft M1 bis M4 über
+den Prüffallkatalog und die Architekturprüfung. Grundlage sind Lastläufe vom 6.\ bis zum 15.\ Oktober
+2026. Den Vergleich mit dem Ausgangszustand tragen allein die Läufe auf hyper-int-otc, die
+frühen Läufe dienten der Wahl der Entwurfsparameter. Die Läufe
+haben neben den Messwerten sechs Fehler in der Zustellung aufgedeckt, die \autoref{sec:zuverlaessigkeit}
+als eigenes Ergebnis festhält, weil sie unmittelbar aus einer Entwurfsentscheidung folgen.
+
+\subsection{Messaufbau und Vorgehen}
+\label{sec:messaufbau}
+
+Gemessen wird auf dem Kubernetes-Cluster hyper-int-otc der Integrationsstufe, dessen Größe
+\autoref{tab:cluster} nennt. Dort läuft neben dem Prototyp der Ausgangszustand aus
+\autoref{sec:systemkontext}, also je Mandant ein Knative-Service mit einem Node.js-Runner, sodass
+beide Modelle auf demselben Cluster verglichen werden können. Die Last stammt dagegen aus dem
+heutigen Produktivbetrieb, der auf AWS Lambda läuft und in dieser Arbeit nur als Quelle des
+Lastprofils dient.
+
+\begin{table}[H]
+  \caption{Der Cluster der Messungen}
+  \label{tab:cluster}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Knoten & 9 $\times$ s9.xlarge.4, zuletzt 8 \\
+    Allokierbar & rund 71 Kerne, 243\,GiB \\
+    NATS & 5 $\times$ NATS 2.14.0 \\
+    Gemessen & Prototyp und Ausgangszustand \\
+    gVisor & ja, Runtime-Klasse der Worker-Pods \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Der Prototyp lief in der Konfiguration aus \autoref{tab:parameter} mit einer Pool-Zielgröße von
+vierzig und einer Skalierungsschwelle von drei Vierteln. Beide Werte sind Ergebnis der ersten
+Läufe. Die Commit-Stände je Lauf sind im Messprotokoll festgehalten, weil fast jeder Lauf eine
+Änderung prüfte. Alle Läufe nutzen das Webhook-Profil mit synchroner Antwort. Das Agentenprofil
+wird nicht gemessen, weil es im Ausgangszustand nicht existiert und damit keinen Vergleichswert
+hat. Seine Bindings sind eine Teilmenge derer des Webhook-Profils, die Werte des Webhook-Profils
+sind für es deshalb ein Richtwert, keine Messung.
+
+Als Lastgenerator dient k6 \autocite{grafana_labs_k6_2026} auf einem Arbeitsplatzrechner, dessen
+Aufrufe über das öffentliche Internet und den Edge-Proxy der Plattform laufen, wie echte
+Webhook-Aufrufe. Die Aufrufe gehen an 188 echte Testmandanten der Integrationsstufe, deren
+Skripte jeder Lauf selbst anlegt und wieder löscht. Zwei Testskripte decken zwei Fragen ab. Das
+\emph{Kaltstart-Skript} verteilt \acp{VU} über eine Zahl von Mandanten. Der erste Aufruf je
+\ac{VU} und Mandant zählt als kalt, jeder weitere als warm. Das \emph{Lastprofil} spielt den
+Tagesverlauf des Produktivbetriebs nach: Aus den Aufrufprotokollen einer Woche wurden je Stunde
+Median und 95.\ Perzentil der Aufrufe je Minute, der Anteil von 650 Mandanten und ihre mittlere
+Laufzeit bestimmt, in der Spitze um 12 Uhr UTC rund 2.160 Aufrufe je Minute bei 89 bis 120
+gleichzeitig aktiven Mandanten. Das Skript staucht die Stunden 5 bis 15 UTC auf je drei Minuten,
+verteilt die Aufrufe nach den Anteilen auf die Testmandanten und lässt jedes Skript so lange auf
+einen Timer warten, wie die Laufzeit des Mandanten vorgibt, weil Laufzeit im Produktivbetrieb
+überwiegend Warten auf Ein- und Ausgabe ist. Im \emph{Wide-Modus} rufen zusätzlich 180 Mandanten
+je zwei Mal pro Minute auf, sodass alle zugleich aktiv bleiben.
+
+Für den Vergleich der Modelle wird nicht die Antwortzeit verwendet, sondern der
+\emph{Overhead}, die Antwortzeit abzüglich der vom Skript selbst angeforderten Laufzeit. Er umfasst
+Edge, Gateway, Auflösung des Skripts, Warten, Kaltstart, Worker und Netz, hängt aber nicht davon
+ab, was das Skript tut. \autoref{tab:messgroessen} ordnet die Messgrößen des Kriterienkatalogs
+den Läufen zu.
+
+\begin{table}[H]
+  \caption{Zuordnung der Messgrößen zu Skripten und Läufen}
+  \label{tab:messgroessen}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Messgröße & Quelle & Ausgangszustand \\
+    \hline
+    S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Läufe 00 bis 08 und
+      Einmalmodus auf hyper-int-otc & Einmalmodus auf hyper-int-otc, 15.\ Oktober \\
+    S2 warme Latenz & Overhead im Lastprofil, Läufe 28 und 30, Zerlegung über Traces & Lauf 18 \\
+    S3 Speicher & Containerstatistiken je Worker-Pod, Kaltstartmessung auf hyper-int-otc &
+      Kaltstartmessung auf hyper-int-otc, 15.\ Oktober \\
+    S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces & ebenso \\
+    Fehlerrate & fehlgeschlagene Aufrufe je Lauf, ohne clientseitige Netzfehler & Lauf 18 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Die Perzentile stammen aus den k6-Zusammenfassungen und sind exakt über alle Aufrufe eines Laufs
+berechnet. Zahlen zu Pods, Zuweisungen, Speicher und \ac{CPU} stammen aus Prometheus, die
+Zerlegung einzelner Aufrufe aus Tempo, und jeder fehlgeschlagene Aufruf trägt eine Trace-Kennung,
+über die sein Weg durch die Dienste nachvollzogen wurde. Fehler mit Status 0, also Verbindungs-
+und Lesefehler auf dem Weg zum Edge-Proxy, haben die Plattform nie erreicht und werden ausgewiesen,
+aber nicht als Fehler der Plattform gezählt.
+
+Vier Einschränkungen gelten für alle Zahlen. Der Ausgangszustand lief mit dem alten Skriptdienst und
+dem Node.js-Runner, der Prototyp mit dem neuen Skriptdienst und dem Rust-Executor, sodass der
+Vergleich zwei Modelle samt ihrer Begleitdienste misst. Die Last kam von einem einzelnen Rechner über das Internet, weshalb
+clientseitige Netzfehler in den meisten Läufen vorkommen. Gleiche Konfigurationen der Lastläufe wurden nicht
+wiederholt, die Läufe ändern jeweils genau eine Sache und bilden eine Reihe, keine Replikate. Damit fehlt, was \textcite[Regel~5]{hoefler_scientific_2015}
+für nichtdeterministische Messungen verlangen, nämlich Konfidenzintervalle aus wiederholten Läufen.
+Die Perzentile je Lauf folgen dagegen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
+berichten \autocites[Regel~8]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}. Die
+warme Latenz streut zwischen gleichen Läufen um 10 bis 40\,ms.
+Die Punktwerte der Soll-Kriterien aus \autoref{sec:kriterienkatalog} werden relativ zum
+Ausgangszustand vergeben. Maßgeblich ist der Faktor, um den der Prototyp besser ist: null Punkte
+bei einem schlechteren Wert, drei bei gleichem Wert, fünf ab dem Faktor zwei, dazwischen linear
+und auf ganze Punkte gerundet. S6 und S7 erhalten je angefangene zwanzig Prozent der Mandanten, die
+unverändert laufen beziehungsweise keine Anpassung brauchen, einen Punkt.
+
+\subsection{Kaltstartlatenz (S1)}
+\label{sec:kaltstart}
+
+\autoref{tab:kaltstart-verlauf} zeigt die Kaltstartläufe in der Reihenfolge, in der der Prototyp
+verändert wurde. Die ersten beiden Zeilen stammen vom 6.\ Oktober mit zehn Mandanten, die übrigen
+aus der ersten Phase vom 8.\ und 9.\ Oktober mit 33 Mandanten und vierzig \acp{VU}, sodass sieben
+Mandanten zwei Aufrufer tragen.
+
+\begin{table}[H]
+  \caption{Kaltstartläufe mit dem Kaltstart-Skript, k6, Stand des Prototyps je Lauf}
+  \label{tab:kaltstart-verlauf}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r@{}}
+    \hline
+    Lauf & Stand des Prototyps & Kalt Med. & Kalt P95 & Kalt Max & Warm Med. \\
+    \hline
+    06.10. & Pool 3, Wartezeit 5\,s, Sidecar. 10 Mandanten, 10 \acsp{VU} & 7,44\,s & 8,84\,s & 9,22\,s & 96\,ms \\
+    06.10. & ohne Sidecar, Wartezeit 20\,s, Pool 10. 10 Mandanten, 10 \acsp{VU} & 192\,ms & 215\,ms & 216\,ms & 102\,ms \\
+    00 & 10 Mandanten, 40 \acsp{VU}, 5 Aufrufe verloren & 594\,ms & 55,0\,s & 55,0\,s & 142\,ms \\
+    01 & 33 Mandanten, 40 \acsp{VU}, Pool 10 & 8,12\,s & 15,5\,s & 21,3\,s & 117\,ms \\
+    02 & Pool 40 & 635\,ms & 1,07\,s & 1,22\,s & 130\,ms \\
+    03 & Skalierungsschwelle 0,25 & 747\,ms & 1,12\,s & 1,14\,s & 128\,ms \\
+    04 & Skalierungsschwelle 0,75 & 613\,ms & 964\,ms & 1,11\,s & 141\,ms \\
+    05 & Start der \acsp{VU} über 10\,s verteilt & 350\,ms & 479\,ms & 801\,ms & 124\,ms \\
+    06 & ruhige Mandanten, 15\,min, 12 Aufrufe verloren & 189\,ms & 367\,ms & 55,2\,s & -- \\
+    07 & nach Neuzuweisung toter Worker & 201\,ms & 382\,ms & 2,41\,s & -- \\
+    08 & Slot bei der Bestätigung frei & 396\,ms & 482\,ms & 677\,ms & 178\,ms \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Der erste Lauf am 6.\ Oktober macht sichtbar, worin der Kaltstart des Prototyps besteht. Sieben
+von zehn Mandanten warteten auf einen neuen Pod. Im Trace eines dieser Mandanten entfallen von
+8,2 Sekunden 7,9 auf das Warten in der Zuteilung und 0,1 auf Bundle-Abruf, Lauf und Antwort, die
+Ausführung selbst dauerte 26\,ms. Die Kaltstartlatenz ist damit eine Frage der Instanzverwaltung,
+nicht der Engine. Der Sidecar des Service Mesh kostete je Pod zwei bis drei Sekunden und wurde
+abgeschaltet. Mit 33 Mandanten und Pool 10 warteten 23 Mandanten 7 bis 21 Sekunden auf Pods, die
+die Control Plane nacheinander anlegt, gebremst vom Rate Limiter ihres Kubernetes-Clients. Erst
+Pool 40 nahm den Pod-Start vom Anfragepfad, alle vierzig Kaltstarts blieben unter zwei Sekunden.
+Die Skalierungsschwelle entschied danach über die Zahl der Pods: Bei einem Viertel der Slots erhielt jeder Mandant
+zusätzliche Pods, 41 Erweiterungen und 114 Pods, weil die Aufrufe eines einzelnen \ac{VU} einander
+während der Bestätigung überlappen und so zwei belegte Slots zählen. Bei drei Vierteln erhielten
+nur Mandanten mit zwei \acp{VU} einen zweiten Pod, sechs Erweiterungen. Lauf 05 zeigte danach 84 Zuweisungen
+für 33 Mandanten, weil der Worker einen Slot erst nach dem Hochladen des Logs freigab, das auf
+diesem Cluster ein bis fünf Sekunden dauert. Seit der Slot bei der Bestätigung frei wird, sind es
+33 Zuweisungen, und kein Bundle-Abruf dauerte mehr länger als 500\,ms.
+
+Für S1a, den Erstkontakt bei gefülltem Pool, ist der Wert damit keine Konstante, sondern hängt
+von der Last während des Schubs ab: zehn Mandanten mit je einem Aufrufer 192\,ms im Median und
+215\,ms im 95.\ Perzentil, 33 Mandanten mit vierzig Aufrufern ohne Pause 396\,ms und 482\,ms.
+Vor der Freigabe des Slots bei der Bestätigung lagen dieselben vierzig Aufrufer bei 613 bis
+635\,ms im Median und rund einer Sekunde im 95.\ Perzentil, weil die Erstkontakte mit
+überzähligen Erweiterungen um Pods und Zuweisungen konkurrierten. Wo die Zeit bei gleichzeitigen
+Erstkontakten anfällt, ist nicht zerlegt. Die Zuweisungen laufen über einen gemeinsamen
+Watcher-Consumer, und jeder neue Mandanten-Consumer wartet auf seinen Leader. Als Wert für den
+Kriterienkatalog gilt das 95.\ Perzentil mit 215\,ms bei einem Aufrufer je Mandant und 482\,ms
+bei vierzig Aufrufern. S1b, der Erstkontakt bei leerem Pool, kostet nach
+\autoref{tab:podstart} 3,3 bis 3,6 Sekunden je Pod, wenn das Image auf dem Knoten liegt, und 5
+bis 8 Sekunden, wenn es erst gezogen wird. Übersteigt ein Schub die Zielgröße, kommt das Anlegen
+in Serie hinzu.
+
+\begin{table}[H]
+  \caption{Zerlegung eines Pod-Starts bis zur ersten Ausführung, 6.\ Oktober, Image auf dem Knoten}
+  \label{tab:podstart}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r@{}}
+    \hline
+    Schritt & Dauer \\
+    \hline
+    Pod anlegen und Scheduling & 0,2\,s \\
+    Container-Start & 0,6\,s \\
+    Prozessstart bis zum ersten Verbindungsversuch & 0,7\,s \\
+    Verbindung zu NATS vom Cluster-Netz blockiert & 1,6\,s \\
+    Anmeldung, Zuweisung, erste Ausführung & 0,3\,s \\
+    Summe, fünf von sieben Pods & 3,3 bis 3,6\,s \\
+    Ausreißer: Image-Pull auf einem Knoten ohne Worker & 7,8\,s \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Der größte Posten liegt außerhalb des Entwurfs. Die Verbindung zu NATS braucht in den Logs der
+neuen Pods 1,1 bis 2,2 Sekunden für den TCP-Verbindungsaufbau, was den Wiederholungen eines
+verlorenen SYN im Sekundentakt entspricht. Mit Verbindungsversuchen von 500\,ms scheitern drei bis
+fünf Versuche, bevor der nächste sofort gelingt. Das Cluster-Netz ist für einen neuen Pod also
+anderthalb bis zweieinhalb Sekunden geschlossen, vermutlich bis seine Netzwerkrichtlinie greift, und
+nur die Plattform kann das ändern.
+
+Der Vergleich mit dem Ausgangszustand wurde am 15.\ Oktober auf hyper-int-otc gemessen, wo beide
+Modelle unter gVisor laufen, nacheinander in derselben Stunde und mit denselben Mandanten. Weil
+Knative einen Runner minutenlang warm hält und der Prototyp einen Worker eine Minute, sendet das
+Kaltstart-Skript dafür im Einmalmodus genau einen Aufruf je Mandant an Mandanten, die im Lauf
+noch niemand gerufen hat. Ein Aufwärmlauf über acht Mandanten zog vorher die Images, und jeder
+Lauf nutzt einen eigenen Block von neunzig Mandanten. Im \emph{verteilten} Lauf kommt je Sekunde
+ein neuer Mandant hinzu, was den Startmechanismus je Mandant misst. Im \emph{Schub} rufen alle
+neunzig im selben Moment, wie Skripte zur vollen Stunde. Der Prototyp lief zweimal, mit der
+Pool-Zielgröße vierzig des Betriebs und mit Pool null, also ohne vorgehaltene Pods, damit der
+nackte Startmechanismus beider Modelle vergleichbar wird. \autoref{tab:kaltstart-vergleich} zeigt
+das Ergebnis.
+
+\begin{table}[H]
+  \caption{Kaltstart je Mandant auf hyper-int-otc, k6 im Einmalmodus, je neunzig Mandanten}
+  \label{tab:kaltstart-vergleich}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r r@{}}
+    \hline
+     & \multicolumn{3}{c}{verteilt, einer je Sekunde} & \multicolumn{3}{c@{}}{Schub, alle zugleich} \\
+     & Ausgang & Pool 40 & Pool 0 & Ausgang & Pool 40 & Pool 0 \\
+    \hline
+    Median & 2,54\,s & 375\,ms & 2,03\,s & 9,06\,s & 3,42\,s & 9,85\,s \\
+    P90 & 3,15\,s & 499\,ms & 6,24\,s & 18,9\,s & 9,71\,s & 17,7\,s \\
+    P95 & 3,33\,s & 1,85\,s & 8,54\,s & 19,5\,s & 10,3\,s & 18,1\,s \\
+    P99 & 4,14\,s & 2,40\,s & 11,0\,s & 21,2\,s & 11,1\,s & 18,8\,s \\
+    Maximum & 6,07\,s & 2,41\,s & 12,0\,s & 22,0\,s & 11,4\,s & 19,2\,s \\
+    unter 2\,s & 10 von 91 & 86 von 90 & 42 von 90 & 0 von 90 & 40 von 90 & 0 von 90 \\
+    fehlgeschlagen & 1 & 0 & 0 & 15 & 0 & 0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{kaltstart_vergleich.pdf}
+  \caption{Kaltstart je Mandant auf hyper-int-otc nach Perzentilen, logarithmische Achse, Werte aus
+    \autoref{tab:kaltstart-vergleich}. Die gestrichelte Linie markiert zwei Sekunden}
+  \label{fig:kaltstart-vergleich}
+\end{figure}
+
+\autoref{fig:kaltstart-vergleich} zeigt dieselben Perzentile als Verlauf. Im verteilten Lauf
+liegt der Prototyp mit Pool im Median bei 375\,ms gegen 2,54 Sekunden, ein
+Faktor von knapp sieben, und bedient 86 statt 10 von 90 Mandanten innerhalb von zwei Sekunden. Der kalte Pfad
+des Prototyps bindet nur den Consumer des Mandanten und lädt das Bundle, während Knative je
+Mandant einen Runner-Pod startet. Weil beide dieselbe Sandbox nutzen, erklärt deren Start den
+Unterschied nicht. Vier Aufrufe des Prototyps brauchten 1,85 bis 2,41 Sekunden und sind
+vermutlich Mandanten, die den Pool kurz leer vorfanden, was in den Logs der Control Plane noch
+nicht geprüft ist. Im Schub bekamen genau vierzig Mandanten einen Worker innerhalb von zwei
+Sekunden, die Zielgröße des Pools. Die übrigen fünfzig warteten drei bis elf Sekunden auf neue
+Pods. In diesem Teil mussten beide Modelle Pods starten, und der Prototyp blieb mit höchstens 11,4
+gegen 22,0 Sekunden schneller und ohne Fehler. Alle 17 Fehler des Ausgangszustands, den Aufwärmlauf eingeschlossen, sind 502 mit
+\enquote{no route to host} zum Queue-Proxy eines Runner-Pods nach 5,6 bis 18,7 Sekunden, mit fast
+fortlaufenden Zieladressen im Schub, was darauf hindeutet, dass Knative frische Pods anspricht,
+bevor ihr Netz erreichbar ist. Belegt ist das nicht.
+
+Die Läufe mit Pool null ordnen den Vorsprung ein. Ohne vorgehaltene Pods startet der Prototyp
+etwa so schnell wie der Ausgangszustand: im verteilten Lauf 2,03 gegen 2,54 Sekunden im Median,
+im Schub 9,85 gegen 9,06 Sekunden. Der nackte Pod-Start unter gVisor auf denselben Knoten kostet
+in beiden Modellen also etwa dasselbe, und der Faktor sieben im verteilten Lauf wie der Faktor 2,6
+im Schub stammen aus dem Pool, nicht aus einem schnelleren Startmechanismus. Was ohne Pool bleibt,
+ist die Zuverlässigkeit: null von 188 Aufrufen scheiterten, gegen 17 von 190 beim Ausgangszustand.
+Dass dennoch 42 verteilte Erstkontakte unter zwei Sekunden blieben und der Tail mit 8,5 Sekunden
+im 95.\ Perzentil länger ist als bei Knative, hat nach den Logs der Control Plane einen gemeinsamen
+Grund: Ein Pod braucht rund 2,5 Sekunden von der Anlage bis zur Anmeldung, die Mandanten kommen
+im Sekundentakt, und ein wartender Mandant nimmt den nächsten Pod, der sich anmeldet, nicht den
+für ihn angelegten. Wer kurz vor einer Anmeldung eintrifft, wird in unter einer Sekunde bedient,
+der frühere Mandant wartet auf den nächsten Pod und verliert im ungünstigen Fall mehrmals
+hintereinander, bis zu zwölf Sekunden. Die Gesamtarbeit ist dieselbe, nur ihre Reihenfolge ist
+offen. Eine Vergabe neuer Pods an den am längsten wartenden Mandanten würde den Tail kürzen, nicht
+den Mittelwert, und ist in \autoref{sec:betriebsplanung} als offene Maßnahme vermerkt. Für die
+Einordnung bleibt: Der Pool ist eine vorgehaltene Ressource von vierzig Pods, die Knative nicht
+hat, und jede Konfiguration lief nur einmal.
+
+\subsection{Overhead und warme Latenz (S2)}
+\label{sec:warm}
+
+\autoref{tab:overhead} stellt die Läufe mit dem Lastprofil gegenüber. Weil das Profil die
+Mandanten überwiegend aktiv hält, nähert der Overhead die warme Latenz an und enthält einen
+kleinen Anteil Erstkontakte.
+
+\begin{table}[H]
+  \caption{Overhead im Lastprofil auf hyper-int-otc in Millisekunden, k6, je Lauf rund 33 Minuten}
+  \label{tab:overhead}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
+    \hline
+    Lauf & Modell, Modus & Aufrufe & Fehler & P50 & P90 & P95 & P99 & Max \\
+    \hline
+    18 & Ausgangszustand, Profil & 56.976 & 408 & 259 & 1.190 & 2.310 & 4.570 & 50.530 \\
+    20 & Prototyp, Wide & 68.881 & 1$^{a}$ & 131 & 257 & 306 & 373 & 3.960 \\
+    28 & Prototyp, Profil & 57.001 & 0 & 127 & 164 & 180 & 268 & 15.460 \\
+    30 & Prototyp, Profil, mit Reconnect & 57.001 & 8$^{b}$ & 127 & 163 & 178 & 276 & 5.580 \\
+    \hline
+    \multicolumn{9}{@{}p{\textwidth}@{}}{\footnotesize $^{a}$ clientseitig, Status 0. $^{b}$ 7
+      clientseitig, 1 Plattform.} \\
+  \end{tabularx}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{overhead_lastprofil.pdf}
+  \caption{Overhead im Lastprofil nach Perzentilen für die Läufe 18 und 28, logarithmische
+    Achse, Werte aus \autoref{tab:overhead}}
+  \label{fig:overhead}
+\end{figure}
+
+Auf demselben Cluster und unter demselben Profil liegt der Prototyp nach \autoref{fig:overhead}
+im Median bei 127\,ms gegen 259\,ms des Ausgangszustands, im 95.\ Perzentil bei 180\,ms gegen 2,31 Sekunden und im 99.\ bei
+268\,ms gegen 4,57 Sekunden. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter
+einer Knative-Route und einem Isolate in einem laufenden Worker, trägt nach
+\autoref{sec:messaufbau} aber auch die verschiedenen Begleitdienste. Der Unterschied im Tail
+entsteht beim Hochfahren von null. Die 408 Fehler des Ausgangszustands verteilen
+sich auf drei Gruppen, von denen nur eine dem Modell zuzurechnen ist. Den größten Teil verursachte
+ein Neustart des einzigen Ingress-Pods von Knative bei 790 von 800\,MiB, ein Vorfall der
+Infrastruktur. Eine zweite Gruppe sind Aufrufe, die hinter dem Hochfahren eines Runners von null
+warteten und nach 54 Sekunden mit einem Timeout endeten, während 54 Pods nicht einplanbar waren,
+weil die \ac{CPU}-Anforderungen bei 112 Prozent des Allokierbaren lagen. Dieser Teil folgt aus
+einem Prozess je Mandant und ist auf diesem Cluster zugleich eine Frage der Kapazität, seine
+Ursache ist im Messprotokoll nur teilweise belegt. Die
+dritte Gruppe sind Aufrufe, die Knative an bereits beendete Runner-Pods leitete. Der Prototyp
+hatte in den Läufen 28 und 30 keinen beziehungsweise einen Fehler der Plattform. Die übrigen
+Fehler sind clientseitige Verbindungsabbrüche und 504 des Edge-Proxys, hinter denen das Gateway
+nachweislich 200 geantwortet hatte, ein Verlust zwischen Edge und Gateway, der beide Modelle
+gleichermaßen trifft.
+
+Der Wide-Lauf auf
+hyper-int-otc lief noch mit dem Executor vor den Korrekturen aus \autoref{sec:zuverlaessigkeit}
+und ist mit Lauf 28 nicht vergleichbar.
+
+Wo die Zeit innerhalb des Prototyps entsteht, zeigt die Zerlegung von je vierzig Traces vom 6.\
+Oktober in \autoref{tab:anfragepfad}, einmal bei leichter Last mit zehn Aufrufern und einmal mit
+vierzig.
+
+\begin{table}[H]
+  \caption{Hops einer warmen Anfrage aus Tempo, P50 / P90 in Millisekunden, 6.\ Oktober}
+  \label{tab:anfragepfad}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
+    \hline
+    Hop & 10 \acsp{VU} & 40 \acsp{VU} \\
+    \hline
+    Warten, bis der Skriptdienst das Resolve beginnt & 5,5 / 8,4 & 42,0 / 61,9 \\
+    Resolve im Skriptdienst & 11,4 / 18,1 & 16,4 / 26,6 \\
+    Resolve-Antwort zum Gateway & 5,3 / 7,4 & 13,4 / 25,0 \\
+    Gateway zum Executor & 5,1 / 8,3 & 7,1 / 14,2 \\
+    Ausführung im Worker & 16,6 / 33,3 & 17,2 / 27,2 \\
+    Antwort des Executors zum Gateway & 5,8 / 7,7 & 11,4 / 16,0 \\
+    Gateway gesamt & 56,5 / 72,5 & 119,7 / 141,0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Der Worker trägt in beiden Lastfällen rund 17\,ms. Die Verdopplung der Gesamtzeit entsteht in den
+Hops über den Stream und vor allem im Warten darauf, dass der Skriptdienst das Resolve aufnimmt.
+Dessen Consumer bestätigte jede Nachricht synchron und band damit je Slot rund 60\,ms, was
+außerhalb des Ausführungsmodells liegt. Die Differenz zwischen Gateway und k6 von 40 bis 65\,ms ist
+der Weg vom Client über Internet und Edge-Proxy. Innerhalb des Workers liegt die Ausführung nach
+dem Histogramm des Executors im Median bei 19,3\,ms, im 90.\ Perzentil bei 39,2\,ms und im 99.\
+bei 88,4\,ms. Die Erzeugung des Isolates aus dem Snapshot allein braucht im Median 15,6\,ms und im
+90.\ Perzentil 24,0\,ms. Bundle-Cache und Code-Cache melden unter Last nahezu nur Treffer, sodass
+die verbleibenden vier Millisekunden auf das Auswerten des Bundles, den Handler und die Antwort
+entfallen. Die Erzeugung des Isolates macht damit rund vier Fünftel der Ausführung aus und ist der
+Preis der Isolate-Grenze je Ausführung aus \autoref{sec:ebenen}. Das in
+\autoref{sec:betriebsplanung} genannte vorab erzeugte Isolate würde ihn vom Anfragepfad nehmen,
+ohne M2 aufzugeben.
+
+\subsection{Durchsatz und Ressourcenbedarf (S4, S3)}
+\label{sec:durchsatz}
+
+Für S4 stieg die Ankunftsrate in Stufen von je 60 Sekunden um 100 Aufrufe je Sekunde, nach einem
+Warm-up von 120 Sekunden mit 50 Aufrufen je Sekunde und über 100 Mandanten mit je einem Skript. Als
+Wert gilt die höchste Stufe mit einer Fehlerrate unter einem Prozent und einem 95.\ Perzentil unter
+zwei Sekunden. k6 lief als Job im Namespace des jeweiligen Modells, ohne Laptop und Internet im Pfad.
+Beide Modelle liefen ohne Signatur- und IdP-Prüfung über je eine Kopie des Einstiegsdienstes, die nur
+für diesen Test bestand. Der Ausgangszustand lief mit vier festen Replikas des Skriptdienstes, weil
+sich der Autoscaler der Originalkonfiguration nicht anlegen ließ, was Knative leicht begünstigt.
+
+\begin{table}[H]
+  \caption{Durchsatz (S4) auf hyper-int-otc, höchste Stufe mit Fehlerrate unter einem Prozent und
+    P95 unter zwei Sekunden}
+  \label{tab:s4}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Konfiguration & Stufe & Nächste Stufe \\
+    \hline
+    Ausgangszustand & 100/s & 200/s: 1,28\,\% Fehler (HTTP 500) \\
+    Prototyp, Gateway wie ausgerollt (200\,m, 128\,MiB) & 200 bis 300/s & 400/s: Gateway beendet (OOMKilled),
+      bis 50\,\% Fehler \\
+    Prototyp, Gateway 1 Kern und 512\,MiB, drei Replikas für den Resolve & 500/s & 600/s: P95 4,4 bis
+      10\,s \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Der Prototyp hält damit 500 Aufrufe je Sekunde gegen 100 im Ausgangszustand. Die Grenze des
+Prototyps liegt nicht in der Ausführung. Die Worker liefen mit den Standardressourcen und
+verbrauchten zusammen 10 bis 15 Kerne. Begrenzt hat die Architektur der bestehenden App: Mit dem
+ausgerollten Gateway und einer Replika für den Resolve lag die Grenze bei 200 bis 300 Aufrufen, mit
+größerem Gateway und drei Replikas, wie der Skriptdienst sie im Betrieb erhält, bei 500. Darüber
+wartet der Resolve im Stream auf einen freien Slot, der Gateway-Span \enquote{resolve script}
+dauert bei 600 Aufrufen je Sekunde im Mittel 3,1 Sekunden, während die Bearbeitung im Skriptdienst
+42 bis 85\,ms braucht. Die Datenbank des Skriptdienstes liegt dabei bei 81 bis 89 Prozent
+\ac{CPU} und 92 Prozent der Verbindungen. Im Ausgangszustand, der schon mit mehr Ressourcen je
+Ausführung lief, begrenzt dagegen die Ausführung: Ab 400 Aufrufen je Sekunde starten zusätzliche
+Runner, bis über 300 Pods, und die Fehler ab 200 Aufrufen ließen sich nicht mehr zuordnen, weil
+die Logs des Zeitfensters rotiert waren. Die Stufen sind 100 Aufrufe breit, der Wert ist eine untere
+Schranke, und je Konfiguration gab es ein bis drei Läufe.
+
+Für S3 belegte der Prototyp auf hyper-int-otc mit bis zu 259 Pods im Mittel 2,2 Kerne, in der Spitze 3,0, bei 24 Prozent
+\ac{CPU}-Auslastung der Knoten. Angefordert waren dafür 11 Kerne und 16 bis 19\,GiB, was den
+Abstand zwischen Request und Bedarf zeigt. Ein freier Pod des Pools hält dort rund fünf Megabyte, ein
+zugewiesener Mandant im Ruhezustand bleibt auf seinem Niveau, bis sich sein Pod nach einer Minute
+beendet. S3 wird je Pod erhoben, weil der Ausgangszustand je Ausführung ohnehin einen ganzen Pod
+belegt und ein Worker-Pod mehrere Ausführungen zugleich trägt.
+
+Den Vergleich mit dem Ausgangszustand liefert die Kaltstartmessung auf hyper-int-otc, deren
+Fenster je Konfiguration die drei Läufe und das Herunterfahren umfasst. Dort laufen beide Modelle
+unter gVisor, und cAdvisor erfasst nur die Pod-Ebene samt dem Anteil der Sandbox, sodass die Werte
+in \autoref{tab:ressourcen-vergleich} untereinander vergleichbar sind.
+
+\begin{table}[H]
+  \caption{Ressourcen auf hyper-int-otc während der Kaltstartmessung, Pod-Ebene unter gVisor}
+  \label{tab:ressourcen-vergleich}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r@{}}
+    \hline
+     & Ausgang & Pool 40 & Pool 0 \\
+    \hline
+    Neue Runtime-Pods im Fenster & 191 & 188 & 188 \\
+    Speicher-Spitze je Pod, Median / P90 / Max, MiB & 89,7 / 92,6 / 104 & 45,8 / 48,8 / 53 & 45,8 / 48,2 / 52 \\
+    \acs{CPU} je Pod über die Lebensdauer, Kerne & 0,017 & 0,020 & 0,022 \\
+    Lebensdauer eines neuen Pods, Median & 78\,s & 190\,s & 88\,s \\
+    Requests \acs{CPU} / Speicher & 10\,m + 25\,m / 128\,Mi & 10\,m / 32\,Mi & 10\,m / 32\,Mi \\
+    Limits \acs{CPU} / Speicher & 100\,m / 512\,Mi & -- / 512\,Mi & -- / 512\,Mi \\
+    Runtime-Pods, Spitze & 162 & 216 & 185 \\
+    Runtime-Speicher, Spitze & 13,7\,GiB & 9,7\,GiB & 8,2\,GiB \\
+    Runtime-Speicher vor dem Test & rund 0 & 1,9\,GiB & 0,3\,GiB \\
+    Steuerung und Routing, Pods & 7 & 2 bis 3 & 2 bis 3 \\
+    Steuerung und Routing, Speicher & 1,35 bis 1,38\,GiB & 113 bis 167\,MiB & 116 bis 167\,MiB \\
+    Steuerung und Routing, \acs{CPU} & bis 0,14 Kerne & bis 0,05 Kerne & bis 0,04 Kerne \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Ein Runner-Pod des Ausgangszustands belegt mit 90\,MiB im Median etwa doppelt so viel Speicher wie
+ein Worker-Pod mit 46\,MiB, auf derselben Sandbox. Der Runner trägt zwei Container je Mandant, den
+Node.js-Prozess und den Queue-Proxy von Knative, der Worker einen Rust-Prozess. Die \ac{CPU}
+unterscheidet sich kaum, beide Pods sind die meiste Zeit untätig. Für den Mandanten im Ruhezustand
+gilt deshalb 90 gegen 46\,MiB, bis das jeweilige Modell den Pod abbaut, Knative nach Minuten, der
+Prototyp nach einer Minute. Die Steuerungsschicht fällt stärker auseinander: Knative Serving mit
+Kourier hält rund 1,4\,GiB in sieben Pods, Control Plane und Gateway des Prototyps 113 bis
+167\,MiB, also rund ein Neuntel. Der Pool kostet dauerhaft rund 1,9\,GiB und 0,75 Kerne, etwa so
+viel wie Knative Serving selbst, und kauft damit die Kaltstarts aus \autoref{sec:kaltstart}. Ohne
+Pool hat der Prototyp mit 8,2 gegen 13,7\,GiB die niedrigste Spitze. Drei Vorbehalte gehören dazu.
+cAdvisor wird nur etwa alle 70 Sekunden abgefragt, sodass kurze Spitzen fehlen und die \ac{CPU} aus
+dem kumulierten Zähler je Pod über die Lebensdauer gemittelt ist. NATS mit 0,21 bis 0,25 Kernen ist
+dem Prototyp nicht zugerechnet, weil die fünf Server der Plattform gehören und auch andere
+Consumer bedienen. Und das \ac{CPU}-Limit des Runners von 100\,m und das fehlende des Workers
+wurden in keinem Lauf erreicht.
+
+\subsection{Zuverlässigkeit der Zustellung}
+\label{sec:zuverlaessigkeit}
+
+\autoref{sec:zuteilung} legt fest, dass jede Nachricht höchstens einmal zugestellt wird, weil eine
+Skriptausführung nicht idempotent ist. Die Läufe zeigen die Kehrseite dieser Entscheidung: Eine
+Nachricht, die ein Worker entgegennimmt und nicht behandelt, ist verloren, und der Aufrufer wartet
+bis zum Timeout. \autoref{tab:zustellung} fasst die Fälle zusammen, in denen Aufrufe verloren gingen oder erst
+nach dem Timeout des Aufrufers liefen. Jeder wurde über die Trace-Kennung des fehlgeschlagenen
+Aufrufs bis zur Ursache verfolgt. Die Korrekturen am Worker sind durch Tests gegen einen lokalen
+NATS-Cluster mit fünf Servern festgehalten. Für die drei Tests zum letzten Fall ist belegt, dass
+sie mit dem alten Verhalten scheitern, das Consumer-Limit hat keinen Test.
+
+\begin{table}[H]
+  \caption{Fehlgeschlagene oder verspätete Aufrufe, ihre Ursache und die Korrektur}
+  \label{tab:zustellung}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Lauf & Befund und Ursache & Korrektur \\
+    \hline
+    00 & 5 Aufrufe im Timeout. Ein Pull an einen frisch angelegten Consumer mit drei Repliken
+      ging verloren, bevor dieser einen Leader hatte. & Nach dem Anlegen bis zu 2\,s auf den Leader
+      warten, einen Pull ohne Heartbeat neu aufbauen. \\
+    06 & 12 Aufrufe im Timeout, ausgeführt erst 133 bis 173\,s später mit dem nächsten Worker.
+      Der Worker hatte sich 0,01 bis 1,94\,s vor dem Auftrag beendet. Die Control Plane sah den
+      Mandanten noch als zugewiesen und bestätigte den Auftrag, ohne dass jemand den Consumer las. & Nach dem Abräumen eines toten Workers Mandanten mit wartenden
+      Aufträgen sofort neu zuweisen, auf hyper-int-otc zusätzlich mit Wiederholung nach 1 bis
+      16\,s, weil die erste Neuzuweisung einmal scheiterte. \\
+    19 & 504 ab der ersten Minute auf hyper-int-otc. Das NATS-Konto erlaubte 100 Consumer je
+      Stream, ab dem 97.\ aktiven Mandanten bekam keiner einen Worker. & Limit auf 1.000
+      angehoben, Lauf aus dem Vergleich ausgeschlossen. \\
+    22--29 & 50 bis 109 Zuweisungen je Lauf scheitern, weil Antworten der JetStream-\acs{API} auf
+      einzelnen langlebigen Verbindungen ausbleiben: In 276 von 276 Fällen war die Verbindung
+      verbunden, ein PING wurde in höchstens 3\,ms beantwortet, und in den zwei Sekunden kam kein
+      Byte an, während frische Verbindungen aus einem Prüf-Pod dieselben Consumer ohne einen
+      einzigen Fehler lasen. Serverseitige Ursache nicht belegt, an die Plattform gemeldet. &
+      Bei genau diesem Muster vor dem nächsten Versuch neu verbinden. Lauf 30: keine
+      gescheiterte Zuweisung mehr, 99.\ Perzentil der Zuweisung 2,1 statt 6,0\,s, und 39 der 62
+      Reconnects landeten auf demselben Server. \\
+    27 & 81 Aufrufe im Timeout nach einem Umbau, der den Consumer direkt zog: Bei fehlendem
+      Heartbeat verwarf der Code den Pull und legte den Consumer an, der schon bestand. Der Server
+      stellte die wartende Nachricht in den verworfenen Pull zu. & Umbau zurückgenommen. \\
+    30 & 1 Aufruf im Timeout. Der Worker hielt einen dauerhaften Pull offen, die Nachricht wurde
+      in ihn zugestellt, während der Prozess sich wegen Inaktivität beendete. & Ein Pull je
+      Nachricht, Beenden und Drain nur zwischen zwei Pulls, noch ohne Lastlauf. \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Drei der sechs Fälle haben dieselbe Form: Ein Pull, in den der Server noch zustellen kann, wird
+vom Worker aufgegeben, durch Prozessende, durch einen verworfenen Pull oder durch einen Pull ohne
+Leader. Unter höchstens einmaliger Zustellung ruht die Korrektheit damit vollständig auf der
+Disziplin des Workers, eine zugestellte Nachricht nie aufzugeben. Die Festlegung in
+\autoref{sec:zuteilung}, je Nachricht genau einen Pull zu ziehen und sich nur zwischen zwei Pulls
+zu beenden, ist das Ergebnis dieser Läufe. Dabei fand sich auch ein Fehler der verwendeten
+NATS-Bibliothek, deren einmaliger Batch-Pull nach dem ersten Heartbeat nicht mehr geweckt wurde,
+sodass eine später eintreffende Nachricht erst mit der Frist des Pulls verworfen wurde. Der
+Heartbeat wurde abgeschaltet. Zwei Fälle liegen außerhalb des Entwurfs, das Consumer-Limit des
+Kontos und die ausbleibenden Antworten auf langlebigen Verbindungen, deren Ursache offen ist und
+für die der Reconnect ein Workaround bleibt. Der verbleibende Fall zeigt eine zweite Lücke: In
+den Läufen 06 und 21 liefen Skripte 111 bis 173 Sekunden nach dem Aufruf, als der Aufrufer längst
+aufgegeben hatte, und das ist der Fall, für den \autoref{sec:betriebsplanung} eine Ablauffrist
+auf synchronen Aufträgen als offene Maßnahme nennt. Damit ein Timeout der Plattform von einem des
+Edge-Proxys unterscheidbar bleibt, gibt das Gateway seit Lauf 28 nach 53 statt 55 Sekunden auf und
+antwortet mit einem eigenen Fehlerkörper. Die Alternative, mindestens einmalige Zustellung mit
+einer Idempotenzkennung je Auftrag, wurde nicht geprüft. Sie verschöbe die Disziplin vom Worker
+auf das Skript und ist in \autoref{sec:Diffusion} als Abwägung festzuhalten.
+
+\subsection{Isolation und Zustandsfreiheit (M1 bis M4)}
+\label{sec:pruefung-isolation}
+
+M1 und M3 werden durch Architektur- und Konfigurationsvergleich geprüft: M1 über die Ebenen der
+Trennung aus \autoref{sec:ebenen}, M3 über den Vergleich der Pod-Spezifikation des Workers mit der
+des Ausgangszustands. M2 und M4 werden über die Prüffälle T1 bis T9 aus \autoref{tab:prueffaelle}
+geprüft, die als Skripte gegen den Ausgangszustand und gegen den Prototyp ausgeführt werden.
+Ein Prüffall gilt als bestanden, wenn der Zugriff scheitert oder der Zustand die nächste Ausführung
+nicht erreicht.
+
+Beide Varianten wurden am 19.\ Oktober auf hyper-int-otc mit demselben Mandanten geprüft, der für
+den Ausgangszustand über die App-\acs{URL} auf den Knative-Stack umgestellt und danach
+zurückgestellt wurde. Jeder Prüffall ist ein eigenes Skript, das angelegt, gebaut, freigegeben und
+über die öffentliche Adresse des Mandanten aufgerufen wird, also auf demselben Weg wie ein echter
+Webhook. T1 bis T5 rufen dasselbe Skript dreimal hintereinander auf. Jede Ausführung meldet
+zuerst, was sie von der vorigen vorfindet, und legt dann eigenen Zustand ab. T6 ruft ein Skript
+auf, das so lange Speicher anfordert, bis die Laufzeit abbricht, und danach fünfmal ein zweites
+Skript desselben Mandanten. T7 bis T9 laufen einmal und protokollieren je Zugriffsweg, ob er
+gelingt. T9 überschreibt vorher jede Kopie der Mandantenidentität, die das Skript erreicht, und
+prüft, ob sich die Entscheidungen der Bindings dadurch ändern. Inhalte von Dateien oder Umgebungsvariablen werden dabei nicht ausgelesen, nur ob der
+Zugriff gelang.
+
+\begin{table}[H]
+  \caption{Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp, hyper-int-otc, 19.\ Oktober}
+  \label{tab:prueffaelle-ergebnis}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l l l >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Nr. & Ausgangszustand & Prototyp & Beobachtung \\
+    \hline
+    T1 & nicht bestanden & bestanden & Knative: Ein Intervall aus Ausführung $n$ schreibt in ein
+         Objekt, das Ausführung $n+1$ angelegt hat. Prototyp: Das Objekt bleibt unberührt. \\
+    T2 & nicht bestanden & bestanden & Knative: Globale Variablen aus $n$ sind in $n+1$ lesbar,
+         obwohl das Modul neu ausgewertet wird. Prototyp: nicht vorhanden. \\
+    T3 & nicht bestanden & bestanden & Knative: Änderungen an \texttt{Array.prototype},
+         \texttt{Object.prototype}, \texttt{JSON.parse}, am Modul \texttt{crypto} und an
+         \texttt{require.cache} wirken fort, nur \texttt{path} kommt frisch. Prototyp: keine wirkt
+         fort, \texttt{require.cache} existiert nicht. \\
+    T4 & bestanden & bestanden & Beide: Die Datei aus $n$ fehlt in $n+1$. Knative setzt das
+         temporäre Verzeichnis zurück, der Prototyp beginnt jede Ausführung mit leerem
+         Dateisystem im Speicher. \\
+    T5 & nicht bestanden & bestanden & Knative: Die in $n$ geöffnete \acs{TLS}-Verbindung ist in
+         $n+1$ offen und beantwortet eine neue Anfrage mit 200. Prototyp: nicht auffindbar. \\
+    T6 & nicht bestanden & bestanden & Knative: Der Prozess stürzt nach 10,3\,s ab, die nächste
+         Ausführung scheitert mit 502, erst danach antwortet ein neu gestarteter Prozess.
+         Prototyp: Abbruch nach 0,36\,s mit eigenem Fehler, die fünf folgenden Ausführungen
+         liefern 200. \\
+    T7 & nicht bestanden & bestanden & Knative: \texttt{fetch} ins Internet liefert 200,
+         \acs{TCP} zur Kubernetes-\acs{API} und zum Port des eigenen Runners wird aufgebaut.
+         Prototyp: Jedes Ziel außer dem eigenen Mandanten wird abgewiesen, und
+         \texttt{Deno.core.ops} ist nicht erreichbar. \\
+    T8 & bestanden & bestanden & Beide: \texttt{/etc}, \texttt{/proc} und das Token des
+         Service-Accounts sind nicht lesbar, im Ausgangszustand durch das Permission Model von
+                  Node.js. Knative reicht 23 Umgebungsvariablen an das Skript durch, der Prototyp keine. \\
+        T9 & nicht bestanden & bestanden & Beide: Alle Überschreibungen gelingen im Skript. Knative:
+         Der Host eines anderen Mandanten ist vorher wie nachher erreichbar, es gibt keine
+         Prüfung, an der eine Identität hinge. Prototyp: eigener Host 200, fremder Mandant vorher
+         wie nachher abgewiesen, gefälschte Header ändern nichts. \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\autoref{tab:prueffaelle-ergebnis} zeigt, dass der Prototyp alle neun Prüffälle besteht und der
+Ausgangszustand sieben nicht. T9 wurde nach den übrigen Fällen ergänzt, um die Aussage aus
+\autoref{sec:faehigkeitsmodell} zu prüfen, dass ein Skript die Frage, in wessen Namen es handelt,
+nicht beantworten und damit auch nicht falsch beantworten kann: Die Kopien im Heap lassen sich
+ändern, die Bindings lesen sie nicht. Die Fehlschläge im Ausgangszustand gehen bis auf T7 und T9 auf dieselbe
+Ursache zurück. Alle Ausführungen eines Mandanten teilen sich einen Node.js-Prozess und dessen
+globalen Kontext, sodass Timer, Variablen, Prototypen und offene Sockets die Ausführung
+überdauern. T6 folgt aus demselben Umstand, denn ein erschöpfter Heap beendet den gemeinsamen
+Prozess und nicht nur die verursachende Ausführung. T4 bestand der Ausgangszustand erwartungsgemäß,
+weil er das temporäre Verzeichnis vor jeder Ausführung zurücksetzt. Bei T8 schützt ihn das
+Permission Model von Node.js vor dem Lesen des Dateisystems. Die durchgereichten
+Umgebungsvariablen sind kein Dateizugriff im Sinne von T8, zeigen aber, dass das Skript im
+Ausgangszustand Konfiguration des Runners sieht.
+
+Der Konfigurationsvergleich für M3 stellt die Felder gegenüber, die die dem Gastcode zugängliche
+Kernel-Oberfläche bestimmen (\autoref{tab:m3}). Beide Seiten stammen aus laufenden Pods auf
+hyper-int-otc vom 20.\ Oktober 2026, und zwar aus dem Container, der den Gastcode ausführt. Der
+Runner trägt daneben den Queue-Proxy von Knative, der keinen Gastcode ausführt. Die Felder des
+Prototyps stimmen mit der Pod-Spezifikation überein, die die Control Plane im Quellcode festlegt.
+Keines davon ist ein Betriebsparameter. Das Plattform-Team hat entschieden, gVisor nur auf OTC bereitzustellen.
+Die Control Plane setzt die Runtime-Klasse deshalb nur, wenn
+der Domänenname des Namespace \texttt{otc} enthält, und der Vergleich gilt für hyper-int-otc, wo
+beide Modelle unter gVisor laufen.
+
+\begin{table}[H]
+  \caption{Konfigurationsvergleich der Pod-Spezifikation für M3, Container mit Gastcode}
+  \label{tab:m3}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Feld & Ausgangszustand & Prototyp & Prototyp gegenüber dem Ausgangszustand \\
+    \hline
+    \texttt{runtimeClassName} & \texttt{gvisor} & \texttt{gvisor} & gleich \\
+    \texttt{allowPrivilegeEscalation} & \texttt{false} & \texttt{false} & gleich \\
+    \texttt{capabilities.drop} & \texttt{ALL} & \texttt{ALL} & gleich \\
+    \texttt{seccompProfile} & \texttt{RuntimeDefault} & \texttt{RuntimeDefault} & gleich \\
+    \texttt{automountServiceAccountToken} & \texttt{false} & \texttt{false} & gleich \\
+    \texttt{hostNetwork}, \texttt{hostPID}, \texttt{hostIPC} & nicht gesetzt & nicht gesetzt & gleich \\
+    \texttt{readOnlyRootFilesystem} & nicht gesetzt & \texttt{true} & strenger \\
+    \texttt{runAsNonRoot} & nicht gesetzt & \texttt{true} & strenger \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+In keiner Zeile ist der Prototyp lockerer als der Ausgangszustand. Sechs Felder sind gleich, zwei
+sind beim Prototyp zusätzlich gesetzt. Die beiden strengeren Felder verkleinern nicht die
+Systemaufrufe, die der Kernel von gVisor annimmt, sondern beschränken, was der Prozess im
+Container verändern kann. M3 ist damit erfüllt. Die Aussage stützt sich auf die Konfiguration und
+sagt nichts über Lücken in gVisor selbst, die für beide Modelle gelten.
+
+\subsection{Verfügbarkeit beim Knotenentzug (M5)}
+\label{sec:pruefung-m5}
+
+Ein rollierendes Knotenupdate evakuiert die Pods eines Knotens über \texttt{kubectl drain}
+\autocite{the_kubernetes_authors_safely_2026}. Auf dem geteilten Integrationscluster steht dieser
+Eingriff nicht zur Verfügung. Gemessen wird deshalb mit einem Ersatz, der an den Worker-Pods
+denselben Reiz auslöst: Unter Last werden alle Worker-Pods eines Knotens im Namespace gelöscht,
+sodass jeder von ihnen wie bei einer Eviction SIGTERM und seine Grace Period erhält und die Control
+Plane die Löschung über den Informer sieht. Nicht abgebildet ist, dass ein Drain auch Control
+Plane, Gateway und NATS-Server desselben Knotens evakuiert. Diese sind Deployments mit Repliken und
+nicht Gegenstand von M5. Erhoben werden je Mandant die Zeit von der Löschung bis zur ersten danach
+begonnenen erfolgreichen Ausführung, die Zahl der verlorenen Aufträge und ob eine Ausführung, die
+die Löschung überspannt, nach \autoref{sec:zuteilung} zu Ende läuft. Der Ausgangszustand wird auf
+demselben Cluster mit demselben Ersatz gemessen, indem der Runner-Pod des Mandanten gelöscht wird.
+Der Zielwert aus \autoref{sec:kriterienkatalog} ist dessen Zeit ohne Ausführungsfähigkeit.
+Gemessen wurde der Prototyp in dem Stand, in dem die Control Plane einen Worker-Pod aus der
+Zuteilung nimmt, sobald er einen \texttt{DeletionTimestamp} bekommt, also mit Beginn der Löschung
+und nicht erst, wenn der Pod gestorben ist. Der Mandant erhält beim nächsten Auftrag einen Pod aus
+dem Pool, und der gelöschte Pod beendet seine laufenden Ausführungen. Acht Mandanten setzten
+Schlag auf Schlag kurze Aufrufe von rund 1,2 Sekunden Dauer ab. Der Knoten wurde 20 Sekunden vor
+der Löschung nach den zugewiesenen Worker-Pods gewählt, die Löschung folgte 90 Sekunden nach
+Laufbeginn, ein Lauf dauerte 240 Sekunden. In vier Läufen hielt jeder Mandant zusätzlich lange
+Aufrufe von 25 Sekunden Haltezeit vor, sodass einer von ihnen die Löschung überspannte, in vier
+weiteren Läufen fehlten sie. Der Code gibt drei freie Pods vor, die Integrationsumgebungen halten
+vierzig, weil nach \autoref{sec:kaltstart} jeder Erstkontakt über die Zielgröße hinaus die Startzeit
+eines Pods trägt. Weil \texttt{kubectl delete} rund eine Sekunde braucht, sind die Lücken ab dem
+Beginn der Löschung gerechnet.
+
+\begin{table}[H]
+  \caption{Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf, ab
+    Beginn der Löschung}
+  \label{tab:m5}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l r r r r r >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Lauf & Mandanten getroffen & Lücke getroffen & Lücke übrige & Latenz getroffen, max. & Fehler &
+      lange Aufrufe mit 200 \\
+    \hline
+    \multicolumn{7}{@{}l}{\emph{Prototyp, mit langen Aufrufen}} \\
+    1 & 2 & 1,11\,s & 1,06\,s & 1.269\,ms & 0 & 8 von 8 \\
+    2 & 2 & 1,20\,s & 1,13\,s & 1.291\,ms & 0 & 8 von 8 \\
+    3 & 3 & 1,37\,s & 0,77\,s & 1.493\,ms & 0 & 8 von 8 \\
+    4 & 2 & 0,76\,s & 0,98\,s & 1.261\,ms & 0 & 8 von 8 \\
+    \multicolumn{7}{@{}l}{\emph{Prototyp, ohne lange Aufrufe}} \\
+    5 & 2 & 1,12\,s & 1,11\,s & 1.483\,ms & 0 & -- \\
+    6 & 1 & 0,61\,s & 1,45\,s & 1.303\,ms & 0 & -- \\
+    7 & 1 & 0,66\,s & 0,59\,s & 1.243\,ms & 0 & -- \\
+    8 & 2 & 1,33\,s & 1,12\,s & 1.271\,ms & 0 & -- \\
+    \multicolumn{7}{@{}l}{\emph{Ausgangszustand}} \\
+    1 & 1 (drei Runner-Pods) & 1,9\,s & -- & 3.000\,ms & 0 & 1 von 1, nach 26,2\,s \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\autoref{tab:m5} zeigt die Läufe. Die Lücke der getroffenen Mandanten liegt zwischen 0,61 und
+1,37 Sekunden und damit im Bereich der nicht getroffenen, die bis 1,45 Sekunden erreichen. Sie ist
+der Abstand der kurzen Aufrufe, die ohnehin rund 1,2 Sekunden dauern, kein Ausfall. Die längste
+kurze Latenz eines getroffenen Mandanten beträgt 1,49 Sekunden bei einem Median von 1,18 Sekunden.
+Es gab keinen Fehler und keinen verlorenen Auftrag, und alle 32 langen Aufrufe, die die Löschung
+überspannten, endeten mit 200 nach rund 25 Sekunden. Rund 0,6 Sekunden nach Beginn der Löschung
+hatte die Control Plane die Pods aus der Zuteilung genommen, je Pod etwa 50 Millisekunden, und die
+Neuzuweisung beim nächsten Auftrag dauerte rund 0,2 Sekunden. Der Aufruf, der dazwischen noch auf
+dem gelöschten Pod lief, wurde von dessen offenem Pull abgeholt und ohne Verzögerung bedient.
+
+Der Ausgangszustand verlor beim gleichzeitigen Löschen der drei Runner-Pods des Mandanten
+ebenfalls nichts. Seine Lücke betrug 1,9 Sekunden und die längste kurze Latenz 3,0 Sekunden, weil
+Knative die Runner sofort ersetzt und der erste neue Aufruf den Kaltstart zahlt. Der Prototyp liegt
+damit in allen acht Läufen unter diesem Wert, und der relative Zielwert aus
+\autoref{sec:kriterienkatalog} ist erreicht. Der Vergleich stützt sich allerdings auf einen
+einzigen Lauf des Ausgangszustands mit einem Mandanten.
+
+Eine weitere Einschränkung betrifft die Knotenwahl. Sie liest die Zuweisungen der letzten 180
+Sekunden. In den Läufen ohne lange Aufrufe waren einzelne Mandanten noch aus dem vorigen Lauf
+zugewiesen, sodass ein getroffener Mandant übersehen sein kann. Er stünde unter den nicht
+getroffenen, die ebenfalls nur Werte der Grundlinie zeigen.
+
+\subsection{Kompatibilität des Bestands (S6, S7)}
+\label{sec:pruefung-kompatibilitaet}
+
+S6 wird aus der Bestandsanalyse in \autoref{sec:bestandsanalyse} und den Prüfungen der
+Kompatibilitätsschicht abgeleitet, nicht durch Ausführen des Bestands gemessen. Von den 1.718
+Mandanten brauchen 713 eine Schnittstelle, die eine sprachbasierte Laufzeit ohne vermitteltes
+Binding nicht bietet, und 648 davon scheitern allein an einem Netzwerk-Binding. Genau diese beiden
+Gruppen, \ac{HTTP} und rohe Sockets, bildet die Schicht nach, belegt durch den Differenztest mit
+757 Fällen, die Integrationstests und die Machbarkeitsprüfung am schwierigsten Vertreter. Die
+übrigen 65 Mandanten brauchen Dateisystem, Betriebssystemmodule oder Prozesse. 16 von ihnen nutzen
+nur \texttt{http}, \texttt{https}, \texttt{net} oder \texttt{tls}, die die Schicht nachbildet. Die
+Skripte der übrigen 49 wurden gelesen und am 21.\ Oktober 2026 mit einem Probeskript auf dem
+Ausgangszustand und dem Prototyp geprüft. 34 schreiben Dateien in das erste Verzeichnis unter \texttt{/tmp} und
+scheitern damit schon im Ausgangszustand, dort an der Skriptdatei selbst, die als einziger Eintrag
+in \texttt{/tmp} liegt, im Prototyp an dem leeren Verzeichnis. Vier lesen Windows-Pfade und
+scheitern im Ausgangszustand ebenfalls, bei vier ist der Import ungenutzt und bei zwei läuft das
+Schreiben nach \texttt{\_\_dirname} in beiden. Ein Mandant führt Prüfskripte mit
+\texttt{child\_process} aus, die der Prototyp absichtlich blockiert, und vier haben gebündelte
+Skripte, die nicht unterstützt sind und nicht als Ausfall zählen. Damit laufen mindestens 1.717 von
+1.718 Mandanten, 99,9 Prozent, nicht schlechter als im Ausgangszustand, sofern die Schicht hält, was die Prüfungen an Beispielen zeigen. Der Scanner-Lauf
+vom 25.\ September 2026 gegen einen frühen Stand der Schicht wird nicht wiederholt, weil er
+Bezeichner in nie ausgeführten Zweigen mitzählt und damit nur eine Obergrenze der Blocker liefert.
+S7, der Aufwand für den Rest, ist für 64 der 65 Mandanten null, weil keine Anpassung am Skript nötig
+ist, und für den letzten nicht gewollt.
+
+Die Machbarkeitsprüfung an \texttt{tedious} aus \autoref{sec:kompatibilitaetsschicht} ist
+bestanden. Der unveränderte Treiber verbindet sich über den Socket-Shim mit einer echten
+Datenbankinstanz und führt eine Abfrage aus, wobei host-seitig ein einziges neues Binding für den
+Verbindungsaufbau nötig war, weil \texttt{deno\_core} Lesen, Schreiben und Schließen bereits
+generisch über beliebige Ressourcen bereitstellt. Die Umstellung auf \ac{TLS} innerhalb des
+\ac{TDS}-Datenstroms gelingt über die Zustandsmaschine, die Ver- und Entschlüsselung übernimmt,
+während der Treiber das Framing selbst verantwortet. Beide Ergebnisse sind mehrfach reproduziert
+und gegen Negativkontrollen geprüft.
+
+
+
+\subsection{Zusammenführung}
+\label{sec:nutzwert}
+
+\autoref{tab:nutzwert} sammelt die erhobenen Werte entlang der Soll-Kriterien. Die Fehlerrate
+ist kein Kriterium des Katalogs und steht deshalb ohne Gewicht dabei. Die Punkte folgen der
+Zuordnung aus \autoref{sec:messaufbau}. Der Ausgangszustand erhält je bewertetem Kriterium drei
+Punkte.
+
+\begin{table}[H]
+  \caption{Stand der Bewertung entlang der Soll-Kriterien}
+  \label{tab:nutzwert}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.24\textwidth} r@{}}
+    \hline
+    Nr. & Gewicht & Prototyp & Ausgangszustand & Punkte \\
+    \hline
+    S1 & 0,30 & verteilt P95 1,85\,s (P90 499\,ms), Schub P95 10,3\,s, 40 von 90 unter 2\,s.
+      S1a bei Pool-Treffer 215 bis 482\,ms, S1b 3,3 bis 3,6\,s je Pod & verteilt P95 3,33\,s,
+      Schub P95 19,5\,s, 0 von 90 unter 2\,s, 17\,\% Fehler im Schub & 5$^{a}$ \\
+    S6 & 0,25 & mindestens 99,9\,\% der Mandanten nicht schlechter lauffähig, abgeleitet & -- & 5$^{b}$ \\
+    S2 & 0,15 & Overhead P50 / P95 / P99 127 / 180 / 268\,ms
+      & 259\,ms / 2,31\,s / 4,57\,s & 5$^{c}$ \\
+    S3 & 0,10 & 46\,MiB je Worker-Pod unter gVisor (Median), Steuerung 113 bis 167\,MiB, Pool
+      1,9\,GiB & 90\,MiB je
+      Runner-Pod (Median), Steuerung 1,4\,GiB & 5$^{d}$ \\
+    S7 & 0,10 & keine Anpassung bei 64 von 65 Mandanten, 1 nicht gewollt & -- & 5$^{f}$ \\
+    S4 & 0,10 & 500 Aufrufe/s, wie ausgerollt 200 bis 300 & 100 Aufrufe/s & 5$^{e}$ \\
+        -- & -- & Fehlerrate 0 bis 1 von 57.001 (Plattform) & 408 von 56.976 (0,71\,\%), davon der
+      größte Teil ein Ingress-Neustart & \\
+    \hline
+    \multicolumn{5}{@{}p{\textwidth}@{}}{\footnotesize $^{a}$ P95 verteilt Faktor 1,8, Schub 1,9,
+      Median verteilt 6,8. Die Werte 4,6 und 4,8 sind gerundet. $^{b}$ Anteil über 80\,\%. Abgeleitet, nicht
+      ausgeführt. $^{c}$ Faktor 2,0 im Median, 12,8 im 95.\ und 17 im 99.\ Perzentil. $^{d}$ Faktor
+      1,96 je Pod, 4,9 gerundet. Der Pool von 1,9\,GiB ist nicht je Pod gerechnet. $^{e}$ Faktor 5,0,
+      wie ausgerollt 2 bis 3. $^{f}$ 98,5\,\% der 65 Mandanten ohne Anpassung.} \\
+  \end{tabularx}
+\end{table}
+
+Auf den sechs Kriterien erreicht der Prototyp die Höchstpunktzahl, der Ausgangszustand
+definitionsgemäß drei Punkte. Der Nutzwert ist damit kein Beleg für Überlegenheit
+in jeder Hinsicht, sondern das Ergebnis einer Zuordnung, deren Vorbehalte in
+\autoref{sec:messaufbau} stehen: eine Konfiguration je Lauf, S6 abgeleitet statt gemessen, und bei S3 ein Pool, dessen Kosten je Pod nicht
+sichtbar sind.
