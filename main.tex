@@ -274,11 +274,6 @@
 \BeforeStartingTOC[lot]{\renewcommand*\autodot{:}} % Für den Doppelpunkt hinter Präfix im Tabellenverzeichnis
 
 %-----------------------------------
-% Abkürzungsverzeichnis
-%-----------------------------------
-\usepackage[printonlyused]{acronym}
-
-%-----------------------------------
 % Symbolverzeichnis
 %-----------------------------------
 % Quelle: https://www.namsu.de/Extra/pakete/Listofsymbols.pdf
@@ -299,6 +294,11 @@
 \AtBeginDocument{\renewcommand{\subsectionautorefname}{Abschnitt}\renewcommand{\subsubsectionautorefname}{Abschnitt}}
 % Behebt die falsche Darstellung der Lesezeichen in PDF-Dateien, welche eine Übersetzung besitzen
 % siehe Issue 149
+%-----------------------------------
+% Abkürzungsverzeichnis
+%-----------------------------------
+\usepackage[printonlyused]{acronym}
+
 \makeatletter
 \pdfstringdefDisableCommands{\let\selectlanguage\@gobble}
 \makeatother
