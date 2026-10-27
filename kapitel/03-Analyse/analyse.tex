@@ -2,26 +2,19 @@
 \section{Analyse des Ausgangszustands und Ableitung des Kriterienkatalogs}
 \label{sec:bedrohungsmodell}
 
-Der Maßstab für das zu konstruierende Artefakt stammt aus zwei Quellen, die beide in der
-Fallstudie liegen. Die erste ist das Konzept, mit dem die Scripting-Engine heute betrieben wird,
-und die Vertrauensannahmen, die daraus folgen. Die zweite ist der produktive Skriptbestand, der
-festlegt, welche Schnittstelle ein neues Modell mindestens bereitstellen muss. Aus beidem ergeben
-sich die relevanten Angriffswege, und aus diesen der Kriterienkatalog, an dem sich der Entwurf in
-\autoref{sec:Entwurf} und die Evaluation in \autoref{sec:Evaluation} messen lassen.
+Der Maßstab für das zu konstruierende Artefakt stammt aus zwei Quellen der Fallstudie, dem Konzept, mit dem die
+Scripting-Engine heute betrieben wird, und dem produktiven Skriptbestand. Aus beiden ergeben sich die
+Angriffswege und aus diesen der Kriterienkatalog.
 
 \subsection{Ausgangszustand und Vertrauensannahmen}
 \label{sec:systemkontext}
 
-Die Scripting-Engine der Fallstudie ist ein mandantenfähiger Execution Service. Sie führt
-JavaScript auf Node.js aus und verarbeitet damit Webhooks, die Ereignisse im \ac{DMS} auslösen
-\autocite{dvelop_ag_dvelop_2026}. Den Code hinterlegt der Mandant selbst. Er wird versioniert
-gespeichert und über viele Ausführungen hinweg unverändert wiederverwendet. Künftig soll
-dieselbe Engine zusätzlich als Werkzeug eines KI-Agenten dienen, der kurze Skripte zur Laufzeit
-erzeugt und ausführen lässt \autocite[S.~50208]{wang_executable_2024}. Diese
-Fähigkeit besteht im Produkt noch nicht. Sie gehört deshalb nicht zum Ausgangszustand, sondern
-ist eine Anforderung an das Artefakt, das beide Profile tragen muss. Betriebsdaten liegen für das
-Agentenprofil nicht vor, weshalb alle Aussagen dazu aus dem Interaktionsmuster eines Agenten
-hergeleitet und als Annahme gekennzeichnet sind.
+Die Scripting-Engine führt JavaScript auf Node.js aus und verarbeitet damit Webhooks
+(\autoref{sec:einleitung:motivation}). Den Code hinterlegt der Mandant selbst. Er wird versioniert gespeichert und
+über viele Ausführungen hinweg unverändert wiederverwendet. Die Fähigkeit als Werkzeug eines KI-Agenten besteht im
+Produkt noch nicht. Sie gehört deshalb nicht zum Ausgangszustand, sondern ist eine Anforderung an das Artefakt,
+das beide Profile tragen muss. Betriebsdaten liegen für das Agentenprofil nicht vor, weshalb alle Aussagen dazu
+aus dem Interaktionsmuster eines Agenten hergeleitet und als Annahme gekennzeichnet sind.
 
 Zwei Ressourcen teilen sich die Ausführungen heute, und an beiden muss eine Mandantengrenze
 verlaufen. Die erste ist der Host-Kernel. Der Execution Service schaltet seinen Runner-Pods
@@ -32,7 +25,7 @@ Hosts, den generische Containerisierung offenlegt \autocite[S.~17--18]{souppaya_
 dadurch verkleinert, aber nicht beseitigt.
 
 Welches Skript eine Instanz ausführt, entscheidet sich erst beim Aufruf. Das Skript wird je
-Ausführung über eine vorsignierte URL aus einem Objektspeicher nachgeladen, weshalb eine Instanz
+Ausführung über eine vorsignierte \ac{URL} aus einem Objektspeicher nachgeladen, weshalb eine Instanz
 nicht an ein Skript gebunden ist, sondern nacheinander beliebige Skripte ihres Mandanten
 ausführt. Sein Eintrag im Module Cache wird dabei vor jeder Ausführung verworfen, sodass
 auch das Übersetzen bei jeder Ausführung erneut anfällt.
@@ -40,16 +33,17 @@ auch das Übersetzen bei jeder Ausführung erneut anfällt.
 Die zweite geteilte Ressource liegt innerhalb dieser Sandbox. Jeder Mandant erhält einen eigenen
 Execution Service, sodass Instanzen mandantenübergreifend nicht wiederverwendet werden. Der
 Skriptcode wird unmittelbar in den laufenden Node.js-Prozess geladen, ohne einen eigenen
-Unterprozess je Ausführung, und es läuft höchstens eine Ausführung zur Zeit. Aufeinanderfolgende
+Unterprozess je Ausführung, und es ist höchstens eine Ausführung zur Zeit vorgesehen. Bricht ein
+Client eine Anfrage ab, gilt sie für Knative als beendet, und weitere Anfragen erreichen den Pod,
+obwohl die Ausführung noch läuft. Aufeinanderfolgende
 Ausführungen desselben Mandanten teilen sich damit den Prozessspeicher. Das temporäre Verzeichnis
 wird vor jeder Ausführung zurückgesetzt, Heap und globale Variablen bleiben bestehen. Ein
 Node.js-Prozess je Mandant statt je Ausführung ist der Ausgangspunkt, gegen den sich jedes
 geprüfte Modell messen lassen muss.
 
 Aus diesem Konzept folgen die Schutzziele. \emph{Vertraulichkeit} und \emph{Integrität}
-verlangen, dass eine Ausführung Daten, Code und Verarbeitung anderer Mandanten weder einsehen
-noch verändern kann. Die \emph{Verfügbarkeit} verlangt, dass sie die Bedienung anderer Mandanten
-nicht beeinträchtigt. Hinzu tritt die \emph{Zustandsfreiheit}, die verlangt, dass eine Ausführung
+verlangen die Mandantenisolation aus \autoref{sec:grundlagen:eigenschaften}, die \emph{Verfügbarkeit}, dass eine
+Ausführung die Bedienung anderer Mandanten nicht beeinträchtigt. Hinzu tritt die \emph{Zustandsfreiheit}, die verlangt, dass eine Ausführung
 keinen Zustand an eine spätere weitergibt.
 
 Das vierte Ziel verdient eine genauere Betrachtung, weil sein Charakter am Lastprofil hängt. In
@@ -115,23 +109,15 @@ welchen Teil der Node.js-Schnittstelle der Bestand tatsächlich braucht.
 
 \subsubsection{Datengrundlage und Vorgehen}
 
-Ausgewertet wurden 1.718 Mandanten mit 14.575 Skriptversionen, die sich auf 8.310 inhaltlich
-verschiedene Skripte und 4.768 Importe verteilen. Vollständig minifizierte Inhalte sind
-ausgeschlossen, weil sich ihre Importe statisch nicht zuverlässig bestimmen lassen. Der Filter
-entfernt 269 Inhalte, 519 Skriptversionen und 25 Mandanten, die ausschließlich solche Skripte
-vorhalten. Eine Gegenrechnung ohne den Filter verschiebt die Kennzahlen um gut einen
-Prozentpunkt und ändert die Aussage nicht.
-
-Jedes Skript wird anhand seiner Importe klassifiziert, wobei die härteste Einschränkung zählt.
-Ein Mandant erhält die Einstufung seines härtesten Skripts und nicht den Durchschnitt. Die
-Analyse ist statisch und sieht daher weder dynamisch zusammengesetzte Modulnamen noch gebündeltes
-Kompilat. Von den Skripten fallen 24 als Parse-Fehler an und werden vorsorglich als blockierend
-geführt.
-
-Ein Import allein sagt nichts darüber, was ein npm-Paket seinerseits benötigt. Für die Pakete mit
-nennenswertem Mandantengewicht wurde deshalb der ausgelieferte Quelltext gelesen, nicht die
-Dokumentation und nicht allein die deklarierten Abhängigkeiten. Geprüft sind 27 von 203
-verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
+Ausgewertet wurden 1.718 Mandanten mit 14.575 Skriptversionen, die sich auf 8.310 inhaltlich verschiedene Skripte und
+4.768 Importe verteilen. Vollständig minifizierte Inhalte sind ausgeschlossen, weil sich ihre Importe statisch nicht
+zuverlässig bestimmen lassen (269 Inhalte, 519 Skriptversionen, 25 Mandanten), eine Gegenrechnung ohne den Filter
+verschiebt die Kennzahlen um gut einen Prozentpunkt. Jedes Skript wird anhand seiner Importe klassifiziert, wobei die
+härteste Einschränkung zählt, und ein Mandant erhält die Einstufung seines härtesten Skripts. Die Analyse ist
+statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündeltes Kompilat, 24 Skripte fallen als
+Parse-Fehler an und gelten vorsorglich als blockierend. Ein Import sagt nichts darüber, was ein npm-Paket seinerseits
+benötigt, weshalb für die Pakete mit nennenswertem Mandantengewicht der ausgelieferte Quelltext gelesen wurde, 27 von
+203 verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
 
 \subsubsection{Ergebnis}
 
@@ -149,35 +135,13 @@ pessimistisch als nicht lauffähig gewertet, ergibt sich ein Viabilitätsinterva
   \label{fig:hard-floor-einordnung}
 \end{figure}
 
-Die blockierenden Pakete zerfallen in zwei Gruppen mit deutlich verschiedenem Bedarf. Die eine
-benötigt \ac{HTTP} direkt, die andere einen rohen \ac{TCP}- oder \ac{TLS}-Socket. Ihre Größen
-stellt \autoref{tab:blockierende-familien} gegenüber.
-
-\begin{table}[H]
-  \caption{Blockierende Paketgruppen im Hard-Floor-Bestand}
-  \label{tab:blockierende-familien}
-  \small
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r >{\RaggedRight\arraybackslash}p{0.30\textwidth}@{}}
-    \hline
-    Gruppe & Pakete & Mandanten & stärkster Vertreter \\
-    \hline
-    Benötigen \ac{HTTP} direkt und umgehen ein bereitgestelltes \texttt{fetch} & 14 & 629 &
-      \texttt{axios} mit 579 Mandanten \\
-    Benötigen einen rohen \ac{TCP}- oder \ac{TLS}-Socket & 8 & 63 &
-      \texttt{mssql} mit 46 Mandanten \\
-    \hline
-    \multicolumn{2}{@{}l}{Schnittmenge beider Gruppen} & 44 & \\
-    \multicolumn{2}{@{}l}{Vereinigung} & 648 & \\
-    \multicolumn{2}{@{}l}{Hard Floor gesamt} & 713 & \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-648 der 713 blockierten Mandanten, also 90,9\,\%, scheitern an einem Netzwerk-Binding und an
-nichts anderem. Dateisystemzugriff, Betriebssystemmodule und Prozesserzeugung tragen nur den
-Rest bei, wie \autoref{tab:blockierende-familien} zeigt.
-Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen den beiden Gruppen liegt ein
-Größenunterschied von etwa zehn zu eins.
+Die blockierenden Pakete zerfallen in zwei Gruppen mit deutlich verschiedenem Bedarf. Die eine benötigt \ac{HTTP}
+direkt und umgeht ein bereitgestelltes \texttt{fetch}, 14 Pakete bei 629 Mandanten, am häufigsten \texttt{axios} mit
+579. Die andere benötigt einen rohen \ac{TCP}- oder \ac{TLS}-Socket, 8 Pakete bei 63 Mandanten, am häufigsten
+\texttt{mssql} mit 46. 44 Mandanten gehören zu beiden Gruppen, die Vereinigung umfasst 648 der 713 blockierten
+Mandanten, also 90,9\,\%, die an einem Netzwerk-Binding und an nichts anderem scheitern. Die übrigen 65 brauchen
+Dateisystem, Betriebssystemmodule oder Prozesse. Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
+den beiden Gruppen liegt ein Größenunterschied von etwa zehn zu eins.
 
 Die kleinere Gruppe stellt die schwierigere Anforderung. Ihre Vertreter sind überwiegend
 Datenbanktreiber mit eigenem binären Protokoll. Bei \texttt{mssql} und dem darunterliegenden
@@ -197,30 +161,21 @@ Kompatibilitätsschicht in \autoref{sec:kompatibilitaetsschicht}, nicht ihre Mac
 Erkennung ist eine Analyse freier Bezeichner und zählt einen Namen nur, wenn das Skript ihn
 nirgends selbst bindet. Sie untertreibt daher eher, als dass sie Abhängigkeiten erfindet.
 
-Ein zweiter Befund derselben Auswertung betrifft nicht die Lauffähigkeit, sondern die Größe der
-gebündelten Artefakte. Von den 14.575 Skriptversionen binden 2.373 überhaupt npm-Pakete ein, und
-für diese liegt das fertige Bundle im Median bei 69,3\,KB, im 95.\ Perzentil bei 429,0\,KB und im
-Maximum bei 1,41\,MB. Betroffen sind 1.023 der 1.718 Mandanten, also knapp 60\,\%. Gegenüber dem
-Quelltext, der meist wenige Kilobyte misst, entspricht das typischerweise einer Aufblähung um den
-Faktor zehn bis dreißig, die fast vollständig auf die Abhängigkeiten entfällt. Je Mandant liegt
-die Zahl gebündelter Versionen im Median bei zwei und im 95.\ Perzentil bei dreizehn, im
-Einzelfall bei 151.
-
-Für die Kompatibilitätsfrage ist diese Größe ohne Belang. Für den Entwurf ist sie es nicht, weil
-das Bundle nach \autoref{sec:zustellung} bei jeder Ausführung zugestellt und ausgewertet werden
-muss. Ohne einen Cache fällt der Abruf dieser Kilobyte bei jeder Ausführung auf den Anfragepfad.
+Ein zweiter Befund betrifft die Größe der gebündelten Artefakte. Von den 14.575 Skriptversionen binden 2.373 npm-Pakete
+ein, und das fertige Bundle liegt im Median bei 69,3\,KB, im 95.\ Perzentil bei 429,0\,KB und im Maximum bei 1,41\,MB,
+typischerweise den Faktor zehn bis dreißig über dem Quelltext. Betroffen sind 1.023 der 1.718 Mandanten, je Mandant
+liegt die Zahl gebündelter Versionen im Median bei zwei, im 95.\ Perzentil bei dreizehn, im Einzelfall bei 151. Für
+die Kompatibilität ist das ohne Belang, für den Entwurf nicht, weil das Bundle nach \autoref{sec:zustellung} bei jeder
+Ausführung zugestellt und ausgewertet werden muss und ohne Cache der Abruf bei jeder Ausführung auf den Anfragepfad
+fällt.
 
 \subsubsection{Grenzen der Auswertung}
 
-Der Datensatz deckt allein die heutige Webhook-Verarbeitung ab. Für das Agentenprofil existiert
-im Produkt nichts, was migriert werden müsste, weshalb sich aus diesen Daten dazu keine Aussage
-ableiten lässt.
-
-Aufrufzahlen enthält der Datensatz nicht. Ein Mandant mit einem Skript pro Monat wiegt so schwer
-wie einer mit hoher Aufruffrequenz, weshalb die Mandantenquote eine Obergrenze der praktischen
-Betroffenheit ist und keine Schätzung. Die transitive Hülle ist zudem unvollständig, was das
-angegebene Intervall abbildet. Die Auswertung erfolgte aggregiert, ohne Codeausschnitte und ohne
-Mandantenkennungen.
+Der Datensatz deckt allein die heutige Webhook-Verarbeitung ab, zum Agentenprofil, das im Produkt nichts zu migrieren
+hat, lässt sich aus ihm nichts ableiten. Aufrufzahlen enthält er nicht, ein Mandant mit einem Skript pro Monat wiegt so
+schwer wie einer mit hoher Aufruffrequenz, weshalb die Mandantenquote eine Obergrenze der praktischen Betroffenheit
+ist und keine Schätzung. Die transitive Hülle ist unvollständig, was das angegebene Intervall abbildet. Die Auswertung
+erfolgte aggregiert, ohne Codeausschnitte und ohne Mandantenkennungen.
 
 \subsection{Angreifermodell und relevante Angriffswege}
 \label{sec:angreifermodell}
@@ -247,20 +202,15 @@ nach Anwendungs- und Infrastrukturebene \autocite[S.~8]{marin_serverless_2022}.
 
 \subsubsection{A1, Anwendungsebene: Zustand zwischen Ausführungen}
 
-Weil der Code in denselben Prozess geladen wird, überdauern über \texttt{setTimeout} oder
-\texttt{setInterval} registrierte Callbacks das Ende ihrer Ausführung und können Daten späterer
-Ausführungen mitlesen \autocite{dvelop_ag_dvelop_2026}. Ebenso überdauern globale Variablen und
-Reste im Speicher. Das Zurücksetzen des Dateisystems greift nicht, weil der übertragene Zustand
-im Speicher liegt, und das Verwerfen des Module Cache greift nur für Zustand auf
-Modulebene. Globale Variablen, veränderte Prototypen, registrierte Callbacks und offene
-Verbindungen überdauern weiterhin. Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb
-eines Mandanten, und seine Bewertung folgt der in \autoref{sec:systemkontext} beschriebenen
-Verschiebung der Vertrauenseinheit.
-
-Derselbe geteilte Prozess trägt einen zweiten Weg. Eine Ausführung kann Ressourcen so erschöpfen,
-dass die Instanz für folgende Ausführungen unbrauchbar wird. Der Ausgangszustand belegt das an
-einem Vorfall, bei dem ein Verfügbarkeitstest im Minutentakt eine Instanz dauerhaft aktiv hielt
-und ein Speicherleck ihren Verbrauch bis zur Unbrauchbarkeit steigen ließ.
+Weil der Code in denselben Prozess geladen wird, überdauern über \texttt{setTimeout} oder \texttt{setInterval}
+registrierte Callbacks das Ende ihrer Ausführung und können Daten späterer Ausführungen mitlesen
+\autocite{dvelop_ag_dvelop_2026}. Ebenso überdauern globale Variablen, veränderte Prototypen und offene Verbindungen,
+denn das Zurücksetzen des Dateisystems und das Verwerfen des Module Cache greifen nur für Zustand auf Datei- und
+Modulebene. Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb eines Mandanten, und seine
+Bewertung folgt der Verschiebung der Vertrauenseinheit aus \autoref{sec:systemkontext}. Derselbe geteilte Prozess trägt
+einen zweiten Weg: Eine Ausführung kann Ressourcen so erschöpfen, dass die Instanz für folgende Ausführungen
+unbrauchbar wird, wie ein Vorfall im Ausgangszustand belegt, bei dem ein Verfügbarkeitstest im Minutentakt eine Instanz
+dauerhaft aktiv hielt und ein Speicherleck ihren Verbrauch bis zur Unbrauchbarkeit steigen ließ.
 
 \subsubsection{A2, Sprachebene: geteilte Laufzeit im selben Prozess}
 
@@ -269,7 +219,7 @@ und ein Speicherleck ihren Verbrauch bis zur Unbrauchbarkeit steigen ließ.
 
 Der zweite Weg greift eine Isolationsgrenze an, die innerhalb eines Prozesses verläuft und
 Angriffe unterhalb der Softwareebene nicht abfangen kann. Über einen entfernten Timer ließ sich
-aus einem ko-lokierten Cloudflare Worker ein JSON Web Token mit bis zu zwölf Bit pro Sekunde bei
+aus einem ko-lokierten Cloudflare Worker ein \ac{JWT} mit bis zu zwölf Bit pro Sekunde bei
 einer Genauigkeit von rund 99 Prozent auslesen, und zwar auf einer produktiven Plattform, die V8
 Isolates einsetzt \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Denselben Befund hatte zuvor
 die Einführung der Site Isolation in Chrome, wo eine sprachbasierte Trennung zweier Origins im
@@ -290,30 +240,23 @@ zwei aber erfolgreich bleiben \autocite[S.~44]{reeves_towards_2021}. Die Fallstu
 sie verlagert sich auf den Sentry, der selbst in Software implementiert und angreifbar ist, was
 eine gezielte Fuzzing-Untersuchung belegt \autocite[S.~168]{li_g-fuzz_2024}.
 
-Der Weg bleibt damit relevant, wenn auch auf höherem Niveau. Ein Agent, der innerhalb eines
-Containers über Codeausführung verfügt, kann Fehlkonfigurationen, Rechtevergabefehler,
-Kernel-Schwachstellen sowie Schwächen der Laufzeit und der Orchestrierung selbst auffinden und
-ausnutzen \autocite[S.~1]{marchand_quantifying_2026}. Diese Untersuchung bezieht sich auf Container ohne
-vorgeschaltete Sandbox-Laufzeit und ist deshalb nicht unmittelbar auf die Fallstudie übertragbar.
-Sie beschreibt jedoch den Angreifertyp, dem die Grenze standhalten muss, sobald Codeausführung im
-Container zum bestimmungsgemäßen Betrieb gehört. Aus einem menschlichen Angreifer mit
-vorbereitetem Exploit wird der ausgeführte Workload selbst.
+Der Weg bleibt damit relevant, wenn auch auf höherem Niveau. Ein Agent mit Codeausführung im Container kann
+Fehlkonfigurationen, Kernel-Schwachstellen sowie Schwächen der Laufzeit und der Orchestrierung selbst auffinden und
+ausnutzen \autocite[S.~1]{marchand_quantifying_2026}, auch wenn die Untersuchung Container ohne vorgeschaltete
+Sandbox-Laufzeit betrifft. Sie beschreibt den Angreifertyp, dem die Grenze standhalten muss: Aus einem menschlichen
+Angreifer mit vorbereitetem Exploit wird der ausgeführte Workload selbst.
 
 \subsection{Kriterienkatalog}
 \label{sec:kriterienkatalog}
 
-Der Katalog übersetzt die Ergebnisse der vorangegangenen Abschnitte in einen Maßstab. Jedes
-Kriterium ist auf seine Herkunft zurückführbar, also auf einen Angriffsweg, eine
-Vertrauensannahme, die Bestandsanalyse oder eine Betriebsanforderung. Kriterien ohne solche
-Herkunft werden nicht aufgenommen.
-
-Unterschieden werden zwei Arten. \emph{Muss-Kriterien} beschreiben Eigenschaften, ohne die ein
-Ausführungsmodell ausscheidet. Sie werden einzeln geprüft und nicht verrechnet, und sie
-entscheiden die Vorauswahl in \autoref{sec:vorauswahl}. \emph{Soll-Kriterien} beschreiben
-Eigenschaften, in denen sich Modelle graduell unterscheiden. Sie scheiden nichts aus, sondern
-bilden den gewichteten Maßstab, an dem \autoref{sec:Evaluation} das fertige Artefakt gegen den
-Ausgangszustand bewertet. Diese Trennung ist Voraussetzung dafür, dass das Artefakt scheitern
-kann, denn ein Modell mit gutem Nutzwert, das ein Muss-Kriterium verletzt, ist keine Lösung.
+Der Katalog übersetzt die Ergebnisse der vorangegangenen Abschnitte in einen Maßstab. Jedes Kriterium ist auf einen
+Angriffsweg, eine Vertrauensannahme, die Bestandsanalyse oder eine Betriebsanforderung zurückführbar, Kriterien ohne
+solche Herkunft werden nicht aufgenommen. \emph{Muss-Kriterien} beschreiben Eigenschaften, ohne die ein
+Ausführungsmodell ausscheidet, sie werden einzeln geprüft, nicht verrechnet und entscheiden die Vorauswahl in
+\autoref{sec:vorauswahl}. \emph{Soll-Kriterien} beschreiben graduelle Unterschiede, scheiden nichts aus und bilden den
+gewichteten Maßstab, an dem \autoref{sec:Evaluation} das Artefakt gegen den Ausgangszustand bewertet. Die Trennung ist
+Voraussetzung dafür, dass das Artefakt scheitern kann, denn ein Modell mit gutem Nutzwert, das ein Muss-Kriterium
+verletzt, ist keine Lösung.
 
 \subsubsection{Muss-Kriterien}
 
@@ -345,16 +288,15 @@ kann, denn ein Modell mit gutem Nutzwert, das ein Muss-Kriterium verletzt, ist k
   \end{tabularx}
 \end{table}
 
-M3 ist gegen den Ausgangszustand als Baseline formuliert, weil dieser mit gVisor bereits einen
-User-Space-Kernel einsetzt. Ein Modell, das diese Schicht aufgibt, um Startzeit zu gewinnen, wäre
-auf der Infrastrukturebene ein Rückschritt, auch bei besserem Nutzwert. M4 folgt unmittelbar aus
-V5, denn die Schnittstelle zur Ausführungsumgebung ist der einzige Durchsetzungspunkt, den die
-Plattform kontrolliert. Das Kriterium entspricht dem Prinzip der Complete Mediation, nach dem jeder
-Zugriff auf jedes Objekt gegen die Berechtigung geprüft wird
-\autocite[Abschn.~I.A.3]{saltzer_protection_1975}. Der Zielwert von M5 ist relativ, wie bei den Soll-Kriterien: Die Zeit ohne
-Ausführungsfähigkeit darf die des Ausgangszustands im selben Versuch nicht überschreiten, und keine
-begonnene Ausführung darf verloren gehen. Eine absolute Schranke wäre aus der Betriebsanforderung
-nicht herleitbar.
+M2 ist auf aufeinanderfolgende Ausführungen geschnitten, weil der Ausgangszustand je Prozess eine Ausführung
+vorsieht. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
+Pod (\autoref{sec:betriebsplanung}). M3 ist gegen den Ausgangszustand formuliert, weil dieser mit gVisor bereits einen
+User-Space-Kernel einsetzt, ein Modell, das diese Schicht aufgibt, wäre auf der Infrastrukturebene ein Rückschritt,
+auch bei besserem Nutzwert. M4 folgt aus V5, denn die Schnittstelle zur Ausführungsumgebung ist der einzige
+Durchsetzungspunkt, den die Plattform kontrolliert, und entspricht dem Prinzip der Complete Mediation
+\autocite[S.~1282]{saltzer_protection_1975}. Der Zielwert von M5 ist relativ: Die Zeit ohne
+Ausführungsfähigkeit darf die des Ausgangszustands im selben Versuch nicht überschreiten, und keine begonnene
+Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsanforderung nicht herleitbar.
 
 \subsubsection{Soll-Kriterien und Gewichtung}
 
@@ -387,65 +329,29 @@ Kompatibilität als stärkste Gegenkraft zu einem Wechsel des Ausführungsmodell
 übrigen Kriterien wiegen leichter, weil sie entweder die Ausführung selbst betreffen, ohne die
 Wartezeit im gleichen Maß zu prägen wie S1, oder weil sie Restgrößen abdecken, deren Größenordnung
 bereits durch S6 begrenzt ist. Die Bewertung je Kriterium erfolgt auf einer Skala von null bis
-fünf, und der Nutzwert ist die mit den Gewichten gebildete Summe. Die Zuordnung von Messwerten zu
-Punktwerten legt \autoref{sec:Evaluation} offen, damit die Bewertung nicht von der Darstellung
-abhängt.
+fünf, und der Nutzwert ist die mit den Gewichten gebildete Summe. Maßgeblich ist bei Kriterien mit
+Vergleichswert der Faktor, um den der Prototyp besser ist: null Punkte beim Faktor null,
+drei bei gleichem Wert, fünf ab dem Faktor zwei, dazwischen jeweils linear, sodass ein Wert knapp unter
+dem des Ausgangszustands knapp unter drei Punkte erhält. Gerundet wird erst das Ergebnis je
+Kriterium auf ganze Punkte. S1 geht je zur Hälfte aus S1a und S1b ein, bei S1 zählt das 95.\ Perzentil, bei S2 der Median. S6 und S7 erhalten je angefangene zwanzig Prozent der
+Mandanten, die unverändert laufen beziehungsweise keine Anpassung brauchen, einen Punkt. Die
+Zuordnung der Messwerte zu den Punkten legt \autoref{sec:Evaluation} offen, damit die Bewertung
+nicht von der Darstellung abhängt.
 
-Der Zielwert ist für S1 und S2 der Wert des Ausgangszustands im selben Messaufbau, den der
-Prototyp unterbieten muss. Eine Zahl wird dafür nicht vorab gesetzt, weil der Ausgangszustand
-bisher nicht unter den Lastprofilen dieser Arbeit gemessen wurde und erst \autoref{sec:Evaluation}
-beide Varianten denselben Läufen aussetzt. S3 und S4 werden dem Ausgangszustand gegenübergestellt,
-ohne dass ein Zielwert sie entscheidet. S6 und S7 haben keinen Vergleichswert, denn der Bestand
-läuft im Ausgangszustand bis auf wenige Ausnahmen. Für sie ist der Maßstab die Bestandsanalyse aus
-\autoref{sec:bestandsanalyse}.
+Der Zielwert ist für S1 und S2 der Wert des Ausgangszustands im selben Messaufbau, den der Prototyp unterbieten muss.
+Eine Zahl wird nicht vorab gesetzt, weil der Ausgangszustand bisher nicht unter den Lastprofilen dieser Arbeit
+gemessen wurde. S3 und S4 werden dem Ausgangszustand gegenübergestellt, ohne dass ein Zielwert sie entscheidet. S6 und
+S7 haben keinen Vergleichswert, ihr Maßstab ist die Bestandsanalyse aus \autoref{sec:bestandsanalyse}.
 
 \subsubsection{Prüffallkatalog}
 
-M2 und M4 lassen sich nicht durch Architekturbetrachtung allein belegen. Für sie wird ein Katalog
-von Prüffällen aufgestellt, der aus den Angriffswegen A1 bis A3 abgeleitet ist. Jeder Prüffall
-wird gegen den Ausgangszustand und gegen das Artefakt ausgeführt, sodass die Gegenüberstellung
-zugleich belegt, welche Eigenschaften der Ausgangszustand bereits erfüllt. Einen vergleichbaren
-Katalog handgeschriebener Prüffälle für Umgebungen, die nicht vertrauenswürdigen, von
-Sprachmodellen erzeugten Code ausführen, enthält SandboxEval mit 51 geprüften Eigenschaften,
-darunter Dateisystemzugriffe und ausgehende Verbindungen \autocite[S.~1--2]{rabin_sandboxeval_2025}.
+M2 und M4 lassen sich nicht durch Architekturbetrachtung allein belegen. Für sie gilt ein Katalog von Prüffällen
+(\autoref{tab:prueffaelle} im Anhang), abgeleitet aus den Angriffswegen A1 bis A3 und gegen den Ausgangszustand und
+das Artefakt ausgeführt, sodass die Gegenüberstellung zugleich belegt, welche Eigenschaften der Ausgangszustand bereits
+erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach, T4 prüft, ob dessen Reset des temporären
+Verzeichnisses auch im Artefakt greift, und die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die
+noch nicht beobachtet wurden. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
+Sprachmodellen erzeugten Code ausführen, enthält SandboxEval mit 51 Eigenschaften
+\autocite[S.~1--2]{rabin_sandboxeval_2025}, zugeschnitten auf Python und Linux und in
+\autoref{sec:pruefung-isolation} für JavaScript angepasst ergänzend ausgeführt.
 
-\begin{table}[H]
-  \caption{Prüffälle zur Zustandsfreiheit und zur Durchsetzung der Fähigkeitsbeschränkung}
-  \label{tab:prueffaelle}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X l l@{}}
-    \hline
-    Nr. & Prüffall & Kriterium & Quelle \\
-    \hline
-    T1 & Ein über \texttt{setTimeout} registrierter Callback überdauert das Ende seiner
-         Ausführung und greift auf Daten einer späteren Ausführung zu. & M2 & beobachtet \\
-    T2 & Eine in Ausführung $n$ gesetzte globale Variable ist in Ausführung $n+1$ lesbar. &
-         M2 & abgeleitet \\
-    T3 & Eine Veränderung eines eingebauten Prototyps oder des Module Cache wirkt in
-         Ausführung $n+1$ fort. & M2 & abgeleitet \\
-    T4 & Eine in Ausführung $n$ abgelegte Datei ist in Ausführung $n+1$ lesbar. & M2 &
-         abgeleitet \\
-    T5 & Eine in Ausführung $n$ geöffnete Netzwerkverbindung ist in Ausführung $n+1$ nutzbar.
-         & M2 & abgeleitet \\
-    T6 & Eine Ausführung erschöpft den Speicher und macht die Instanz für folgende
-         Ausführungen unbrauchbar. & M2 & beobachtet \\
-    T7 & Ausgehender Netzwerkverkehr wird an dem vermittelten Binding vorbei aufgebaut. &
-         M4 & abgeleitet \\
-        T8 & Auf das Dateisystem wird an dem vermittelten Binding vorbei zugegriffen. & M4 &
-         abgeleitet \\
-    T9 & Eine Ausführung überschreibt jede ihr sichtbare Kopie ihrer Identität und handelt
-         danach im Namen eines anderen Mandanten. & M4 & abgeleitet \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-T1 und T6 bilden Vorgänge nach, die im Ausgangszustand dokumentiert sind, und sind damit keine
-konstruierten Laborfälle. Für T4 gilt das nicht. Der Ausgangszustand setzt das temporäre
-Verzeichnis vor jeder Ausführung zurück, weshalb eine Datei aus Ausführung $n$ in Ausführung
-$n+1$ gerade nicht mehr vorhanden ist. T4 prüft also, ob dieser Reset auch im Artefakt greift.
-Die übrigen Prüffälle ergänzen den Katalog um Wege, die aus derselben geteilten Ressource folgen,
-aber noch nicht beobachtet wurden.
-
-Damit steht fest, wodurch die Unterfragen aus \autoref{sec:einleitung:zielsetzung} beantwortet werden.
-U3 prüft M1 bis M4 über Prüffallkatalog und Architekturprüfung, U4 erhebt die Messgrößen S1 bis
-S4 sowie M5, und die Muss-Kriterien entscheiden in \autoref{sec:Entwurf} über die Technologie.

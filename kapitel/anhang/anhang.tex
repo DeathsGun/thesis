@@ -27,13 +27,13 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert.
     & Bundle entpackt, maximal & 64\,MB \\
     & Bundle-Cache & 128\,MB je Prozess, Schlüssel SHA-256, Verdrängung des am
       längsten nicht genutzten Eintrags \\
-    & Selbstbeendigung ohne Auftrag & 1\,min (Umgebungsvariable), geprüft alle 30\,s, nur im zugewiesenen Zustand und nur
-      zwischen zwei Pulls \\
+    & Selbstbeendigung ohne Auftrag (Rückfall) & 5\,min (Umgebungsvariable), geprüft alle 30\,s, nur im
+      zugewiesenen Zustand und nur zwischen zwei Pulls \\
     & Mandanten-Consumer & dauerhaft, Repliken wie der Stream (drei), höchstens eine Zustellung, Bestätigungsfrist
       900\,s, gelöscht nach 300\,s ohne Nutzung, offene Zustellungen höchstens Slots $\times$ 10,
       ein Pull je Nachricht mit Frist 2\,s, Warten auf den Leader bis 2\,s \\
     & Lesen des Consumers & Frist 2\,s, drei Versuche, Reconnect nach einem Versuch ohne Antwort \\
-    & NATS-Verbindung beim Start & 500\,ms je Versuch, Wiederholung bis 30\,s, danach höchstens 66
+    & NATS-Verbindung bei der ersten Zuweisung & 500\,ms je Versuch, Wiederholung bis 30\,s, danach höchstens 66
       Reconnects, Wartezeit bis 5\,s \\
     & Bundle-Abruf & 3 Versuche (50\,ms, 200\,ms) bei Transportfehlern, 5xx und 429 \\
     & Callback und Log-Upload & 3 Versuche (500\,ms, 1\,s) bei Transportfehlern und 5xx, je 30\,s Frist \\
@@ -41,14 +41,18 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert.
     & Readiness-Probe & \texttt{/ready}, alle 10\,s \\[2pt]
     Gateway & Wartezeit synchron & 53\,s, unter den 55\,s des Edge-Proxys \\[2pt]
         Control Plane & Pool-Zielgröße & 3 (Code), 40 (Integrationsumgebungen) \\
-    & Kommando an einen Worker (assign, unassign) & Redis-Liste je Worker, Antwort in einer
-      Reply-Liste, Frist 10\,s \\
+    & Kommando an einen Worker (assign, unassign) & \ac{HTTP}-\texttt{POST} an den Transport des
+      Pods, Antwort in der Response, Frist 10\,s \\
     & Reserve für Erweiterungen & Zielgröße / 2 \\
     & Rotation & nach 1\,h Zuweisungsdauer, geprüft alle 10\,s \\
+    & Rückzug ohne Auftrag & \emph{retire} nach 1\,min ohne Nachricht des Mandanten, geprüft alle 10\,s,
+      überzählige Pods über dem Maximum der letzten Minute \\
+    & Pool-Vorhersage & Nachfrage je Minute, Rückblick vier Wochen und sieben Tage, Fenster 3\,min mit
+      Vorlauf, Sicherheitsfaktor 1,3, Haltedauer 3\,min, Obergrenze 50, für die Messungen aus \\
     & Pods ohne Eintrag & gelöscht nach 5\,min \\
     & Neuzuweisung nach Pod-Tod & sofort, falls Aufträge warten, Wiederholung nach 1, 2, 4, 8,
       16\,s \\
-    & Anlegen beim Erstkontakt & höchstens eines je Mandant in 30\,s, Warten auf Anmeldung
+    & Anlegen beim Erstkontakt & höchstens eines je Mandant in 30\,s, Warten auf Bereitschaft
       bis 20\,s, geprüft je 1\,s \\
     & Watcher-Consumer & bis zu 20 Zustellungen \\
     & Lastskalierung je Mandant & Ziel-Auslastung 0,5 (Code) bzw.\ 0,75 (Integrationsumgebungen)
@@ -56,11 +60,13 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert.
       1, Lastprüfung alle 250\,ms, erste Erweiterung frühestens 2\,s nach dem Erstkontakt, Abstand
       zwischen Erweiterungen 2\,s, Pool danach auf Zielgröße aufgefüllt \\
     & Metriken & \ac{OTLP}-Push alle 15\,s \\[2pt]
-    Pod & Ressourcen & \ac{CPU}-Request 10\,m ohne Limit, Speicher 32\,Mi Request und 512\,Mi
+    Pod & Ressourcen Sandbox & \ac{CPU}-Request 10\,m ohne Limit, Speicher 32\,Mi Request und 512\,Mi
       Limit in der Integrationsumgebung, 128\,Mi Request im Code \\
+    & Ressourcen Transport & Speicher 32\,Mi Request und 256\,Mi Limit \\
+    & Token der Zuweisung & RS256, gültig 80\,min, also Zuweisungsdauer plus Grace Period und Reserve \\
     & Grace Period & 900\,s \\
     & Service Mesh & Sidecar-Injection deaktiviert \\
-    & Egress & Internet nur TCP 443, NATS und Redis über Labels der Cluster-Richtlinien \\
+    & Egress & Internet nur TCP 443, NATS über ein Label der Cluster-Richtlinien, kein Redis \\
     \hline
   \end{tabularx}
 \end{table}
@@ -100,15 +106,15 @@ Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
     \hline
     Zustand & Bedeutung & Übergänge \\
     \hline
-    angelegt & über die Kubernetes-\acs{API} erzeugt, noch nicht angemeldet, in keiner der drei
-      Mengen & nach Anmeldung \emph{frei}, ohne Anmeldung nach der Schonfrist aus
+    angelegt & über die Kubernetes-\acs{API} erzeugt, noch nicht bereit, in keiner der drei
+      Mengen & bei Bereitschaft \emph{frei}, ohne Bereitschaft nach der Schonfrist aus
       \autoref{tab:parameter} gelöscht \\[2pt]
-    frei & angemeldet, im Pool & beim Erstkontakt in einem atomaren Schritt nach
+    frei & bereit, im Pool & beim Erstkontakt in einem atomaren Schritt nach
       \emph{reserviert} \\[2pt]
-    reserviert & Zuweisung läuft, Kommando über Redis, Antwort innerhalb der Frist & bei
+    reserviert & Zuweisung läuft, Kommando über \ac{HTTP}, Antwort innerhalb der Frist & bei
       Bestätigung \emph{zugewiesen}, bei einem fehlgeschlagenen Schritt zurück nach \emph{frei} \\[2pt]
     zugewiesen & genau einem Mandanten zugeordnet, nie wieder im Pool & Rotation nach Ablauf
-      der Zuweisungsdauer, Selbstbeendigung ohne Auftrag oder Entzug des Knotens, jeweils nach
+      der Zuweisungsdauer, Rückzug ohne Auftrag oder Entzug des Knotens, jeweils nach
       \emph{beendet}, nie zurück nach \emph{frei} \\[2pt]
     beendet & Pod hat einen \texttt{DeletionTimestamp} bekommen oder ist gestorben, ein Informer
       meldet es & aus jedem Zustand. War es der letzte Pod
@@ -121,3 +127,352 @@ Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
 Nach einem Neustart liest die Control Plane den Zustand aus Redis zurück, entfernt zuerst Pods, die
 es nicht mehr gibt, und wiederholt offene Zuweisungen. Das ist möglich, weil der Worker eine
 wiederholte Zuweisung an denselben Mandanten als Bestätigung behandelt.
+
+
+\section{Codeauszüge}
+\label{sec:codeauszuege}
+
+Die Auszüge stammen aus dem Prototyp. Sie sind gekürzt, die Kommentare sind übersetzt oder entfallen.
+
+\lstdefinelanguage{GoLang}{
+  keywords={func, return, if, nil, var, const, type, struct, string, error, package, import, range},
+  sensitive=true, comment=[l]{//}, morestring=[b]"
+}
+\lstdefinelanguage{RustLang}{
+  keywords={fn, pub, impl, match, let, if, else, self, Self, true, false, enum, struct, use, mut, const},
+  sensitive=true, comment=[l]{//}, morestring=[b]"
+}
+
+\begin{lstlisting}[language=GoLang, caption={Rechte der NATS-Verbindung eines Workers (Auth Callout, \texttt{WorkerGrant.Permissions}, Go)}, label={lst:callout-rechte}]
+func (g WorkerGrant) Permissions() Permissions {
+	consumer := Stream + ".scriptworker-tenant-" + g.TenantID
+	return Permissions{
+		PubAllow: []string{
+			"$JS.API.CONSUMER.INFO." + consumer,
+			"$JS.API.CONSUMER.MSG.NEXT." + consumer,
+			"$JS.ACK." + consumer + ".>",
+			// Antworten nur an Aufrufer des eigenen Mandanten
+			"dv.processstudio.replies.*." + g.TenantID + ".>",
+		},
+		PubDeny: []string{
+			"$JS.API.CONSUMER.CREATE.>",
+			"$JS.API.CONSUMER.DURABLE.CREATE.>",
+			"$JS.API.CONSUMER.DELETE.>",
+			"$JS.API.STREAM.>",
+			"$JS.API.DIRECT.GET.>",
+			"dv.processstudio.cmds.>",
+		},
+		SubAllow: []string{"_INBOX_" + g.WorkerID + ".>"},
+		SubDeny:  []string{"_INBOX.>", "dv.processstudio.>", "$JS.>"},
+	}
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=GoLang, caption={Prüfung der Verbindung eines Workers im Auth Callout (\texttt{Service.Authorize}, Go)}, label={lst:callout-token}]
+claims, err := s.tokens.Verify(ctx, c.Token)
+if err != nil {
+	return domain.WorkerGrant{}, domain.Rejection{Reason: "invalid assignment token: " + err.Error()}
+}
+if !domain.ValidWorkerID(claims.Subject) || claims.Subject != c.User {
+	return domain.WorkerGrant{}, domain.Rejection{Reason: "the token is for another worker"}
+}
+if !domain.ValidTenantID(claims.TenantID) {
+	return domain.WorkerGrant{}, domain.Rejection{Reason: "the token's tenant is not a valid tenant id"}
+}
+if !identityMatches(c.Password, claims.IdentityHash) {
+	return domain.WorkerGrant{}, domain.Rejection{Reason: "the identity secret doesn't match the token"}
+}
+return domain.WorkerGrant{WorkerID: claims.Subject, TenantID: claims.TenantID, ExpiresAt: claims.ExpiresAt}, nil
+\end{lstlisting}
+
+\begin{lstlisting}[language=RustLang, caption={Absender im eigenen Pod werden als Quelle von Kommandos abgelehnt (\texttt{CommandHandler::is\_own\_pod}, Rust)}, label={lst:eigener-pod}]
+fn is_own_pod(&self, peer: IpAddr) -> bool {
+    let peer = match peer {
+        IpAddr::V6(v6) => v6.to_ipv4_mapped().map_or(peer, IpAddr::V4),
+        v4 => v4,
+    };
+    peer.is_loopback() || Some(peer) == self.pod_ip
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=RustLang, caption={Zuordnung des Profils zu den Bindings (\texttt{BindingSet::for\_profile}, Rust)}, label={lst:bindings}]
+pub fn for_profile(profile: Profile) -> Self {
+    match profile {
+        Profile::Webhook => BindingSet {
+            fetch: true,
+            net: true,
+            tls: true,
+            console_capture: true,
+            node_globals: true,
+        },
+        // Agentenprofil: erzeugter, möglicherweise beeinflusster Quelltext,
+        // bekommt nie Socket-Bindings, was er auch importiert.
+        Profile::Agent => BindingSet {
+            fetch: true,
+            net: false,
+            tls: false,
+            console_capture: false,
+            node_globals: false,
+        },
+    }
+}
+\end{lstlisting}
+
+
+\section{Weitere Messdaten zu Kapitel 5}
+\label{sec:messdaten}
+
+\begin{table}[H]
+  \caption{Zuordnung der Messgrößen zu Skripten und Läufen}
+  \label{tab:messgroessen}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Messgröße & Quelle & Ausgangszustand \\
+    \hline
+    S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Läufe 00 bis 08 und
+      Einmalmodus auf hyper-int-otc, Pool 40 am 26.\ Oktober, Pool 0 am 15.\ Oktober & Einmalmodus auf
+      hyper-int-otc, 15.\ Oktober \\
+    S2 warme Latenz & Overhead im Lastprofil, Läufe 28 und 30 sowie zwei Läufe am 26.\ Oktober, Zerlegung über
+      Traces & Lauf 18 \\
+    S3 Speicher & Containerstatistiken je Worker-Pod, Kaltstartmessung auf hyper-int-otc, 15.\ und 26.\ Oktober &
+      Kaltstartmessung auf hyper-int-otc, 15.\ Oktober \\
+    S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces & ebenso \\
+    Fehlerrate & fehlgeschlagene Aufrufe je Lauf, ohne clientseitige Netzfehler & Lauf 18 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Kaltstartläufe mit dem Kaltstart-Skript, k6, Stand des Prototyps je Lauf}
+  \label{tab:kaltstart-verlauf}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r@{}}
+    \hline
+    Lauf & Stand des Prototyps & Kalt Med. & Kalt P95 & Kalt Max & Warm Med. \\
+    \hline
+    06.10. & Pool 3, Wartezeit 5\,s, Sidecar. 10 Mandanten, 10 \acsp{VU} & 7,44\,s & 8,84\,s & 9,22\,s & 96\,ms \\
+    06.10. & ohne Sidecar, Wartezeit 20\,s, Pool 10. 10 Mandanten, 10 \acsp{VU} & 192\,ms & 215\,ms & 216\,ms & 102\,ms \\
+    00 & 10 Mandanten, 40 \acsp{VU}, 5 Aufrufe verloren & 594\,ms & 55,0\,s & 55,0\,s & 142\,ms \\
+    01 & 33 Mandanten, 40 \acsp{VU}, Pool 10 & 8,12\,s & 15,5\,s & 21,3\,s & 117\,ms \\
+    02 & Pool 40 & 635\,ms & 1,07\,s & 1,22\,s & 130\,ms \\
+    03 & Skalierungsschwelle 0,25 & 747\,ms & 1,12\,s & 1,14\,s & 128\,ms \\
+    04 & Skalierungsschwelle 0,75 & 613\,ms & 964\,ms & 1,11\,s & 141\,ms \\
+    05 & Start der \acsp{VU} über 10\,s verteilt & 350\,ms & 479\,ms & 801\,ms & 124\,ms \\
+    06 & ruhige Mandanten, 15\,min, 12 Aufrufe verloren & 189\,ms & 367\,ms & 55,2\,s & -- \\
+    07 & nach Neuzuweisung toter Worker & 201\,ms & 382\,ms & 2,41\,s & -- \\
+    08 & Slot bei der Bestätigung frei & 396\,ms & 482\,ms & 677\,ms & 178\,ms \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Zerlegung eines Pod-Starts bis zur ersten Ausführung, 6.\ Oktober, Image auf dem Knoten}
+  \label{tab:podstart}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r@{}}
+    \hline
+    Schritt & Dauer \\
+    \hline
+    Pod anlegen und Scheduling & 0,2\,s \\
+    Container-Start & 0,6\,s \\
+    Prozessstart bis zum ersten Verbindungsversuch & 0,7\,s \\
+    Verbindung zu NATS vom Cluster-Netz blockiert & 1,6\,s \\
+    Anmeldung, Zuweisung, erste Ausführung & 0,3\,s \\
+    Summe, fünf von sieben Pods & 3,3 bis 3,6\,s \\
+    Ausreißer: Image-Pull auf einem Knoten ohne Worker & 7,8\,s \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Ressourcen auf hyper-int-otc während der Kaltstartmessung, Pod-Ebene unter gVisor}
+  \label{tab:ressourcen-vergleich}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r@{}}
+    \hline
+     & Ausgang & Pool 40 & Pool 0 \\
+    \hline
+    Neue Runtime-Pods im Fenster & 191 & 188 & 188 \\
+    Speicher-Spitze je Pod, Median / P90 / Max, MiB & 89,7 / 92,6 / 104 & 45,8 / 48,8 / 53 & 45,8 / 48,2 / 52 \\
+    \acs{CPU} je Pod über die Lebensdauer, Kerne & 0,017 & 0,020 & 0,022 \\
+    Lebensdauer eines neuen Pods, Median & 78\,s & 190\,s & 88\,s \\
+    Requests \acs{CPU} / Speicher & 10\,m + 25\,m / 128\,Mi & 10\,m / 32\,Mi & 10\,m / 32\,Mi \\
+    Limits \acs{CPU} / Speicher & 100\,m / 512\,Mi & -- / 512\,Mi & -- / 512\,Mi \\
+    Runtime-Pods, Spitze & 162 & 216 & 185 \\
+    Runtime-Speicher, Spitze & 13,7\,GiB & 9,7\,GiB & 8,2\,GiB \\
+    Runtime-Speicher vor dem Test & rund 0 & 1,9\,GiB & 0,3\,GiB \\
+    Steuerung und Routing, Pods & 7 & 2 bis 3 & 2 bis 3 \\
+    Steuerung und Routing, Speicher & 1,35 bis 1,38\,GiB & 113 bis 167\,MiB & 116 bis 167\,MiB \\
+    Steuerung und Routing, \acs{CPU} & bis 0,14 Kerne & bis 0,05 Kerne & bis 0,04 Kerne \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Speicher auf hyper-int-otc nach der Trennung in Transport und Sandbox, 26.\ Oktober}
+  \label{tab:ressourcen-trennung}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
+    \hline
+     & Pool 40 & Pool 0 \\
+    \hline
+    Speicher-Spitze je neuem Pod, Median / P90 / Max, MiB & 58,9 / 64,2 / 68,5 & 59,9 / 63,3 / 67,2 \\
+    Control Plane und Gateway, Spitze & 161\,MiB & -- \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Hops einer warmen Anfrage aus Tempo, P50 / P90 in Millisekunden, 6.\ Oktober}
+  \label{tab:anfragepfad}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
+    \hline
+    Hop & 10 \acsp{VU} & 40 \acsp{VU} \\
+    \hline
+    Warten, bis der Skriptdienst das Resolve beginnt & 5,5 / 8,4 & 42,0 / 61,9 \\
+    Resolve im Skriptdienst & 11,4 / 18,1 & 16,4 / 26,6 \\
+    Resolve-Antwort zum Gateway & 5,3 / 7,4 & 13,4 / 25,0 \\
+    Gateway zum Executor & 5,1 / 8,3 & 7,1 / 14,2 \\
+    Ausführung im Worker & 16,6 / 33,3 & 17,2 / 27,2 \\
+    Antwort des Executors zum Gateway & 5,8 / 7,7 & 11,4 / 16,0 \\
+    Gateway gesamt & 56,5 / 72,5 & 119,7 / 141,0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Fehlgeschlagene oder verspätete Aufrufe, ihre Ursache und die Korrektur}
+  \label{tab:zustellung}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Lauf & Befund und Ursache & Korrektur \\
+    \hline
+    00 & 5 Aufrufe im Timeout. Ein Pull an einen frisch angelegten Consumer mit drei Repliken
+      ging verloren, bevor dieser einen Leader hatte. & Nach dem Anlegen bis zu 2\,s auf den Leader
+      warten, einen Pull ohne Heartbeat neu aufbauen. \\
+    06 & 12 Aufrufe im Timeout, ausgeführt erst 133 bis 173\,s später mit dem nächsten Worker.
+      Der Worker hatte sich 0,01 bis 1,94\,s vor dem Auftrag beendet. Die Control Plane sah den
+      Mandanten noch als zugewiesen und bestätigte den Auftrag, ohne dass jemand den Consumer las. & Nach dem Abräumen eines toten Workers Mandanten mit wartenden
+      Aufträgen sofort neu zuweisen, auf hyper-int-otc zusätzlich mit Wiederholung nach 1 bis
+      16\,s, weil die erste Neuzuweisung einmal scheiterte. Seit dem 26.\ Oktober zieht die Control
+      Plane Mandanten ohne Aufträge selbst zurück, bevor ein Worker sich beendet. \\
+    19 & 504 ab der ersten Minute auf hyper-int-otc. Das NATS-Konto erlaubte 100 Consumer je
+      Stream, ab dem 97.\ aktiven Mandanten bekam keiner einen Worker. & Limit auf 1.000
+      angehoben, Lauf aus dem Vergleich ausgeschlossen. \\
+    22--29 & 50 bis 109 Zuweisungen je Lauf scheitern, weil Antworten der JetStream-\acs{API} auf
+      einzelnen langlebigen Verbindungen ausbleiben: In 276 von 276 Fällen war die Verbindung
+      verbunden, ein PING wurde in höchstens 3\,ms beantwortet, und in den zwei Sekunden kam kein
+      Byte an, während frische Verbindungen aus einem Prüf-Pod dieselben Consumer ohne einen
+      einzigen Fehler lasen. Serverseitige Ursache nicht belegt, an die Plattform gemeldet. &
+      Bei genau diesem Muster vor dem nächsten Versuch neu verbinden. Lauf 30: keine
+      gescheiterte Zuweisung mehr, 99.\ Perzentil der Zuweisung 2,1 statt 6,0\,s, und 39 der 62
+      Reconnects landeten auf demselben Server. \\
+    27 & 81 Aufrufe im Timeout nach einem Umbau, der den Consumer direkt zog: Bei fehlendem
+      Heartbeat verwarf der Code den Pull und legte den Consumer an, der schon bestand. Der Server
+      stellte die wartende Nachricht in den verworfenen Pull zu. & Umbau zurückgenommen. \\
+    30 & 1 Aufruf im Timeout. Der Worker hielt einen dauerhaften Pull offen, die Nachricht wurde
+      in ihn zugestellt, während der Prozess sich wegen Inaktivität beendete. & Ein Pull je
+      Nachricht, Beenden und Drain nur zwischen zwei Pulls, noch ohne Lastlauf. \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{SandboxEval, 51 Eigenschaften für JavaScript angepasst, 21.\ Oktober 2026. Eine Antwort heißt
+    nicht, dass der Zugriff auf den echten Host gelang, im Webhook-Profil sind die Werte leer oder nachgebildet}
+  \label{tab:sandboxeval}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r@{}}
+    \hline
+     & Ausgangszustand & Prototyp, Webhook & Prototyp, Agent \\
+    \hline
+    Fälle, die antworteten (von 51) & 31 & 29 & 2 \\
+    davon mit Information über den echten Host & 12 & 0 & 0 \\
+    davon mit Verbindung zu externen Zielen & 5 & 0 & 0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Konfigurationsvergleich der Pod-Spezifikation für M3, Container mit Gastcode}
+  \label{tab:m3}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Feld & Ausgangszustand & Prototyp & Prototyp gegenüber dem Ausgangszustand \\
+    \hline
+    \texttt{runtimeClassName} & \texttt{gvisor} & \texttt{gvisor} & gleich \\
+    \texttt{allowPrivilegeEscalation} & \texttt{false} & \texttt{false} & gleich \\
+    \texttt{capabilities.drop} & \texttt{ALL} & \texttt{ALL} & gleich \\
+    \texttt{seccompProfile} & \texttt{RuntimeDefault} & \texttt{RuntimeDefault} & gleich \\
+    \texttt{automountServiceAccountToken} & \texttt{false} & \texttt{false} & gleich \\
+    \texttt{hostNetwork}, \texttt{hostPID}, \texttt{hostIPC} & nicht gesetzt & nicht gesetzt & gleich \\
+    \texttt{readOnlyRootFilesystem} & nicht gesetzt & \texttt{true} & strenger \\
+    \texttt{runAsNonRoot} & nicht gesetzt & \texttt{true} & strenger \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf, ab
+    Beginn der Löschung}
+  \label{tab:m5}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l r r r r r >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Lauf & Mandanten getroffen & Lücke getroffen & Lücke übrige & Latenz getroffen, max. & Fehler &
+      lange Aufrufe mit 200 \\
+    \hline
+    \multicolumn{7}{@{}l}{\emph{Prototyp, mit langen Aufrufen}} \\
+    1 & 2 & 1,11\,s & 1,06\,s & 1.269\,ms & 0 & 8 von 8 \\
+    2 & 2 & 1,20\,s & 1,13\,s & 1.291\,ms & 0 & 8 von 8 \\
+    3 & 3 & 1,37\,s & 0,77\,s & 1.493\,ms & 0 & 8 von 8 \\
+    4 & 2 & 0,76\,s & 0,98\,s & 1.261\,ms & 0 & 8 von 8 \\
+    \multicolumn{7}{@{}l}{\emph{Prototyp, ohne lange Aufrufe}} \\
+    5 & 2 & 1,12\,s & 1,11\,s & 1.483\,ms & 0 & -- \\
+    6 & 1 & 0,61\,s & 1,45\,s & 1.303\,ms & 0 & -- \\
+    7 & 1 & 0,66\,s & 0,59\,s & 1.243\,ms & 0 & -- \\
+    8 & 2 & 1,33\,s & 1,12\,s & 1.271\,ms & 0 & -- \\
+    \multicolumn{7}{@{}l}{\emph{Ausgangszustand}} \\
+    1 & 1 (drei Runner-Pods) & 1,9\,s & -- & 3.000\,ms & 0 & 1 von 1, nach 26,2\,s \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+
+
+\section{Prüffallkatalog}
+\label{sec:prueffallkatalog}
+
+\begin{table}[H]
+  \caption{Prüffälle zur Zustandsfreiheit und zur Durchsetzung der Fähigkeitsbeschränkung}
+  \label{tab:prueffaelle}
+  \small
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X l l@{}}
+    \hline
+    Nr. & Prüffall & Kriterium & Quelle \\
+    \hline
+    T1 & Ein über \texttt{setTimeout} registrierter Callback überdauert das Ende seiner
+         Ausführung und greift auf Daten einer späteren Ausführung zu. & M2 & beobachtet \\
+    T2 & Eine in Ausführung $n$ gesetzte globale Variable ist in Ausführung $n+1$ lesbar. &
+         M2 & abgeleitet \\
+    T3 & Eine Veränderung eines eingebauten Prototyps oder des Module Cache wirkt in
+         Ausführung $n+1$ fort. & M2 & abgeleitet \\
+    T4 & Eine in Ausführung $n$ abgelegte Datei ist in Ausführung $n+1$ lesbar. & M2 &
+         abgeleitet \\
+    T5 & Eine in Ausführung $n$ geöffnete Netzwerkverbindung ist in Ausführung $n+1$ nutzbar.
+         & M2 & abgeleitet \\
+    T6 & Eine Ausführung erschöpft den Speicher und macht die Instanz für folgende
+         Ausführungen unbrauchbar. & M2 & beobachtet \\
+    T7 & Ausgehender Netzwerkverkehr wird an dem vermittelten Binding vorbei aufgebaut. &
+         M4 & abgeleitet \\
+        T8 & Auf das Dateisystem wird an dem vermittelten Binding vorbei zugegriffen. & M4 &
+         abgeleitet \\
+    T9 & Eine Ausführung überschreibt jede ihr sichtbare Kopie ihrer Identität und handelt
+         danach im Namen eines anderen Mandanten. & M4 & abgeleitet \\
+    \hline
+  \end{tabularx}
+\end{table}

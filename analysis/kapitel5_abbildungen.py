@@ -1,4 +1,5 @@
 # Abbildungen fuer Kapitel 5 aus den Tabellenwerten (tab:kaltstart-vergleich, tab:overhead).
+# Pool 40 und Prototyp-Overhead: Stand vom 26.10.2026, Pool 0 und Ausgangszustand: 15.10.2026.
 # Aufruf aus dem Projektordner: python3 analysis/kapitel5_abbildungen.py  (braucht matplotlib)
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -14,8 +15,8 @@ def fmt(v, _):
 
 # Abb. 1: Kaltstart je Mandant, hyper-int-otc, tab:kaltstart-vergleich (ms)
 pct = ["Median", "P90", "P95", "P99", "Max."]
-verteilt = {"Ausgangszustand": [2540, 3150, 3330, 4140, 6070], "Prototyp, Pool 40": [375, 499, 1850, 2400, 2410], "Prototyp, Pool 0": [2030, 6240, 8540, 11000, 12000]}
-schub = {"Ausgangszustand": [9060, 18900, 19500, 21200, 22000], "Prototyp, Pool 40": [3420, 9710, 10300, 11100, 11400], "Prototyp, Pool 0": [9850, 17700, 18100, 18800, 19200]}
+verteilt = {"Ausgangszustand": [2540, 3150, 3330, 4140, 6070], "Prototyp, Pool 40": [344, 431, 525, 634, 639], "Prototyp, Pool 0": [2030, 6240, 8540, 11000, 12000]}
+schub = {"Ausgangszustand": [9060, 18900, 19500, 21200, 22000], "Prototyp, Pool 40": [3610, 6790, 6900, 7850, 8000], "Prototyp, Pool 0": [9850, 17700, 18100, 18800, 19200]}
 fig, axes = plt.subplots(1, 2, figsize=(6.3, 3.0), sharey=True)
 for ax, data, title in ((axes[0], verteilt, "verteilt, ein Mandant je Sekunde"), (axes[1], schub, "Schub, alle 90 zugleich")):
     for name, ys in data.items():
@@ -30,10 +31,11 @@ axes[1].legend(frameon=False, fontsize=8, loc="lower right")
 fig.tight_layout()
 fig.savefig("abbildungen/kaltstart_vergleich.pdf")
 
-# Abb. 2: Overhead im Lastprofil, tab:overhead, Läufe 18, 28 (ms)
+# Abb. 2: Overhead im Lastprofil, tab:overhead, Läufe 18, 28 und 26.10. (ms)
 pct2 = ["P50", "P90", "P95", "P99"]
 runs = {"Ausgangszustand, otc (Lauf 18)": ([259, 1190, 2310, 4570], "#2a78d6", "o"),
-        "Prototyp, otc (Lauf 28)": ([127, 164, 180, 268], "#eb6834", "s")}
+        "Prototyp, otc (Lauf 28, 15.10.)": ([127, 164, 180, 268], "#eb6834", "s"),
+        "Prototyp, otc (26.10.)": ([138, 239, 293, 405], "#1baf7a", "^")}
 fig, ax = plt.subplots(figsize=(6.3, 2.9))
 for name, (ys, col, mk) in runs.items():
     ax.plot(pct2, ys, marker=mk, ms=5, lw=1.6, color=col, label=name, mec="white", mew=0.8)

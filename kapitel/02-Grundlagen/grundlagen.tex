@@ -1,47 +1,36 @@
 \newpage
 \section{Grundlagen} \label{sec:grundlagen}
 
-Dieses Kapitel legt die Begriffe fest, die die folgenden Kapitel voraussetzen. Es ordnet sie in
-drei Gruppen: die Schichten, auf denen fremder Code voneinander getrennt wird, die Bausteine, aus
-denen die Ausführung auf Kubernetes zusammengesetzt ist, und die beiden Eigenschaften, die die
-Forschungsfrage verlangt. Begriffe, die nur an einer Stelle gebraucht werden, erklärt die
-jeweilige Stelle.
+Dieses Kapitel legt die Begriffe fest, die die folgenden Kapitel voraussetzen. Begriffe, die nur an einer Stelle
+gebraucht werden, erklärt die jeweilige Stelle.
 
 \subsection{Schichten der Isolation}
 \label{sec:grundlagen:isolation}
 
 Ein \emph{Container} grenzt einen Prozess über Mechanismen des Betriebssystemkerns ab, teilt sich
 diesen Kern aber mit allen anderen Containern desselben Hosts
-\autocite[S.~18]{souppaya_application_2017}. Was daraus für die Angriffsfläche folgt, behandelt
-\autoref{sec:angreifermodell}.
-In Kubernetes ist der \emph{Pod} die kleinste Einheit, die sich ausbringen lässt. Er fasst einen
+\autocite[S.~18]{souppaya_application_2017}. In Kubernetes ist der \emph{Pod} die kleinste Einheit, die sich ausbringen lässt. Er fasst einen
 oder mehrere Container zusammen, die sich Netz und Speicher teilen und gemeinsam auf einen Knoten
 geplant werden \autocite{the_kubernetes_authors_pods_2026}.
 
-\emph{gVisor} schiebt zwischen Container und Host-Kernel eine weitere Schicht. Es ist ein in Go
-geschriebener Anwendungskern, der eine Linux-ähnliche Schnittstelle nachbildet. Sein Kernstück,
-der Sentry, fängt die Systemaufrufe der Anwendung ab und beantwortet sie selbst, statt sie an den
-Host-Kernel durchzureichen. Die Laufzeit \texttt{runsc} setzt die Spezifikation der Open Container
-Initiative um und lässt sich dadurch in Kubernetes als Runtime-Klasse eintragen
-\autocite{the_gvisor_authors_what_2026}. Weil der Sentry im User Space läuft und nur eine verkleinerte
-Oberfläche des Host-Kernels nutzt \autocite{the_gvisor_authors_security_2026}, wird gVisor als
-User-Space-Kernel bezeichnet. Der Preis sind langsamere Systemaufrufe
-\autocite[S.~3]{young_true_2019}.
+\emph{gVisor} schiebt zwischen Container und Host-Kernel eine weitere Schicht. Sein Kernstück, der Sentry, fängt die
+Systemaufrufe der Anwendung ab und beantwortet sie selbst, statt sie an den Host-Kernel durchzureichen. Die Laufzeit
+\texttt{runsc} setzt die Spezifikation der Open Container Initiative um und lässt sich als Runtime-Klasse in
+Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}. Weil der Sentry im User Space läuft und nur eine
+verkleinerte Oberfläche des Host-Kernels nutzt \autocite{the_gvisor_authors_security_2026}, gilt gVisor als
+User-Space-Kernel, der Preis sind langsamere Systemaufrufe \autocite[S.~3]{young_true_2019}.
 
 Ein \emph{V8-Isolate} ist eine Instanz der JavaScript-Engine V8 mit eigenem Heap. Innerhalb eines
 Isolates kann ein \emph{Context} voneinander unabhängigen JavaScript-Code in derselben Instanz
 ausführen \autocite{the_v8_authors_getting_2026}. Die Grenze zwischen zwei Isolates verläuft damit
 innerhalb eines Prozesses und wird allein von der Engine durchgesetzt. Sie ist eine sprachbasierte
-Grenze, die Angriffe unterhalb der Softwareebene nicht abfängt, weshalb der Browser Chrome
-Webseiten verschiedener Herkunft in getrennte Prozesse verlegt hat
-\autocite[S.~1661--1662]{reis_site_2019}.
+Grenze, die Angriffe unterhalb der Softwareebene nicht abfängt.
 
 \emph{\texttt{deno\_core}} ist eine Rust-Bibliothek des Deno-Projekts, die den Umgang mit V8
 kapselt. Ihre Runtime-Instanz hält ein Isolate und verbindet es mit einer Event Loop. Über
 \emph{Ops} werden Rust-Funktionen so registriert, dass JavaScript sie aufrufen kann, und
 \emph{Extensions} bündeln Ops mit dem JavaScript-Code, der sie dem Skript zugänglich macht
-\autocite{iwanczuk_roll_2022}. Die Bibliothek bildet zugleich den Kern der Deno-Laufzeitumgebung
-\autocite{deno_land_inc_how_2026}. \emph{Bindings} heißen in dieser Arbeit die Schnittstellen, über die ein
+\autocite{iwanczuk_roll_2022}. \emph{Bindings} heißen in dieser Arbeit die Schnittstellen, über die ein
 Skript die Außenwelt erreicht, etwa \texttt{fetch} oder ein Socket. Ein Binding besteht aus Ops
 und dem JavaScript-Code, der sie dem Skript in der gewohnten Form anbietet.
 
@@ -51,18 +40,17 @@ und dem JavaScript-Code, der sie dem Skript in der gewohnten Form anbietet.
 \emph{Knative Serving} erweitert Kubernetes um Ressourcen für die Ausführung von Diensten, die auf
 Anfragen reagieren. Ein Service verwaltet den Lebenszyklus eines Workloads, eine Revision ist der
 Stand von Code und Konfiguration zu einem Zeitpunkt, und Revisionen werden nach eingehendem
-Verkehr skaliert, bis hinunter auf null Pods \autocite{the_knative_authors_overview_2026}. Nach
-welcher Wartezeit ohne Verkehr ein Pod entfernt wird, ist konfigurierbar
-\autocite{the_knative_authors_configuring_2026}. Der Ausgangszustand der Fallstudie nutzt genau
+Verkehr skaliert, bis hinunter auf null Pods \autocite{the_knative_authors_overview_2026}. Der Ausgangszustand der Fallstudie nutzt genau
 dieses Verhalten, wie \autoref{sec:systemkontext} zeigt.
 
 Ein \emph{Kaltstart} ist die Verzögerung, die eine Anfrage erfährt, wenn keine laufende Instanz sie
 bedienen kann und die Plattform erst eine bereitstellen muss
 \autocite[S.~1]{lin_mitigating_2019}. In der Fallstudie umfasst sie das Anlegen und Planen des
 Pods, den Start der Laufzeitumgebung und das Laden des Codes. Eine Anfrage, die auf eine bereits
-laufende Instanz trifft, gilt als \emph{warm}. Zwei Gegenmittel sind in der Literatur
+laufende Instanz trifft, gilt als \emph{warm}. Drei Gegenmittel sind in der Literatur
 beschrieben: ein Vorrat vorgehaltener Instanzen, der den Start vom Anfragepfad nimmt
-\autocite[S.~1]{lin_mitigating_2019}, und Snapshots initialisierter Instanzen, aus denen ein Start
+\autocite[S.~1]{lin_mitigating_2019}, vorinitialisierte Laufzeitumgebungen, aus denen neue Instanzen
+entstehen \autocite[S.~57]{oakes_sock_2018}, und Snapshots initialisierter Instanzen, aus denen ein Start
 schneller hervorgeht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}.
 Wie die Arbeit den Kaltstart misst, legt \autoref{sec:kriterienkatalog} fest.
 
@@ -77,15 +65,12 @@ Stream bereits für ihre Kommandos und Events, und das Ausführungsmodell nutzt 
 \subsection{Mandantenisolation und Zustandsfreiheit}
 \label{sec:grundlagen:eigenschaften}
 
-Ein \emph{Mandant} ist in der Fallstudie ein Kunde, dessen Nutzer sich eine Installation des
-\ac{DMS} teilen. Das deckt sich mit der Definition von \textcite[S.~427]{krebs_architectural_2012},
-nach der ein Mandant eine Gruppe von Nutzern mit derselben Sicht auf eine Anwendung ist und
-Mandantenfähigkeit darin besteht, eine Anwendungsinstanz zwischen mehreren Mandanten zu teilen.
-Mehrere Mandanten laufen auf derselben Plattform, und die Plattform muss sie
-voneinander trennen, weil sie einander nicht vertrauen. \emph{Mandantenisolation} heißt in dieser
+Ein \emph{Mandant} ist in der Fallstudie ein Kunde, dessen Nutzer sich eine Installation des \ac{DMS} teilen, nach
+\textcite[S.~427]{krebs_architectural_2012} eine Gruppe von Nutzern mit derselben Sicht auf eine Anwendung. Mehrere
+Mandanten laufen auf derselben Plattform, und die Plattform muss sie voneinander trennen, weil sie einander nicht
+vertrauen. \emph{Mandantenisolation} heißt in dieser
 Arbeit, dass eine Ausführung Daten, Code und Verarbeitung anderer Mandanten weder einsehen noch
-verändern noch stören kann. Welche Schutzziele daraus folgen und woran die Trennung heute
-durchgesetzt wird, leitet \autoref{sec:systemkontext} aus dem Betriebskonzept her.
+verändern noch stören kann. Die Schutzziele leitet \autoref{sec:systemkontext} aus dem Betriebskonzept her.
 
 \emph{Zustandsfreiheit} bezieht sich nicht auf Mandanten, sondern auf aufeinanderfolgende
 Ausführungen. Eine Ausführung ist zustandsfrei, wenn nichts von ihr einer späteren zugänglich ist,

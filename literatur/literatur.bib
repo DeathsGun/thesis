@@ -331,7 +331,7 @@
 	title = {Application Container Security Guide},
 	doi = {10.6028/NIST.SP.800-190},
 	number = {800-190},
-	institution = {National Institute of Standards and Technology},
+	institution = {{National Institute of Standards and Technology}},
 	type = {{NIST} Special Publication},
 	author = {Souppaya, Murugiah and Morello, John and Scarfone, Karen},
 	date = {2017},
@@ -378,7 +378,6 @@
 	location = {Santa Clara, {CA}},
 	title = {Firecracker: Lightweight Virtualization for Serverless Applications},
 	isbn = {978-1-939133-13-7},
-	url = {https://www.usenix.org/conference/nsdi20/presentation/agache},
 	pages = {419--434},
 	booktitle = {17th {USENIX} Symposium on Networked Systems Design and Implementation ({NSDI} 20)},
 	publisher = {{USENIX} Association},
@@ -396,13 +395,14 @@
 }
 
 @inproceedings{young_true_2019,
+	location = {Renton, {WA}},
 	title = {The True Cost of Containing: A {gVisor} Case Study},
-	url = {https://www.usenix.org/system/files/hotcloud19-paper-young.pdf},
+	url = {https://www.usenix.org/conference/hotcloud19/presentation/young},
+	urldate = {2026-10-19},
 	booktitle = {11th {USENIX} Workshop on Hot Topics in Cloud Computing ({HotCloud} 19)},
 	publisher = {{USENIX} Association},
 	author = {Young, Ethan G. and Zhu, Pengfei and Caraza-Harter, Tyler and Arpaci-Dusseau, Andrea C. and Arpaci-Dusseau, Remzi H.},
-	date = {2019},
-	file = {Full Text:files/805/Young et al. - 2019 - The True Cost of Containing A gVisor Case Study.pdf:application/pdf},
+	date = {2019-07},
 }
 
 @article{li_g-fuzz_2024,
@@ -427,9 +427,8 @@
 
 @inproceedings{boucher_putting_2018,
 	location = {Boston, {MA}},
-	title = {Putting the "Micro" Back in Microservice},
+	title = {Putting the \enquote{Micro} Back in Microservice},
 	isbn = {978-1-939133-01-4},
-	url = {https://www.usenix.org/conference/atc18/presentation/boucher},
 	pages = {645--650},
 	booktitle = {2018 {USENIX} Annual Technical Conference ({USENIX} {ATC} 18)},
 	publisher = {{USENIX} Association},
@@ -461,7 +460,6 @@
 @inproceedings{lehmann_everything_2020,
 	title = {Everything Old is New Again: Binary Security of {WebAssembly}},
 	isbn = {978-1-939133-17-5},
-	url = {https://www.usenix.org/conference/usenixsecurity20/presentation/lehmann},
 	pages = {217--234},
 	booktitle = {29th {USENIX} Security Symposium ({USENIX} Security 20)},
 	publisher = {{USENIX} Association},
@@ -473,7 +471,6 @@
 @inproceedings{shillaker_faasm_2020,
 	title = {Faasm: Lightweight Isolation for Efficient Stateful Serverless Computing},
 	isbn = {978-1-939133-14-4},
-	url = {https://www.usenix.org/conference/atc20/presentation/shillaker},
 	pages = {419--433},
 	booktitle = {2020 {USENIX} Annual Technical Conference ({USENIX} {ATC} 20)},
 	publisher = {{USENIX} Association},
@@ -556,7 +553,6 @@
 	number = {3},
 	journaltitle = {Journal of Management Information Systems},
 	author = {Peffers, Ken and Tuunanen, Tuure and Rothenberger, Marcus A. and Chatterjee, Samir},
-	urldate = {2025-12-20},
 	date = {2007-12},
 }
 
@@ -603,7 +599,7 @@
 @inproceedings{wang_executable_2024,
 	title = {Executable Code Actions Elicit Better {LLM} Agents},
 	volume = {235},
-	url = {https://proceedings.mlr.press/v235/wang24h.html},
+	doi = {10.48550/arXiv.2402.01030},
 	series = {Proceedings of Machine Learning Research},
 	pages = {50208--50232},
 	booktitle = {Proceedings of the 41st International Conference on Machine Learning ({ICML} 2024)},
@@ -771,12 +767,105 @@
 	date = {2026},
 }
 
+@misc{the_nats_authors_auth_callout_2026,
+	title = {Auth callout},
+	url = {https://docs.nats.io/running-a-nats-service/configuration/securing_nats/auth_callout},
+	author = {{The NATS Authors}},
+	urldate = {2026-10-23},
+	date = {2026},
+}
+
 @misc{the_gvisor_authors_what_2026,
 	title = {What is {gVisor}?},
 	url = {https://gvisor.dev/docs/},
 	author = {{The gVisor Authors}},
 	urldate = {2026-10-19},
 	date = {2026},
+}
+
+@misc{activepieces_sandboxing_2026,
+	title = {Sandboxing},
+	booktitle = {Activepieces Documentation},
+	url = {https://www.activepieces.com/docs/install/architecture/sandboxing},
+	author = {{Activepieces}},
+	urldate = {2026-10-21},
+	date = {2026},
+}
+
+@misc{tanstack_code_2026,
+	title = {Code Mode Isolate Drivers},
+	booktitle = {{TanStack} {AI} Documentation},
+	url = {https://tanstack.com/ai/latest/docs/code-mode/code-mode-isolates},
+	author = {{TanStack}},
+	urldate = {2026-10-21},
+	date = {2026},
+}
+
+@misc{laverdet_isolated-vm_2026,
+	title = {isolated-vm: Secure \& isolated {JS} environments for nodejs},
+	url = {https://github.com/laverdet/isolated-vm},
+	author = {Laverdet, Marcel},
+	urldate = {2026-10-21},
+	date = {2026},
+}
+
+@inproceedings{alzayat_groundhog_2023,
+	title = {Groundhog: Efficient Request Isolation in {FaaS}},
+	url = {https://arxiv.org/abs/2205.11458},
+	booktitle = {Proceedings of the Eighteenth European Conference on Computer Systems ({EuroSys} '23)},
+	publisher = {{ACM}},
+	author = {Alzayat, Mohamed and Mace, Jonathan and Druschel, Peter and Garg, Deepak},
+	urldate = {2026-10-21},
+	date = {2023},
+}
+
+@inproceedings{dukic_photons_2020,
+	title = {Photons: Lambdas on a Diet},
+	url = {https://www.dpss.inesc-id.pt/~rbruno/papers/vdukic-socc20.pdf},
+	booktitle = {Proceedings of the 11th {ACM} Symposium on Cloud Computing ({SoCC} '20)},
+	publisher = {{ACM}},
+	author = {Dukić, Vojislav and Bruno, Rodrigo and Singla, Ankit and Alonso, Gustavo},
+	urldate = {2026-10-21},
+	date = {2020},
+}
+
+@inproceedings{du_catalyzer_2020,
+	title = {Catalyzer: Sub-millisecond Startup for Serverless Computing with Initialization-less Booting},
+	doi = {10.1145/3373376.3378512},
+	booktitle = {Proceedings of the Twenty-Fifth International Conference on Architectural Support for Programming Languages and Operating Systems ({ASPLOS} '20)},
+	publisher = {{ACM}},
+	author = {Du, Dong and Yu, Tianyi and Xia, Yubin and Zang, Binyu and Yan, Guanglu and Qin, Chenggang and Wu, Qixuan and Chen, Haibo},
+	date = {2020},
+}
+
+@misc{cloudflare_worker_2026,
+	title = {Worker Loader},
+	booktitle = {Cloudflare Workers Documentation},
+	url = {https://developers.cloudflare.com/workers/runtime-apis/bindings/worker-loader},
+	author = {{Cloudflare}},
+	urldate = {2026-10-21},
+	date = {2026},
+}
+
+@inproceedings{shahrad_serverless_2020,
+	title = {Serverless in the Wild: Characterizing and Optimizing the Serverless Workload at a Large Cloud Provider},
+	url = {https://www.usenix.org/conference/atc20/presentation/shahrad},
+	pages = {205--218},
+	booktitle = {2020 {USENIX} Annual Technical Conference ({USENIX} {ATC} 20)},
+	publisher = {{USENIX} Association},
+	author = {Shahrad, Mohammad and Fonseca, Rodrigo and Goiri, Íñigo and Chaudhry, Gohar and Batum, Paul and Cooke, Jason and Laureano, Eduardo and Tresness, Colby and Russinovich, Mark and Bianchini, Ricardo},
+	urldate = {2026-10-21},
+	date = {2020-07},
+}
+
+@inproceedings{oakes_sock_2018,
+	title = {{SOCK}: Rapid Task Provisioning with Serverless-Optimized Containers},
+	url = {https://www.usenix.org/conference/atc18/presentation/oakes},
+	booktitle = {2018 {USENIX} Annual Technical Conference ({USENIX} {ATC} 18)},
+	publisher = {{USENIX} Association},
+	author = {Oakes, Edward and Yang, Leon and Zhou, Dennis and Hundt, Kevin and Arpaci-Dusseau, Andrea C. and Arpaci-Dusseau, Remzi H.},
+	urldate = {2026-10-21},
+	date = {2018-07},
 }
 
 @misc{the_knative_authors_overview_2026,

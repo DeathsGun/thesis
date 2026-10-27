@@ -219,6 +219,7 @@
 
 %Bib-Datei einbinden
 \addbibresource{literatur/literatur.bib}
+\DefineBibliographyStrings{ngerman}{artno = {Art.-Nr.}}
 
 % Zeilenabstand im Literaturverzeichnis ist Einzeilig
 % siehe Leitfaden S. 14
@@ -295,6 +296,7 @@
 % PDF Meta Daten setzen
 %-----------------------------------
 \usepackage[hyperfootnotes=false]{hyperref} %hyperfootnotes=false deaktiviert die Verlinkung der Fußnote. Ansonsten inkompaibel zum Paket "footmisc"
+\AtBeginDocument{\renewcommand{\subsectionautorefname}{Abschnitt}\renewcommand{\subsubsectionautorefname}{Abschnitt}}
 % Behebt die falsche Darstellung der Lesezeichen in PDF-Dateien, welche eine Übersetzung besitzen
 % siehe Issue 149
 \makeatletter
@@ -402,6 +404,12 @@
 \listoftables
 \newpage
 %-----------------------------------
+% Listingverzeichnis
+%-----------------------------------
+\renewcommand{\lstlistlistingname}{Listingverzeichnis}
+\lstlistoflistings
+\newpage
+%-----------------------------------
 % Abkürzungsverzeichnis
 %-----------------------------------
 % Falls das Abkürzungsverzeichnis nicht im Inhaltsverzeichnis angezeigt werden soll
@@ -506,7 +514,17 @@
 % noch weitere Arten von Zusammenfassungen eines Literaturverzeichnisse zu
 % erzeugen.
 % Beispiel: [type=book,type=article]
-\printbibliography[nottype=misc,heading=bibintoc,title={\langde{Literaturverzeichnis}\langen{Bibliography}}]
+% Quellenarten: Internetquellen sind Webseiten, Dokumentation und Repositories (misc oder online ohne DOI
+% und ohne arXiv-Kennung). Alle wissenschaftlichen Arbeiten, auch Preprints, stehen im Literaturverzeichnis.
+\defbibcheck{webonly}{%
+  \ifboolexpr{test {\ifentrytype{misc}} or test {\ifentrytype{online}}}
+    {\ifboolexpr{test {\iffieldundef{doi}} and test {\iffieldundef{eprint}}}{}{\skipentry}}
+    {\skipentry}}
+\defbibcheck{noweb}{%
+  \ifboolexpr{test {\ifentrytype{misc}} or test {\ifentrytype{online}}}
+    {\ifboolexpr{test {\iffieldundef{doi}} and test {\iffieldundef{eprint}}}{\skipentry}{}}
+    {}}
+\printbibliography[check=noweb,heading=bibintoc,title={\langde{Literaturverzeichnis}\langen{Bibliography}}]
 
 % neue Seite für Internetquellen-Verzeichnis
 \newpage
@@ -516,7 +534,7 @@
 % Die Option heading=bibintoc würde die Internetquelle als eigenen Eintrag im
 % Inhaltsverzeicnis anzeigen.
 %\printbibliography[type=online,heading=bibintoc,title={\headingNameInternetSources}]
-\printbibliography[type=misc,heading=subbibliography,title={\headingNameInternetSources}]
+\printbibliography[check=webonly,heading=subbibliography,title={\headingNameInternetSources}]
 
 \end{document}
 
