@@ -3,7 +3,7 @@
 
 Die Tabelle nennt die im Quellcode des Prototyps hinterlegten Vorgaben, auf die
 \autoref{sec:Entwurf} verweist, Stand 15. Oktober 2026, konfigurierbare Werte mit ihrem Standardwert
-und, wo die Integrationsumgebung abweicht, mit deren Wert.
+und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \ac{OTLP}-Push an die Plattform.
 
 \begin{table}[H]
   \caption{Parameter des Prototyps nach Komponente}
@@ -224,6 +224,84 @@ pub fn for_profile(profile: Profile) -> Self {
 \label{sec:messdaten}
 
 \begin{table}[H]
+  \caption{Stand des Prototyps je Beleg}
+  \label{tab:stand}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} c c c c@{}}
+    \hline
+    Beleg & Datum & Trennung & Callout & Proxy & Zustellungen \\
+    \hline
+            S1a (Pool 40), S2, M5 mit Prober, T7 und T9 & 28.\ Oktober & ja & nein & ja & 4 \\
+    S1a (Tabelle), S2 und S3 (Speicher) & 26.\ Oktober & ja & nein & nein & 1 \\
+    S1b (Pool 0), S2 Läufe 28 und 30, S3 Vergleich, Pool-Kosten & bis 15.\ Oktober & nein & nein & nein & 1 \\
+    S4, M3, M5, T1 bis T9, SandboxEval & bis 21.\ Oktober & nein & nein & nein & 1 \\
+        T10 & 28.\ Oktober, lokal & ja & ja & -- & -- \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+
+\begin{table}[H]
+  \caption{Herleitung von S6 aus der Bestandsanalyse und den Prüfungen der Kompatibilitätsschicht}
+  \label{tab:s6}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r >{\RaggedRight\arraybackslash}p{0.34\textwidth}@{}}
+    \hline
+    Gruppe & Mandanten & Wertung \\
+    \hline
+    Alle Mandanten & 1.718 & \\
+    Ohne blockierendes Merkmal & 1.005 & läuft \\
+    Nur ein Netzwerk-Binding blockiert (HTTP 629, Sockets 63, beide 44) & 648 & läuft über die Schicht, Annahme \\
+    Übrige, nur \texttt{http}, \texttt{https}, \texttt{net} oder \texttt{tls} & 16 & läuft über die Schicht, Annahme \\
+    Übrige, Skripte gelesen und im Probelauf geprüft & 49 & \\
+    \quad schreiben nach \texttt{/tmp} & 34 & nicht schlechter, scheitert schon im Ausgangszustand \\
+    \quad lesen Windows-Pfade & 4 & nicht schlechter, ebenso \\
+    \quad Import ungenutzt & 4 & läuft \\
+    \quad schreiben nach \texttt{\_\_dirname} & 2 & läuft in beiden \\
+    \quad \texttt{child\_process} & 1 & absichtlich blockiert, ausgenommen \\
+    \quad gebündelte Skripte & 4 & nicht unterstützt, nicht als Ausfall gezählt \\
+    S6, bis zu & 1.717 von 1.718 & 99,9\,\%, mit den vier gebündelten als Ausfall 1.713, 99,7\,\% \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+
+\begin{table}[H]
+  \caption{Unsicherheit der Kaltstartläufe aus \autoref{tab:kaltstart-vergleich}: konservatives 95-\%-Intervall für P95 aus den
+    Ordnungsstatistiken (P90 bis Maximum) und Anteil unter 2\,s mit 95-\%-Intervall nach Clopper-Pearson}
+  \label{tab:kaltstart-ki}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
+    \hline
+    Spalte & P95 & Intervall für P95 & unter 2\,s & Intervall \\
+    \hline
+    Ausgangszustand, verteilt & 3,33\,s & 3,15 bis 6,07\,s & 10 von 91 & 5,4 bis 19,3\,\% \\
+    Pool 40, verteilt & 525\,ms & 431 bis 639\,ms & 90 von 90 & 96,0 bis 100\,\% \\
+    Pool 0, verteilt & 8,54\,s & 6,24 bis 12,0\,s & 42 von 90 & 36,1 bis 57,5\,\% \\
+    Ausgangszustand, Schub & 19,5\,s & 18,9 bis 22,0\,s & 0 von 90 & 0 bis 4,0\,\% \\
+    Pool 40, Schub & 6,90\,s & 6,79 bis 8,0\,s & 40 von 90 & 34,0 bis 55,3\,\% \\
+    Pool 0, Schub & 18,1\,s & 17,7 bis 19,2\,s & 0 von 90 & 0 bis 4,0\,\% \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{95-\%-Bootstrap-Intervalle des Overheads in Millisekunden, Blöcke von 1.000 aufeinanderfolgenden Aufrufen,
+    1.000 Ziehungen}
+  \label{tab:konfidenz}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
+    \hline
+    Lauf vom 26.\ Oktober (Aufrufe) & P50 & P90 & P95 & P99 \\
+    \hline
+    Nach der Trennung in Transport und Sandbox (57.001) & 126 bis 131 & 162 bis 168 & 178 bis 190 & 423 bis 444 \\
+    Control Plane beendet den Leerlauf (56.987) & 136 bis 140 & 234 bis 243 & 287 bis 297 & 386 bis 420 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+
+\begin{table}[H]
   \caption{Zuordnung der Messgrößen zu Skripten und Läufen}
   \label{tab:messgroessen}
   \small
@@ -418,14 +496,14 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf, ab
-    Beginn der Löschung}
+    \caption{Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf, ab
+    Beginn der Löschung, am 28.\ Oktober als längster Abstand zweier Antworten des Probers}
   \label{tab:m5}
   \footnotesize
+  \setlength{\tabcolsep}{4pt}
   \begin{tabularx}{\textwidth}{@{}l r r r r r >{\RaggedRight\arraybackslash}X@{}}
     \hline
-    Lauf & Mandanten getroffen & Lücke getroffen & Lücke übrige & Latenz getroffen, max. & Fehler &
-      lange Aufrufe mit 200 \\
+        Lauf & Getroffen & Lücke getroffen & Lücke übrige & Latenz max. & Fehler & Lange Aufrufe \\
     \hline
     \multicolumn{7}{@{}l}{\emph{Prototyp, mit langen Aufrufen}} \\
     1 & 2 & 1,11\,s & 1,06\,s & 1.269\,ms & 0 & 8 von 8 \\
@@ -437,8 +515,17 @@ pub fn for_profile(profile: Profile) -> Self {
     6 & 1 & 0,61\,s & 1,45\,s & 1.303\,ms & 0 & -- \\
     7 & 1 & 0,66\,s & 0,59\,s & 1.243\,ms & 0 & -- \\
     8 & 2 & 1,33\,s & 1,12\,s & 1.271\,ms & 0 & -- \\
-    \multicolumn{7}{@{}l}{\emph{Ausgangszustand}} \\
-    1 & 1 (drei Runner-Pods) & 1,9\,s & -- & 3.000\,ms & 0 & 1 von 1, nach 26,2\,s \\
+        \multicolumn{7}{@{}l}{\emph{Ausgangszustand}} \\
+    1 & 1 (3 Pods) & 1,9\,s & -- & 3.000\,ms & 0 & 1 von 1 (26,2\,s) \\
+    \multicolumn{7}{@{}l}{\emph{Prototyp, Prober 100\,ms, 28.\ Oktober}} \\
+    P1 & 3 & 0,22 bis 0,30\,s & -- & -- & 0 & 3 neu ausgeführt (33,4 bis 33,7\,s) \\
+    P2 & 4 & 0,24 bis 0,34\,s & -- & -- & 0 & 2 neu ausgeführt (36,5\,s) \\
+    P3 & 2 & 0,27 bis 0,42\,s & -- & -- & 0 & 1 neu ausgeführt (35,5\,s) \\
+    P4, nach dem Fix & 5 & 0,21 bis 0,27\,s & -- & -- & 0 & 8 von 8 (25,2\,s) \\
+    \multicolumn{7}{@{}l}{\emph{Ausgangszustand, Prober 100\,ms, 28.\ Oktober}} \\
+    A1 & 1 & 2,42\,s & -- & -- & 0 & 1 von 1 (25,3\,s) \\
+    A2 bis A4 & je 3 & 2,10 bis 2,69\,s & -- & -- & 0 & 9 von 9 (25,3\,s) \\
+
     \hline
   \end{tabularx}
 \end{table}
@@ -472,8 +559,10 @@ pub fn for_profile(profile: Profile) -> Self {
          M4 & abgeleitet \\
         T8 & Auf das Dateisystem wird an dem vermittelten Binding vorbei zugegriffen. & M4 &
          abgeleitet \\
-    T9 & Eine Ausführung überschreibt jede ihr sichtbare Kopie ihrer Identität und handelt
+        T9 & Eine Ausführung überschreibt jede ihr sichtbare Kopie ihrer Identität und handelt
          danach im Namen eines anderen Mandanten. & M4 & abgeleitet \\
+    T10 & Code mit der Netz- und Prozesssicht der Sandbox verbindet sich ohne gültiges Token mit NATS oder weist dem
+         eigenen Transport einen Mandanten zu. & M1 & abgeleitet \\
     \hline
   \end{tabularx}
 \end{table}

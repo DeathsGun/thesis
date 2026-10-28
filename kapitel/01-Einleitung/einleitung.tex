@@ -43,8 +43,9 @@ Der Ausgangszustand genügt in zwei Punkten nicht. Der erste ist die Zeit bis zu
 Ausführung. Ein Runner, der auf null skaliert war, braucht mehrere Sekunden, bis er den ersten
 Aufruf bedient, und Mandanten, deren Webhooks selten ausgelöst werden, zahlen diese Zeit bei fast
 jedem Aufruf. Unter Last kommt hinzu, dass ein Runner Aufrufe nacheinander abarbeitet. Beides
-hat zu Rückmeldungen von Kunden geführt und war der Anlass für diese Arbeit. Der zweite Punkt ist
-der Betrieb. Jedes rollierende Update der Clusterknoten, im Jahr etwa vier, trifft die gerade
+hat zu Supportfällen und einem internen Störungsfall geführt
+\autocites{intern_supportfaelle_otc_2026}{intern_stoerungsfall_2026} und war der Anlass für diese Arbeit. Der zweite Punkt ist
+der Betrieb. Jedes rollierende Update der Clusterknoten, im Jahr etwa vier \autocite{intern_ddp_updates_2026}, trifft die gerade
 warmen Runner, die sich nicht übergeben lassen, und die Scripting-Engine kann in dieser Zeit für
 die betroffenen Mandanten nicht ausführungsfähig sein. Die geringe Wartbarkeit des heutigen Runners bleibt als Maßstab außen vor, weil sie sich nicht wie Startzeit und
 Verfügbarkeit messen lässt.
@@ -63,15 +64,14 @@ Anforderungen des eigenen Betriebs begründet, etwa Amazon Web Services mit Fire
 Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten stellen jeweils eine
 Lösung vor. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
 erzeugter Funktionen konstruiert und anschließend gegen einen produktiven Ausgangszustand
-gemessen wird, ist in den gesichteten Arbeiten dagegen nicht zu finden. Gesucht wurde über Websuche, Crossref und arXiv nach Modellen, die ein Isolate je Ausführung, einen
+gemessen wird, ist in den gesichteten Arbeiten dagegen nicht zu finden. Gesucht wurde im Oktober 2026 als gezielte Lückensuche über Websuche, Crossref und arXiv, ohne Fachdatenbanken mit Konto und ohne Anspruch auf Vollständigkeit, nach Modellen, die ein Isolate je Ausführung, einen
 Pool vorgehaltener Pods und eine Messung gegen einen produktiven Ausgangszustand verbinden. Die nächsten Vorarbeiten sind sprachbasierte Isolation je Funktion
 \autocite[S.~645]{boucher_putting_2018}, WebAssembly-Isolation mit geteiltem Zustand
 \autocite[S.~419]{shillaker_faasm_2020}, das Sandboxing von Funktionen in mandantenfähigen
 Serverless-Umgebungen \autocite[S.~25]{mainas_sandboxing_2024}, die Isolation der Anwendungen
 eines Agentensystems \autocite[S.~1]{wu_isolategpt_2025}, ein Sandbox-Dienst für Agenten
 \autocite[S.~1]{piao_agentbay_2025} und der Pool vorgehaltener Sandbox-Pods des
-Kubernetes-Projekts Agent Sandbox \autocite{kuo_running_2026}. Keine davon
-zieht ein Isolate je Ausführung, und keine misst gegen einen produktiven Ausgangszustand.
+Kubernetes-Projekts Agent Sandbox \autocite{kuo_running_2026}. 
 Groundhog stellt zwischen aufeinanderfolgenden Aufrufen einen sauberen Zustand durch Wiederherstellen
 eines Snapshots her \autocite[S.~1]{alzayat_groundhog_2023}, Photons und Catalyzer zielen auf
 Speicherbedarf und Kaltstart \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020}.
@@ -93,16 +93,13 @@ ein Modell beschaffen sein muss, das die genannten Eigenschaften zugleich erfül
     dem Ausgangszustand der Fallstudie senkt?
 \end{description}
 
-Bezugspunkt der Frage ist der gemessene Ausgangszustand der Fallstudie und kein generischer
-Vergleichswert.
+
 
 \subsection{Zielsetzung und Abgrenzung}
 \label{sec:einleitung:zielsetzung}
 
 Ziel der Arbeit ist ein lauffähiges Ausführungsmodell, das die Oberfrage für die Fallstudie beantwortet und
-gegen deren Ausgangszustand gemessen ist. Der Ansatz trennt zwei Grenzen, die heute zusammenfallen, und nimmt
-die Startzeit mit einem Pool vorgehaltener Pods vom Anfragepfad, \autoref{sec:diffusion:fazit} fasst ihn
-zusammen. Der Prototyp wird auf demselben Cluster gegen den Ausgangszustand gemessen.
+auf demselben Cluster gegen deren Ausgangszustand gemessen ist. Der Ansatz steht in \autoref{sec:diffusion:fazit}.
 
 Die Oberfrage wird dazu über fünf Unterfragen bearbeitet.
 
@@ -120,7 +117,7 @@ Die Oberfrage wird dazu über fünf Unterfragen bearbeitet.
     dem Bedrohungsmodell abgeleitet sind?
 
   \item[U4] \label{rq:u4} Welche Kaltstartlatenz, welche warme Latenz im 50., 90., 95. und 99. Perzentil (P50 bis P99), welchen Durchsatz und welchen Speicherbedarf je Instanz erreicht der
-    Prototyp unter beiden Lastprofilen im Vergleich zum gemessenen Ausgangszustand?
+    Prototyp im Webhook-Profil im Vergleich zum gemessenen Ausgangszustand und im Agentenprofil, das keinen Ausgangswert hat, als Richtwert?
 
   \item[U5] \label{rq:u5} Welche über die Fallstudie hinaus übertragbaren Designprinzipien und
     welcher Migrationspfad folgen aus Entwurf und Evaluation?
@@ -134,7 +131,8 @@ nachweist, und U5 löst das Ergebnis von der Fallstudie.
 Damit das Artefakt seine eigenen Kriterien verfehlen kann, legt \autoref{sec:kriterienkatalog} fest, welche
 Messgrößen zählen, wie sie in Punkte eingehen und dass der Prototyp bei Kaltstart und warmer Latenz den
 Ausgangszustand unterbieten muss. Der Ausgangszustand wird erst in \autoref{sec:Evaluation} unter denselben
-Lastprofilen gemessen, die Vergleichswerte sind vor dem Entwurf also nicht bekannt. Ein dokumentiertes Verfehlen ist
+Lastprofilen gemessen. Die Bewertungsregel steht vor dem Entwurf fest, die Parameter des Prototyps wurden danach bis zum
+26.\ Oktober abgestimmt. Ein dokumentiertes Verfehlen ist
 ein gültiges Ergebnis.
 
 Nicht als Forschungsfrage geführt wird der Vergleich der bekannten Isolationstechnologien untereinander, ihre
@@ -157,13 +155,14 @@ Prototypen und für die Evaluation das Laborexperiment und die Pilotierung eines
 \autocite[S.~668]{osterle_memorandum_2010}, also das Vorgehen dieser Arbeit. Nach der Einteilung von
 \textcite[S.~80--81]{venable_feds_2016} ist die Evaluation summativ, weil sie das fertige Artefakt gegen vorab
 festgelegte Kriterien beurteilt, und artifiziell, weil sie im Laborexperiment unter nachgespieltem Lastprofil misst und
-nicht im laufenden Betrieb. 
+nicht im laufenden Betrieb. Das entspricht den Richtlinien von \textcite[S.~83]{hevner_design_2004} und dem Prozessmodell von
+\textcite[S.~54]{peffers_design_2007}.   
 
 \subsection{Aufbau der Arbeit}
 \label{sec:einleitung:aufbau}
 
 Die Kapitel folgen den vier Phasen. \autoref{sec:grundlagen} erklärt die Begriffe, \autoref{sec:bedrohungsmodell} bildet
-die Analysephase und beantwortet U1 mit dem Kriterienkatalog aus Betriebskonzept, Angreifermodell und Skriptbestand,
+die Analysephase und beantwortet U1 mit dem Kriterienkatalog aus Ausgangslage, Angreifermodell und Skriptbestand,
 \autoref{sec:Entwurf} ist der Entwurf und beantwortet U2. \autoref{sec:Evaluation} prüft das Artefakt gegen den Katalog
-und den gemessenen Ausgangszustand, U3 über die Prüffälle, U4 über die Lastläufe. \autoref{sec:Diffusion} beantwortet
+und den gemessenen Ausgangszustand, U3 über die Prüffälle, U4 über die Lastläufe. \autoref{sec:Diffusion} überträgt die Ergebnisse (Diffusion nach \textcite{osterle_memorandum_2010}), beantwortet
 U5 und schließt mit Fazit und Ausblick.

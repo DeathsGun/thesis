@@ -46,7 +46,7 @@ verlangen die Mandantenisolation aus \autoref{sec:grundlagen:eigenschaften}, die
 Ausführung die Bedienung anderer Mandanten nicht beeinträchtigt. Hinzu tritt die \emph{Zustandsfreiheit}, die verlangt, dass eine Ausführung
 keinen Zustand an eine spätere weitergibt.
 
-Das vierte Ziel verdient eine genauere Betrachtung, weil sein Charakter am Lastprofil hängt. In
+Der Charakter des vierten Ziels hängt vom Lastprofil ab. In
 der Webhook-Verarbeitung stammen alle Skripte eines Mandanten von ihm selbst und bilden eine
 gemeinsame Vertrauensdomäne. Übernommener Zustand stört dort die folgenden Ausführungen,
 überschreitet aber keine Vertrauensgrenze, weshalb Zustandsfreiheit hier eine Anforderung an die
@@ -55,10 +55,9 @@ desselben Mandanten entstehen aus verschiedenen Kontexten und können nach V2 vo
 Dritten beeinflusst sein, sind einander also nicht wechselseitig vertrauenswürdig. Der
 Zustandsübertrag wird damit auch innerhalb eines Mandanten zur Vertraulichkeitsverletzung. Die
 Vertrauenseinheit verschiebt sich vom Mandanten auf die einzelne Ausführung, und die
-Isolationsgrenze muss dieser Verschiebung folgen. Diese Verschiebung ist der Kern des Problems,
-das die vorliegende Arbeit löst.
+Isolationsgrenze muss dieser Verschiebung folgen.
 
-Damit lassen sich die Vertrauensannahmen festhalten.
+Die Vertrauensannahmen lauten wie folgt.
 
 \begin{description}
   \item[V1: Der ausgeführte Code ist nicht vertrauenswürdig.] Im Webhook-Profil hinterlegt der
@@ -180,11 +179,11 @@ erfolgte aggregiert, ohne Codeausschnitte und ohne Mandantenkennungen.
 \subsection{Angreifermodell und relevante Angriffswege}
 \label{sec:angreifermodell}
 
-Das Angreifermodell wird über Fähigkeiten bestimmt und nicht über Identität. Die maßgebliche
+Das Angreifermodell wird über Fähigkeiten bestimmt und nicht über Identität. Die zugrunde gelegte
 Fähigkeit besteht darin, beliebigen JavaScript-Code innerhalb der Ausführungsumgebung eines
 Mandanten auszuführen. Sie ist durch die Bauart des Dienstes gegeben und muss nicht erst erlangt
 werden. Die Codeausführung ist damit kein Angriffsziel, sondern der Ausgangspunkt, und die
-maßgebliche Frage lautet, was der Code von dort aus erreichen kann. Dieselbe Ausgangslage
+Frage lautet, was der Code von dort aus erreichen kann. Dieselbe Ausgangslage
 kennzeichnet die Bewertung von Ausbruchsfähigkeiten aktueller Sprachmodelle, bei der der Zugang
 innerhalb des Containers vorausgesetzt und allein der Ausbruch untersucht wird
 \autocite[S.~3]{marchand_quantifying_2026}.
@@ -209,8 +208,10 @@ denn das Zurücksetzen des Dateisystems und das Verwerfen des Module Cache greif
 Modulebene. Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb eines Mandanten, und seine
 Bewertung folgt der Verschiebung der Vertrauenseinheit aus \autoref{sec:systemkontext}. Derselbe geteilte Prozess trägt
 einen zweiten Weg: Eine Ausführung kann Ressourcen so erschöpfen, dass die Instanz für folgende Ausführungen
-unbrauchbar wird, wie ein Vorfall im Ausgangszustand belegt, bei dem ein Verfügbarkeitstest im Minutentakt eine Instanz
-dauerhaft aktiv hielt und ein Speicherleck ihren Verbrauch bis zur Unbrauchbarkeit steigen ließ.
+unbrauchbar wird, wie es im Betrieb des Ausgangszustands beobachtet wurde: Ein Verfügbarkeitstest im Minutentakt hielt eine Instanz
+dauerhaft aktiv, und ein Speicherleck ließ ihren Verbrauch bis zur Unbrauchbarkeit steigen. Seit April 2026 ersetzt die
+Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausgelöste Funktionen nie auf null skalieren
+\autocite{intern_runner_ersatz_2026}.
 
 \subsubsection{A2, Sprachebene: geteilte Laufzeit im selben Prozess}
 
@@ -270,7 +271,7 @@ verletzt, ist keine Lösung.
     \hline
     M1 & \textbf{Prozessgrenze je Mandant.} Zwischen zwei Mandanten verläuft eine Grenze auf
          Prozess- oder Virtualisierungsebene. Eine sprachbasierte Grenze allein genügt nicht. &
-         A2 & Architektur\-prüfung \\[2pt]
+         A2 & Architektur\-prüfung, T10 \\[2pt]
     M2 & \textbf{Zustandsfreiheit je Ausführung.} Kein Zustand einer Ausführung ist einer
          späteren zugänglich, auch nicht innerhalb eines Mandanten. Umfasst Prozessspeicher,
          globale Variablen, registrierte Callbacks, offene Verbindungen und Dateisystem. &
@@ -289,12 +290,12 @@ verletzt, ist keine Lösung.
 \end{table}
 
 M2 ist auf aufeinanderfolgende Ausführungen geschnitten, weil der Ausgangszustand je Prozess eine Ausführung
-vorsieht. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
+vorsieht. Der Zuschnitt folgt nicht aus dem Bedrohungsmodell, sondern ist ein Zugeständnis an die Kosten. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
 Pod (\autoref{sec:betriebsplanung}). M3 ist gegen den Ausgangszustand formuliert, weil dieser mit gVisor bereits einen
 User-Space-Kernel einsetzt, ein Modell, das diese Schicht aufgibt, wäre auf der Infrastrukturebene ein Rückschritt,
 auch bei besserem Nutzwert. M4 folgt aus V5, denn die Schnittstelle zur Ausführungsumgebung ist der einzige
 Durchsetzungspunkt, den die Plattform kontrolliert, und entspricht dem Prinzip der Complete Mediation
-\autocite[S.~1282]{saltzer_protection_1975}. Der Zielwert von M5 ist relativ: Die Zeit ohne
+\autocite[S.~1282]{saltzer_protection_1975}. M5 ist ein Abnahmekriterium am Prototyp und entscheidet die Vorauswahl nicht. Der Zielwert von M5 ist relativ: Die Zeit ohne
 Ausführungsfähigkeit darf die des Ausgangszustands im selben Versuch nicht überschreiten, und keine begonnene
 Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsanforderung nicht herleitbar.
 
@@ -310,10 +311,10 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
     \hline
     S1 & Kaltstartlatenz & Zeit bis zum Ausführungsbeginn beim ersten Auftrag eines Mandanten, P95,
          S1a mit Pod aus dem Pool, S1b bei leerem Pool & 0,30 \\
-    S6 & Kompatibilität des Bestands & Anteil unverändert lauffähiger Mandanten und
-         Skripte & 0,25 \\
+    S6 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
+         Ausgangszustand & 0,25 \\
     S2 & Warme Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
-    S3 & Speicherbedarf & Bedarf je Pod unter Last und je Mandant im Ruhezustand & 0,10 \\
+    S3 & Speicherbedarf & Bedarf je Pod in der Kaltstartmessung, dazu die Kosten des Pools & 0,10 \\
     S7 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,10 \\
     \hline
@@ -322,7 +323,10 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
   \end{tabularx}
 \end{table}
 
-Die Gewichte sind eine begründete Setzung und kein Messergebnis. S1 erhält das höchste Gewicht,
+Die Gewichte sind eine begründete Setzung und kein Messergebnis. Die Nutzwertanalyse hat bekannte Schwächen \autocite{keeney_decisions_1993}: Die Gewichte sind
+subjektiv, und ein guter Wert gleicht einen schlechten aus. Deshalb gilt für die Muss-Kriterien keine Kompensation, und
+\autoref{sec:nutzwert} prüft, ob die Rangfolge von den Gewichten abhängt. Ab Faktor zwei gibt es fünf Punkte, ein Faktor von
+1,9 und einer von 5 zählen daher fast gleich.  S1 erhält das höchste Gewicht,
 weil die Kaltstartzeit im Agentenprofil in die Wartezeit der anfragenden Person eingeht und sich
 über die Aufrufe einer Aufgabe summiert \autocite[S.~76]{dean_tail_2013}. S6 folgt darauf, weil \autoref{sec:bestandsanalyse} die
 Kompatibilität als stärkste Gegenkraft zu einem Wechsel des Ausführungsmodells ausweist. Die
@@ -338,7 +342,7 @@ Mandanten, die unverändert laufen beziehungsweise keine Anpassung brauchen, ein
 Zuordnung der Messwerte zu den Punkten legt \autoref{sec:Evaluation} offen, damit die Bewertung
 nicht von der Darstellung abhängt.
 
-Der Zielwert ist für S1 und S2 der Wert des Ausgangszustands im selben Messaufbau, den der Prototyp unterbieten muss.
+Der Zielwert ist für S1 und S2 der Wert des Ausgangszustands im selben Messaufbau, den der Prototyp unterbieten muss, bei S1 für das gewichtete Maß aus S1a und S1b.
 Eine Zahl wird nicht vorab gesetzt, weil der Ausgangszustand bisher nicht unter den Lastprofilen dieser Arbeit
 gemessen wurde. S3 und S4 werden dem Ausgangszustand gegenübergestellt, ohne dass ein Zielwert sie entscheidet. S6 und
 S7 haben keinen Vergleichswert, ihr Maßstab ist die Bestandsanalyse aus \autoref{sec:bestandsanalyse}.
@@ -348,9 +352,10 @@ S7 haben keinen Vergleichswert, ihr Maßstab ist die Bestandsanalyse aus \autore
 M2 und M4 lassen sich nicht durch Architekturbetrachtung allein belegen. Für sie gilt ein Katalog von Prüffällen
 (\autoref{tab:prueffaelle} im Anhang), abgeleitet aus den Angriffswegen A1 bis A3 und gegen den Ausgangszustand und
 das Artefakt ausgeführt, sodass die Gegenüberstellung zugleich belegt, welche Eigenschaften der Ausgangszustand bereits
-erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach, T4 prüft, ob dessen Reset des temporären
+erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach, T6 prüft zugleich die Verfügbarkeit innerhalb eines
+Mandanten, für die kein Muss-Kriterium besteht, T4 prüft, ob dessen Reset des temporären
 Verzeichnisses auch im Artefakt greift, und die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die
-noch nicht beobachtet wurden. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
+noch nicht beobachtet wurden. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M1. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
 Sprachmodellen erzeugten Code ausführen, enthält SandboxEval mit 51 Eigenschaften
 \autocite[S.~1--2]{rabin_sandboxeval_2025}, zugeschnitten auf Python und Linux und in
 \autoref{sec:pruefung-isolation} für JavaScript angepasst ergänzend ausgeführt.

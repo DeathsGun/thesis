@@ -1,7 +1,7 @@
 \newpage
 \section{Entwurf und Umsetzung des Ausführungsmodells} \label{sec:Entwurf}
 
-Dieses Kapitel beantwortet U2.
+Dieses Kapitel beantwortet U2 und beschreibt den Prototyp, an dem \autoref{sec:Evaluation} misst.
 
 \subsection{Randbedingungen der Zielplattform}
 \label{sec:randbedingungen}
@@ -17,7 +17,7 @@ scheiden damit aus. Das ist ein Plattformausschluss und kein Sicherheitsurteil, 
 \textcite[S.~420, 424]{agache_firecracker_2020} beschriebene Grenze ist die stärkste der betrachteten.
 
 Die zweite ist die bereits eingesetzte Sandbox-Laufzeit. M3 untersagt, die dem Gastcode zugängliche Oberfläche des
-Host-Kernels gegenüber dem Ausgangszustand zu vergrößern, die äußere Grenze ist damit keine Entwurfsvariable mehr. Ihr
+Host-Kernels gegenüber dem Ausgangszustand zu vergrößern. Die äußere Grenze ist damit keine Entwurfsvariable mehr. Ihr
 Aufwand ist in die Entscheidung des Ausgangszustands bereits eingegangen \autocite[S.~3]{young_true_2019}. Ein
 Ausbruch aus der V8-Sandbox endet damit in einer gVisor-Sandbox und nicht auf dem Host-Kernel. Hardwareseitige
 Seitenkanäle deckt gVisor nach eigener Darstellung nicht ab \autocite{the_gvisor_authors_security_2026}, und der
@@ -27,8 +27,8 @@ Die dritte betrifft die Granularität der Ressourcenlimits. Kubernetes vergibt s
 \autocite{the_kubernetes_authors_resource_2026} und kennt keine Schnittstelle für getrennte Limits innerhalb eines
 Containers, und der Thread-Modus von cgroup v2 kennt keinen Speicher-Controller
 \autocite{the_kernel_development_community_control_2026}. Ein eigener Container je Aufgabe im selben Pod hilft unter
-gVisor nicht, weil dort das Limit allein für den Sandbox-Prozess gesetzt wird und die je Container deklarierten Werte
-innerhalb der Sandbox nicht durchgesetzt werden \autocite{googlegvisor_contributors_container_2019}. Mehrere
+gVisor nicht. Dort wird das Limit allein für den Sandbox-Prozess gesetzt, und die je Container deklarierten Werte
+werden innerhalb der Sandbox nicht durchgesetzt \autocite{googlegvisor_contributors_container_2019}. Mehrere
 Container in einem Pod sind zudem ein Mittel der Zusammenarbeit und keine Mandantengrenze, sie teilen Adresse und
 Portraum \autocite{the_kubernetes_authors_pods_2026}. Der Pod ist damit die kleinste Einheit, auf der ein vom Kern
 durchgesetztes Speicherlimit und eine Isolationseinheit existieren.
@@ -70,10 +70,10 @@ auf die innere Grenze.
 Fünf Bauarten scheiden hier aus, vier an den Muss-Kriterien und eine am Gegenstand der Arbeit.
 
 Node.js selbst kann als Vertrauensgrenze M4 nicht erfüllen. Das Bedrohungsmodell des Projekts erklärt den
-ausgeführten Code für vertrauenswürdig, ein Szenario mit bösartigem Modul ist keine Schwachstelle
-\autocite{the_nodejs_project_security_2026}, und das Berechtigungsmodell bezeichnet sich selbst als
+ausgeführten Code für vertrauenswürdig. Ein Szenario mit bösartigem Modul ist keine Schwachstelle
+\autocite{the_nodejs_project_security_2026}. Das Berechtigungsmodell bezeichnet sich selbst als
 \enquote{seat belt} ohne Garantie gegenüber bösartigem Code \autocite{the_nodejs_project_permissions_2026}. Node.js
-ist damit als Vertrauensgrenze nicht bewertbar, als Laufzeitumgebung innerhalb einer fremden Grenze bleibt es
+ist damit als Vertrauensgrenze nicht bewertbar. Als Laufzeitumgebung innerhalb einer fremden Grenze bleibt es
 tragfähig, und in dieser Rolle erfüllt der Ausgangszustand M1 und M3.
 
 Ein Berechtigungsmodell an der Stelle einer Mandantengrenze scheitert an M1 und M4. Die Modelle von Node.js und Deno
@@ -87,9 +87,9 @@ sich nicht als Bibliothek einbinden, sodass ein Host keine Isolates erzeugen, be
 \autocite{oven-shbun_contributors_feature_2026}.
 
 workerd scheitert an M2. Gesondert geprüft wird es, weil das Deno-Team zu Cloudflare wechselt
-\autocite{noauthor_deno_2026}. workerd erzeugt je Worker ein Isolate, das über alle Anfragen bestehen bleibt, sodass
-globale Variablen und Callbacks einer Ausführung für die folgende erreichbar sind, genau der Zustand, den T1 und T2
-prüfen, und die quelloffene Fassung setzt keine Ressourcenlimits durch. Dass es sich nicht als gehärtete Sandbox
+\autocite{noauthor_deno_2026}. workerd erzeugt je Worker ein Isolate, das über alle Anfragen bestehen bleibt.
+Globale Variablen und Callbacks einer Ausführung sind damit für die folgende erreichbar, genau der Zustand, den T1 und T2
+prüfen. Die quelloffene Fassung setzt keine Ressourcenlimits durch. Dass es sich nicht als gehärtete Sandbox
 versteht \autocite{cloudflare_workerd_2026}, schließt es nicht aus, denn M1 verläuft nach \autoref{sec:zwei-grenzen} an
 der Pod-Grenze. Bei M4 ist workerd dem gewählten Entwurf eher voraus.
 
@@ -98,7 +98,7 @@ JavaScript-Funktionen, und bricht den gesamten Bestand aus \autoref{sec:bestands
 
 Nach diesen Ausschlüssen bleibt eine Bauart: eine in den Execution Service eingebettete JavaScript-Engine mit einer
 Isolate-Grenze je Ausführung und vermittelten Bindings. Dieselbe Bauart ließe sich in einem Node.js-Host mit
-\texttt{isolated-vm} verwirklichen. Sie erfüllt M1 bis M4 grundsätzlich und wird aus drei Gründen nicht gewählt. Das
+\texttt{isolated-vm} verwirklichen. Sie erfüllt M1 bis M4 und wird aus drei Gründen nicht gewählt. Das
 Paket befindet sich im Wartungsmodus und warnt selbst, dass es nicht vertrauenswürdigen Code nicht automatisch sicher
 macht \autocite{laverdet_isolated-vm_2026}. Der Host bleibt ein Node.js-Prozess, dessen Projekt Code im eigenen Prozess
 nicht als Vertrauensgrenze behandelt \autocite{the_nodejs_project_security_2026}. Und Kompatibilitätsschicht,
@@ -109,17 +109,18 @@ als in Rust gegen V8. Das Wartungsrisiko trägt \texttt{deno\_core} nach \autore
 \label{sec:wasm-zurueckgestellt}
 
 Der erste Weg bettet V8 unmittelbar ein, mit \ac{JIT}-Kompilierung. Der zweite kompiliert eine JavaScript-Engine nach
-WebAssembly und führt sie in einer Wasm-Sandbox aus, deren Ziel die sichere Ausführung nicht vertrauenswürdigen Codes
-ist \autocite{bytecode_alliance_security_2026}. Beide erfüllen M1 bis M4, verglichen wird deshalb entlang der
+WebAssembly und führt sie in einer Wasm-Sandbox aus. Deren Ziel ist die sichere Ausführung nicht vertrauenswürdigen Codes
+\autocite{bytecode_alliance_security_2026}, im Serverless-Betrieb etwa Sledge \autocite{gadepalli_sledge_2020}.
+Beide erfüllen M1 bis M4. Verglichen wird deshalb entlang der
 Soll-Kriterien, ohne Gewichtung und ohne Messung, denn gebaut wurde nur der erste Weg.
 
 Beim Sicherheitsgewinn zeigt sich kein Vorsprung. WebAssembly erlaubt keine Erzeugung von Maschinencode zur Laufzeit
-\autocite[S.~187]{haas_bringing_2017}, im linearen Speicher fehlen aber \ac{ASLR}, Guard Pages und Stack Canaries
+\autocite[S.~187]{haas_bringing_2017}. Im linearen Speicher fehlen aber \ac{ASLR}, Guard Pages und Stack Canaries
 \autocite[S.~218, 221]{lehmann_everything_2020}, und Ausbrüche aus der Wasm-Laufzeit sind dokumentiert
 \autocite{bytecode_alliance_wasmtimes_2026}. Beide Wege laufen zudem in derselben gVisor-Sandbox. Bei S1 entscheidet
 nach \autoref{sec:kaltstart} nicht die Engine, sondern die Instanzverwaltung. Bei S2 und S4 läuft eine nach
 WebAssembly kompilierte Engine ohne \ac{JIT} interpretierend \autocite{igalia_five_2026}, was beim von Ein- und
-Ausgabe geprägten Lastprofil wenig wiegt, und Ahead-of-time-Verfahren verkleinern den Abstand
+Ausgabe geprägten Lastprofil wenig wiegt. Ahead-of-time-Verfahren verkleinern den Abstand
 \autocite[S.~3]{fallin_partial_2025}. Bei S3 belegen \textcite[S.~419]{shillaker_faasm_2020} und
 \textcite[S.~25]{mainas_sandboxing_2024} einen geringeren Ressourcenbedarf gegenüber Containern, gegen ein
 eingebettetes Isolate ist das nicht gemessen. Bei S6 und S7 liegt der erste Weg vorn, weil die
@@ -128,7 +129,7 @@ geschrieben ist und für eine andere Engine neu entstehen müsste.
 
 Der zweite Weg ist damit nicht dominiert und wird zurückgestellt. Seinem möglichen Vorteil bei S3 und auf
 Engine-Ebene bei S1 steht ein sicherer Nachteil bei S6, dem Kriterium mit dem zweithöchsten Gewicht, und bei S7
-gegenüber. Zudem schließt der erste Weg den zweiten nicht aus, denn V8 führt WebAssembly-Module innerhalb derselben
+gegenüber. Zudem schließt der erste Weg den zweiten nicht aus: V8 führt WebAssembly-Module innerhalb derselben
 Isolate-Grenze aus \autocite[S.~196]{haas_bringing_2017}, während eine Wasm-Sandbox eine Engine mit \ac{JIT} nicht
 aufnehmen kann \autocite[S.~187]{haas_bringing_2017}. Der erste Weg ist die Obermenge, und die Entscheidung für ihn
 hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweiterung.
@@ -161,17 +162,19 @@ V8-Isolate je Ausführung mit vermittelten Bindings & bedingt & ja & ja & ja & j
 \end{tabularx}
 \end{table}
 
-Für das gewählte Modell gilt M1 bedingt. Ob die Mandantengrenze nach einem Ausbruch aus der Engine hält,
-hängt an der Trennung der Zugangsdaten. Ohne den Auth Callout, der Stand auf der Plattform, teilen alle Worker-Pods
-dieselben NATS-Zugangsdaten (\autoref{sec:betriebsplanung}).
+Für das gewählte Modell gilt M1 als Entwurfseigenschaft: Mit dem Auth Callout ist M1 erfüllt, lokal erprobt (T10, \autoref{sec:pruefung-isolation}). Im Plattformstand ohne Callout, der der Messung zugrunde liegt,
+teilen alle Worker-Pods dieselben NATS-Zugangsdaten, und M1 ist dort nicht erfüllt (\autoref{sec:betriebsplanung}).
+Die Wahl stützt sich auf den Entwurf.
 
 Der Ausgangszustand verletzt M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
 teilen, und M4, weil dem Skript die vollständige Node-Schnittstelle offensteht.
 
-Die zweite Zeile ist die aufschlussreichere. Ein frischer Node-Prozess je Ausführung stellt Zustandsfreiheit her und
-erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Zustandsfreiheit
-und vermittelter Zugriff sind zwei verschiedene Eigenschaften, und die naheliegende, billige Änderung liefert nur die
-erste. Für zur Laufzeit erzeugte Skripte ist das nach V2 die maßgebliche Lücke, denn ein über seine Eingaben
+Ein frischer Node-Prozess je Ausführung stellt Zustandsfreiheit her und
+erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Auch mit Egress-Proxy und Netzwerkrichtlinie
+vermittelte er nur das Netz, Dateisystem, Umgebung und Identität des Hosts blieben dem Skript offen. Der Prozessstart von
+Node.js unter gVisor ist nicht gemessen. Zustandsfreiheit
+und vermittelter Zugriff sind zwei verschiedene Eigenschaften, und die einfache Änderung liefert nur die
+erste. Für zur Laufzeit erzeugte Skripte ist das nach V2 die Lücke, denn ein über seine Eingaben
 beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin zugreifen darf
 \autocite[S.~82]{greshake_not_2023}. Bei workerd liegt es umgekehrt, der Zugriff ist vermittelt, aber das Isolate
 überdauert die Ausführung. Beide Eigenschaften zugleich erfüllt erst ein Isolate je Ausführung mit vermittelten
@@ -255,12 +258,12 @@ sie auf Ausführungsaufträge ab. Die \emph{Control Plane} verwaltet den Pool de
 Mandanten zu Pods und deren Consumer und stellt die Token aus, mit denen sich ein Worker bei NATS ausweist. Der
 \emph{Worker} ist ein Pod aus zwei Containern desselben Images: Der \emph{Transport} hält die Zugangsdaten zu NATS,
 bindet den Consumer des Mandanten, zieht die Aufträge, antwortet auf dem Stream und nimmt die Kommandos der Control
-Plane an, führt aber nie Mandantencode aus. Das tut allein die \emph{Sandbox}, die die Isolates erzeugt, jede
+Plane an. Mandantencode führt er nie aus. Das tut allein die \emph{Sandbox}, die die Isolates erzeugt, jede
 Ausführung vom Transport über eine Loopback-Verbindung erhält und weder NATS- noch Redis-Zugangsdaten besitzt. Der
 \emph{Auth Callout} entscheidet für den NATS-Server über jede Verbindung eines Workers und gibt ihr nur Rechte auf die
 Nachrichten des einen Mandanten, den das Token der Control Plane nennt
 \autocite{the_nats_authors_auth_callout_2026}. Der \emph{Egress-Proxy} ist der einzige Weg der Sandbox nach außen: Das Gateway
-registriert jeden Lauf mit Regeln und Grenzen, und die Sandbox schickt \texttt{fetch} und Sockets an den Proxy, der über
+registriert jeden Lauf mit Regeln und Grenzen. Die Sandbox schickt \texttt{fetch} und Sockets an den Proxy, der über
 jedes Ziel entscheidet (\autoref{sec:faehigkeitsmodell}). Die Nachrichten zwischen Gateway, Control Plane und Workern laufen über
 den vorhandenen JetStream-Stream von NATS, als Zustandsspeicher der Control Plane dient das vorhandene Redis, für
 Skriptbundles und Bodies der vorhandene Objektspeicher. Der bisherige Skriptdienst löst eine Skriptkennung in
@@ -272,25 +275,25 @@ Eine synchrone Ausführung nimmt folgenden Weg. Das Gateway lässt die Skriptken
 über 64\,KiB im Objektspeicher ab und veröffentlicht den Auftrag als Request-Reply-Nachricht auf einem Subject, das
 die Mandantenkennung trägt. Einer der dem Mandanten zugewiesenen Worker zieht die Nachricht, führt aus, lädt einen
 großen Response-Body über eine vorsignierte \ac{URL} hoch und antwortet mit einer kleinen Nachricht, die nur Ausgang
-und Größe trägt, das Gateway liest den Body und antwortet dem Aufrufer. Es wartet begrenzt, und der Worker bricht
+und Größe trägt. Das Gateway liest den Body und antwortet dem Aufrufer. Es wartet begrenzt, und der Worker bricht
 etwas früher ab, damit jede Antwort den Aufrufer erreicht. Eine Hintergrundausführung unterscheidet sich am Ende des
-Weges: Das Gateway antwortet sofort mit dem Status 202, der Worker stellt das Ergebnis per POST an eine
+Weges: Das Gateway antwortet sofort mit dem Status 202. Der Worker stellt das Ergebnis per POST an eine
 Callback-\ac{URL} zu, die das Gateway auf einen Pfad unterhalb der Basisadresse des Mandanten beschränkt hat, und
 bricht nach einer längeren Frist ab. Beide Fristen entsprechen denen des Ausgangszustands
 (\autoref{tab:parameter}).
 
 Daneben verläuft der Steuerpfad. Dass ein Worker bereit ist, entnimmt die Control Plane dem Informer der
 Kubernetes-\ac{API}, Zuweisung und Entzug schickt sie als \ac{HTTP}-Kommando an den Transport des Pods. Die
-Netzwerkrichtlinie lässt diesen Port nur von der Control Plane zu, und der Transport lehnt Kommandos aus dem eigenen
+Netzwerkrichtlinie lässt diesen Port nur von der Control Plane zu. Der Transport lehnt Kommandos aus dem eigenen
 Pod ab, damit Code, der die Sandbox verlässt, sich keinen Mandanten zuweisen kann (\autoref{lst:eigener-pod}). Die
 Zuweisung trägt das Token, mit dem der Transport sich erst jetzt mit NATS verbindet. Drei Vertrauensgrenzen liegen auf
 diesen Wegen. Der Worker hat keinen Zugang zum Objektspeicher, sondern erhält je Auftrag vorsignierte \acp{URL}, nur
 das Gateway greift auf den Bucket zu. Die Verbindung zu NATS gehört einem Mandanten: Das Token nennt Worker, Mandant
-und den Hash eines Identitätsgeheimnisses, das nur der Transport lesen kann, und der Callout gibt der Verbindung nur
+und den Hash eines Identitätsgeheimnisses, das nur der Transport lesen kann. Der Callout gibt der Verbindung nur
 die Rechte, den Consumer dieses Mandanten zu binden, daraus zu ziehen und zu bestätigen sowie auf dessen
 Reply-Subjects zu antworten. Consumer anlegen, den Stream verwalten und die Kommandos der Plattform lesen verbietet er
 (\autoref{lst:callout-rechte}, \autoref{lst:callout-token}). Und der Worker filtert die Header in beiden Richtungen:
-Vor dem Skript verbirgt er die Header, die die Plattform für ihre Zwischenschritte setzt, und aus der Antwort
+Vor dem Skript verbirgt er die Header, die die Plattform für ihre Zwischenschritte setzt. Aus der Antwort
 entfernt er Header, mit denen ein Skript die Richtlinien der Plattform-Origin schwächen könnte, etwa Cookies,
 \ac{CORS}, \ac{CSP} und \ac{HSTS} (\autoref{tab:header}).
 
@@ -336,17 +339,17 @@ zwei davon trennen Mandanten oder Ausführungen.
 % Plattformen gehoert als Verfahren nach Kapitel 2.
 
 Der vorgehaltene Pool folgt dem Vorgehen von \textcite[S.~1]{lin_mitigating_2019}, Kaltstarts durch vorgehaltene
-Instanzen zu verdecken. Entscheidend ist, dass das Nachziehen des Pools einer Vorratspolitik folgt und nie auf dem
-Anfragepfad liegt, sonst trägt eine Anfrage wieder die volle Startzeit eines Pods. Das Skalieren auf null des
+Instanzen zu verdecken. Das Nachziehen des Pools folgt einer Vorratspolitik und liegt nie auf dem
+Anfragepfad, sonst trägt eine Anfrage wieder die volle Startzeit eines Pods. Das Skalieren auf null des
 Ausgangszustands \autocite{the_knative_authors_configuring_2026} wird durch eine Untergrenze ersetzt.
 
 Ein Pod trägt die Ausführungen genau eines Mandanten, wie im Ausgangszustand, und zwei Mandanten teilen sich weder
 gVisor-Sandbox noch cgroup noch Adressraum. Ein Mandant ist umgekehrt nicht auf einen Pod beschränkt, bei Last erhält
 er bis zu zehn Pods aus dem Pool (\autoref{sec:zuteilung}). Der Pod trägt zwei Container, die Pod-Netzwerk und unter
-gVisor den Kernel der Sandbox teilen. Sie trennen Zugangsdaten und Mandantencode, keine Mandanten, und der Prozess,
+gVisor den Kernel der Sandbox teilen. Sie trennen Zugangsdaten und Mandantencode, keine Mandanten. Der Prozess,
 der Mandantencode ausführt, fällt mit der Pod-Grenze zusammen, weil nach \autoref{sec:randbedingungen} unterhalb des
 Pods keine durchgesetzte Grenze für Ressourcen existiert. Für die Zugangsdaten reicht das als zweite Hürde, nicht als
-Grenze: Der Sandbox-Container trägt keine, ein Ausbruch aus der Engine erbeutet also keine, erst ein zweiter aus der
+Grenze: Der Sandbox-Container trägt keine. Ein Ausbruch aus der Engine erbeutet also keine, erst ein zweiter aus der
 Containergrenze erreicht den Transport. Hinter dieser schwächeren Hürde begrenzt der Auth Callout den Gewinn auf die
 Consumer des eigenen Mandanten und die Laufzeit des Tokens.
 
@@ -355,10 +358,10 @@ Ursachen: Die Control Plane entzieht ihn nach einer Stunde Zuweisungsdauer oder 
 eine Minute lang keinen Auftrag geschickt hat, oder er wird beim Entzug eines Knotens abgeräumt. Zurückziehen heißt,
 dass sie den Mandanten zuerst aus der Zuteilung nimmt und dem Worker dann ein \emph{retire} schickt, das seinen
 Consumer leert und den Prozess beendet. Beendete der Worker sich allein, bliebe der Mandant bis zur Meldung des
-Informers zugewiesen, und ein Auftrag in dieser Lücke wartete 0,5 bis 3,2 Sekunden. Das eigene Leerlauf-Ende des
+Informers zugewiesen. Ein Auftrag in dieser Lücke wartete 0,5 bis 3,2 Sekunden. Das eigene Leerlauf-Ende des
 Workers steht deshalb nur noch als Rückfall bei fünf Minuten. Der Pool wird ausschließlich aus frischen Pods
-nachgefüllt. Das ist bewusst konservativ: Ein Pod, der nie Mandantencode ausgeführt hat, kann nichts von einem
-früheren Mandanten tragen, ohne Vertrauen in die innere Grenze, und die begrenzte Zuweisungsdauer begrenzt, wie lange
+nachgefüllt. Ein Pod, der nie Mandantencode ausgeführt hat, kann nichts von einem
+früheren Mandanten tragen, ohne Vertrauen in die innere Grenze. Die begrenzte Zuweisungsdauer begrenzt, wie lange
 ein bösartiger Mandant denselben Prozess angreifen kann. Der Preis ist ein Kaltstart je Nachfüllung, den der Pool vom
 Anfragepfad fernhält. Die Fristen von einer Stunde und einer Minute sind gesetzt und nicht hergeleitet. Große Anbieter
 halten Instanzen ebenfalls eine feste Zeit warm, AWS zehn und Azure zwanzig Minuten, und es gibt Verfahren, die sie an
@@ -373,8 +376,8 @@ zu vier gleichzeitige Ausführungen einen Prozess teilen, benennt \autoref{sec:b
 als offene Maßnahme führt.
 
 Die Bindung eines Isolates an einen Thread ist eine Eigenschaft von \texttt{deno\_core}. Der Prototyp startet deshalb je
-Ausführung einen eigenen Betriebssystem-Thread mit eigener Event Loop, begrenzt durch eine Semaphore im Consumer des Mandanten,
-und einen Watchdog-Thread, weil ein Skript in einer Schleife ohne Ein- und Ausgabe die Event Loop nie erreicht und nur
+Ausführung einen eigenen Betriebssystem-Thread mit eigener Event Loop, begrenzt durch eine Semaphore im Consumer des Mandanten.
+Hinzu kommt ein Watchdog-Thread, weil ein Skript in einer Schleife ohne Ein- und Ausgabe die Event Loop nie erreicht und nur
 ein Thread außerhalb des Isolates die Terminierung auslösen kann. Der Thread trägt keine Trennung, alle Threads eines
 Prozesses teilen Adressraum und cgroup. Beide Profile schöpfen aus demselben Vorrat an Slots, lange Hintergrundläufe
 können synchrone verdrängen (\autoref{sec:betriebsplanung}).
@@ -383,14 +386,14 @@ Die Isolate-Grenze je Ausführung erfüllt M2 und kostet nach \autoref{sec:warm}
 einer Ausführung von etwa 19\,ms. Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
 aber nicht her, weil Contexts denselben Heap verwenden. Ein Zurücksetzen des Prozesses auf einen Snapshot zwischen
 zwei Ausführungen, wie \textcite[S.~1]{alzayat_groundhog_2023} es für Container beschreiben, setzt voraus, dass ein
-Container höchstens eine Ausführung zur Zeit trägt, und passt nicht zu bis zu vier gleichzeitigen Ausführungen je Pod.
+Container höchstens eine Ausführung zur Zeit trägt. Das passt nicht zu bis zu vier gleichzeitigen Ausführungen je Pod.
 
 \subsubsection{Zuteilung und Instanzverwaltung}
 \label{sec:zuteilung}
 
 Der Ausgangszustand überlässt die Instanzverwaltung dem Autoscaler von Knative, je Mandant eine Revision, die nach
 der letzten Anfrage auf null skaliert (\autoref{sec:grundlagen:bausteine}). Dagegen sprechen drei Dinge. Eine
-Ausführung hängt am gerade warmen Pod, der sich beim Entzug eines Knotens nicht übergeben lässt, das ist die Herkunft
+Ausführung hängt am gerade warmen Pod, der sich beim Entzug eines Knotens nicht übergeben lässt. Das ist die Herkunft
 von M5. Eine Untergrenze von einer Instanz je Revision bedeutete bei über 1.700 meist inaktiven Mandanten über tausend
 leerlaufende Pods. Und eine Zwischeniteration, in der das Gateway je Anfrage synchron bei der Control Plane die
 Adresse des Workers erfragte, koppelte die Skalierung an den Anfragepfad und wurde verworfen. Daraus folgt die Regel:
@@ -401,30 +404,30 @@ Das Gateway veröffentlicht einen Auftrag auf ein Subject der Form
 keinen Pod. Jeder zugewiesene Worker bindet den dauerhaften Pull-Consumer seines Mandanten, dessen Filter genau
 dessen Kennung enthält und den die Control Plane vor der Zuweisung angelegt hat. Aufträge anderer Mandanten kann er
 nicht empfangen, weil der Server sie ihm nicht zustellt und seine Verbindung nur diesen Consumer ansprechen darf. Hält
-ein Mandant mehrere Pods, binden alle denselben Consumer, und der Server verteilt die Aufträge unter ihnen, wobei
-jeder Pod nur einen Auftrag je Abruf zieht, damit er keinen Auftrag hält, für den er keinen freien Slot hat. Die
+ein Mandant mehrere Pods, binden alle denselben Consumer, und der Server verteilt die Aufträge unter ihnen.
+Jeder Pod zieht nur einen Auftrag je Abruf, damit er keinen Auftrag hält, für den er keinen freien Slot hat. Die
 Isolation liegt damit im Filter des Messaging-Systems und nicht in einem gemeinsamen Handler, der nach einem
-Mandantenfeld verzweigt, der Worker prüft die Kennung dennoch ein zweites Mal gegen seine Zuweisung. Der zweite
-Consumer gehört der Control Plane. Sein Filter trägt an der Stelle des Mandanten einen Platzhalter, er sieht jeden
+Mandantenfeld verzweigt. Der Worker prüft die Kennung dennoch ein zweites Mal gegen seine Zuweisung. Der zweite
+Consumer gehört der Control Plane. Sein Filter trägt an der Stelle des Mandanten einen Platzhalter. Er sieht jeden
 Auftrag, führt aber nichts aus, sondern prüft, ob der Mandant einen Pod hat und ob seine Last einen weiteren
 rechtfertigt.
 
 Der Consumer des Mandanten erlaubt vier Zustellungen mit Wartezeiten von 5, 10 und 20 Sekunden. Eine Nachricht kommt
 nur zurück, wenn die Wiederholung sicher ist oder ein Absturz sie erzwingt. Scheitert die Plattform, bevor Mandantencode
 lief, weil das Bundle oder der Body nicht erreichbar oder die Sandbox nicht ansprechbar ist, lehnt der Worker die
-Nachricht ab, und sie wird erneut zugestellt, solange eine Zustellung übrig ist und ein synchroner Aufrufer noch wartet.
+Nachricht ab. Sie wird erneut zugestellt, solange eine Zustellung übrig ist und ein synchroner Aufrufer noch wartet.
 Vom Skript ist dann nichts gelaufen. Eine synchrone Nachricht, die erst nach der Frist von 50 Sekunden ankommt, verwirft
 der Worker ungelaufen. Jeder andere Ausgang bestätigt oder beendet die Nachricht, auch ein Timeout oder der Fehler des
-Skripts. Stirbt der Worker mitten in einer Ausführung, oder die Sandbox, meist durch einen OOM-Kill, kommt die Nachricht
-zurück, und das Skript läuft ein zweites Mal. Das wird hingenommen, obwohl eine Skriptausführung nicht idempotent ist,
-und die Zahl der Zustellungen begrenzt, wie oft ein Skript so einen Prozess beenden kann.  Eine Startmarke je Nachricht in Redis, die eine Neuzustellung dem Aufrufer als
-Fehlschlag meldet statt sie zu wiederholen, kostete einen Redis-Zugriff je Ausführung auf dem Anfragepfad und ist nicht
-umgesetzt (\autoref{sec:diffusion:ausblick}).
+Skripts. Stirbt der Worker mitten in einer Ausführung, oder die Sandbox, meist durch einen \ac{OOM}-Kill, kommt die Nachricht
+zurück, und das Skript läuft ein zweites Mal. Das wird hingenommen, obwohl eine Skriptausführung nicht idempotent ist.
+Die Zahl der Zustellungen begrenzt, wie oft ein Skript so einen Prozess beenden kann. Eine Startmarke je Nachricht in Redis,
+die eine Neuzustellung dem Aufrufer als Fehlschlag meldet statt sie zu wiederholen, kostete einen Redis-Zugriff je
+Ausführung auf dem Anfragepfad. Sie ist nicht umgesetzt (\autoref{sec:diffusion:ausblick}).
 
 Ein Worker wartet nach dem Binden eines frisch angelegten Consumers auf dessen Leader, zieht je Nachricht genau einen
-Pull und beendet sich nur zwischen zwei Pulls, denn eine in einen verworfenen Pull zugestellte Nachricht war bis zum
-26.\ Oktober, mit einer einzigen Zustellung, verloren (\autoref{sec:zuverlaessigkeit}). Der Name des Consumers hängt nur vom Mandanten ab, sodass der nächste Pod, der den
-Mandanten übernimmt, an der letzten Bestätigung fortsetzt.
+Pull und beendet sich nur zwischen zwei Pulls: Eine in einen verworfenen Pull zugestellte Nachricht war bis zum
+26.\ Oktober, mit einer einzigen Zustellung, verloren (\autoref{sec:zuverlaessigkeit}). Der Name des Consumers hängt nur
+vom Mandanten ab, sodass der nächste Pod, der den Mandanten übernimmt, an der letzten Bestätigung fortsetzt.
 
 \begin{figure}[H]
   \centering
@@ -456,7 +459,7 @@ Mandanten übernimmt, an der letzten Bestätigung fortsetzt.
 \end{figure}
 
 \autoref{fig:erstkontakt} zeigt den Erstkontakt eines Mandanten als \ac{UML}-Sequenzdiagramm. Die Control Plane prüft in Redis, ob der Mandant
-zugewiesen ist, und nimmt andernfalls in einem atomaren Schritt einen Pod aus dem Pool und markiert ihn als
+zugewiesen ist. Andernfalls nimmt sie in einem atomaren Schritt einen Pod aus dem Pool und markiert ihn als
 reserviert, sodass ein bereiter Pod zu keinem Zeitpunkt in keiner der drei Mengen steht. Ein frisch angelegter Pod
 steht, bis der Informer ihn als bereit meldet, in keiner Menge, weshalb unbekannte Pods erst nach einer Schonfrist
 gelöscht werden. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an, höchstens einen je
@@ -472,7 +475,7 @@ Control Plane vorbei, sie liest zu ihnen nur noch die Last.
 Der Erstkontakt gibt einem Mandanten einen Pod, weitere erhält er nach Last. Für jeden Auftrag eines zugewiesenen
 Mandanten liest die Control Plane, zeitlich gedrosselt, die Auslastung aus dem gemeinsamen Consumer, also laufende und
 noch nicht abgeholte Aufträge. Übersteigt die Summe einen festen Anteil der Slots aller Pods des Mandanten, kommen so
-viele Pods aus dem Pool hinzu, wie die Auslastung verlangt, und der Pool wird auf seine Zielgröße aufgefüllt, ohne auf
+viele Pods aus dem Pool hinzu, wie die Auslastung verlangt. Der Pool wird auf seine Zielgröße aufgefüllt, ohne auf
 die neuen Pods zu warten. Erstkontakte haben Vorrang, weil ein wartender Erstkontakt die volle Startzeit eines Pods
 trägt, eine ausbleibende Erweiterung aber nur Latenz kostet. Eine Erweiterung nimmt deshalb nur, solange ein fester
 Teil der Zielgröße frei bleibt, und frühestens kurz nach dem Erstkontakt. Eine Obergrenze je Mandant und ein
@@ -482,8 +485,8 @@ Den Rückbau übernimmt die Control Plane: Sie merkt sich, wie viele Pods jede L
 ältesten Pods über dem Maximum der letzten Minute zurück. Die letzten Nachrichtenzeiten je Mandant legt sie in Redis
 ab, damit ein Neustart sie nicht vergisst.
 
-Auch die Zielgröße des Pools muss nicht fest sein. Die Control Plane zählt die Zuweisungen je Minute in Redis und sagt
-daraus die Größe für die nächsten Minuten vorher, aus dem gleichen Zeitfenster an den gleichen Wochentagen der letzten
+Auch die Zielgröße des Pools muss nicht fest sein. Die Control Plane zählt die Zuweisungen je Minute in Redis.
+Daraus sagt sie die Größe für die nächsten Minuten vorher, aus dem gleichen Zeitfenster an den gleichen Wochentagen der letzten
 vier Wochen und den letzten sieben Tagen, mit Sicherheitsfaktor 1,3, nach unten begrenzt von der statischen Zielgröße,
 nach oben von einer Kostengrenze. Der Grund ist die Uhr, denn geplante Skripte machen die vollen Stunden zu den
 geschäftigsten Minuten. Die Vorhersage ist für den Betrieb umgesetzt, die Messungen liefen mit der festen Zielgröße
@@ -492,19 +495,20 @@ vierzig.
 Der Zustand der Zuteilung liegt in Redis ohne Ablaufzeiten, sodass die Control Plane ihn nach einem Neustart
 zurückliest und offene Zuweisungen wiederholt. Es gibt eine Replik und keine Leader Election. Eine Schleife hält den
 Bestand in Ordnung: Sie entzieht Pods nach Ablauf der Zuweisungsdauer, wobei die Grace Period laufende Ausführungen zu
-Ende kommen lässt, löscht Pods, die in keiner Menge geführt werden, und füllt den Pool auf seine Zielgröße auf oder
-stutzt ihn zurück, wobei nur lebende Pods auf dem aktuellen Image zählen, sodass ein neues Worker-Image durch den Pool
+Ende kommen lässt. Sie löscht Pods, die in keiner Menge geführt werden, und füllt den Pool auf seine Zielgröße auf oder
+stutzt ihn zurück. Dabei zählen nur lebende Pods auf dem aktuellen Image, sodass ein neues Worker-Image durch den Pool
 rollt. Bekommt ein Pod einen \texttt{DeletionTimestamp}, meldet ein Informer der Kubernetes-\ac{API} das innerhalb
-von Sekunden, und die Control Plane streicht ihn aus der Menge des Mandanten, ohne sein Ende abzuwarten, ohne ihn
+von Sekunden. Die Control Plane streicht ihn aus der Menge des Mandanten, ohne sein Ende abzuwarten, ohne ihn
 erneut zu löschen und ohne ein \emph{unassign}-Kommando. War es sein letzter Pod und warten bereits Aufträge, weist
 sie den Mandanten sofort neu zu. Die Zustände eines Pods führt \autoref{tab:podzustaende}.
 
 Für M5 ergibt sich daraus ein konkreter Ablauf. Der Entzug eines Knotens sendet den betroffenen Pods SIGTERM. Ein
 Worker hört auf, Aufträge zu ziehen, lehnt neue Zuweisungen ab und lässt laufende Ausführungen bis zum Ergebnis
-kommen, die Grace Period deckt die längste Ausführung samt Zustellung. Der dauerhafte Consumer bleibt mit seinem
+kommen. Die Grace Period deckt die längste Ausführung samt Zustellung. Der dauerhafte Consumer bleibt mit seinem
 Bestätigungsstand auf dem Server. Sobald die Control Plane den \texttt{DeletionTimestamp} sieht, nimmt sie den Pod aus
-der Zuteilung, und der nächste Auftrag des Mandanten wird einem Pod aus dem Pool zugewiesen, der dort fortsetzt.
-Überschreitet eine Ausführung die Grace Period, beendet Kubernetes den Pod, und die Nachricht kommt nach der Bestätigungsfrist zurück. Die Untergrenze des Pools ist so zu
+der Zuteilung. Der nächste Auftrag des Mandanten wird einem Pod aus dem Pool zugewiesen, der dort fortsetzt.
+Überschreitet eine Ausführung die Grace Period, beendet Kubernetes den Pod, und die Nachricht kommt nach der
+Bestätigungsfrist zurück. Die Untergrenze des Pools ist so zu
 wählen, dass der Entzug eines Knotens nicht dazu führt, dass Aufträge auf das Nachfüllen warten. Ob die Zeit ohne
 Ausführungsfähigkeit damit M5 einhält, misst \autoref{sec:pruefung-m5}.
 
@@ -519,13 +523,12 @@ Shell-Kommandos in \ac{KI}-Agenten: Je nach Einstellung blockieren 69 bis 99 Pro
 sperren sollen \autocite[S.~1--2]{chen_one_2026}.
 
 Der Mandantenkontext, also Kennung und Profil, liegt in \texttt{OpState}, dem Zustandsobjekt, das der
-Host jedem Isolate zuordnet. Die Bindings lesen ihn dort aus dem Host-Code, im JavaScript-Heap existiert er nicht,
+Host jedem Isolate zuordnet. Die Bindings lesen ihn dort aus dem Host-Code. Im JavaScript-Heap existiert er nicht,
 sodass ein Skript ihn weder auslesen noch überschreiben noch vortäuschen kann. Was das Skript als Eingabe erhält,
-etwa die Mandantenkennung im Request, sind Kopien, die kein Binding liest. Das ist gegenüber dem Ausgangszustand, in
-dem das Skript selbst die Angaben trägt, mit denen es sich ausweist, der wesentliche Unterschied. Für V2 ist es
-zentral: Ein beeinflusstes Skript kann die Frage, in wessen Namen es handelt, nicht beantworten und damit auch nicht
-falsch beantworten. Die zulässigen Ziele kennt der Proxy aus der Registrierung, die Limits liegen in den Parametern des Isolates und im
-Watchdog.
+etwa die Mandantenkennung im Request, sind Kopien, die kein Binding liest. Das unterscheidet es vom Ausgangszustand, in
+dem das Skript selbst die Angaben trägt, mit denen es sich ausweist. Für V2 gilt: Ein beeinflusstes Skript kann nicht
+bestimmen, in wessen Namen es handelt. Die zulässigen Ziele kennt der Proxy aus der Registrierung.
+Die Limits liegen in den Parametern des Isolates und im Watchdog.
 
 Welche Bindings eine Ausführung erhält, bestimmen ihr Profil und die Konfiguration des Mandanten, nicht der Inhalt des
 Skripts. Das Webhook-Profil erhält \texttt{fetch}, eine abgefangene Konsole und die Node-Globals \texttt{process},
@@ -534,12 +537,12 @@ braucht. Rohe Sockets samt \ac{TLS}, die nur die zehnmal kleinere Socket-Gruppe 
 freigeschaltete Fähigkeit (\autoref{sec:betriebsplanung}). Das Agentenprofil erhält \texttt{fetch} und Web-Globals wie Timer,
 \texttt{URL} und \texttt{Buffer}, aber weder \texttt{require} noch Konsole noch Modul-Loader. In beiden Profilen
 löscht der Worker nach der Initialisierung das \texttt{Deno}-Objekt und die Reste des Bootstraps, über die ein
-Skript die rohen Ops erreichen könnte, und die Prüfung der Ziele liegt im Proxy, in den Ops nur im Rückfall ohne Proxy. Eine
-Ableitung der Bindings aus dem Code, etwa aus dem Abhängigkeitsgraphen des Bundling-Schritts, wurde verworfen, weil im
-Agentenprofil derjenige die Importe schreibt, dessen Beeinflussbarkeit das Bedrohungsmodell beschreibt (V2), und weil
-sich zwei feste Mengen mit einer Freischaltung prüfen lassen, eine abgeleitete nicht. Dass auch das Webhook-Profil nur
-erhält, was der Bestand braucht, folgt aus M4 und V5. In der Umsetzung ist die Zuordnung eine einzige Funktion vom Profil auf die
-Extensions (\autoref{lst:bindings}). Der Prototyp registriert das Socket-Binding im Webhook-Profil noch immer, die
+Skript die rohen Ops erreichen könnte. Die Prüfung der Ziele liegt im Proxy, in den Ops nur im Rückfall ohne Proxy. Eine
+Ableitung der Bindings aus dem Code, etwa aus dem Abhängigkeitsgraphen des Bundling-Schritts, wurde verworfen: Im
+Agentenprofil schreibt derjenige die Importe, dessen Beeinflussbarkeit das Bedrohungsmodell beschreibt (V2). Außerdem
+lassen sich zwei feste Mengen mit einer Freischaltung prüfen, eine abgeleitete nicht. Dass auch das Webhook-Profil nur
+erhält, was der Bestand braucht, folgt aus M4 und V5. In der Umsetzung ist die Zuordnung eine einzige Funktion vom
+Profil auf die Extensions (\autoref{lst:bindings}). Der Prototyp registriert das Socket-Binding im Webhook-Profil noch immer, die
 Freischaltung je Mandant ist nicht umgesetzt.
 
 Fehlende Kompatibilität zeigt sich in beiden Profilen erst zur Laufzeit als Fehler beim Laden eines Moduls, das die
@@ -548,13 +551,15 @@ Schicht aus \autoref{sec:kompatibilitaetsschicht} nicht bereitstellt.
 Die Menge der Bindings legt fest, \emph{ob} ein Skript nach außen sprechen kann, der Egress-Proxy legt fest, \emph{wohin}.
 Beide Profile schicken \texttt{fetch} als \ac{HTTP}-Anfrage und Sockets als \texttt{CONNECT}-Tunnel an den Proxy, jeden Hop einer
 Redirect-Kette einzeln. Die Registrierung des Gateways nennt Mandant, Profil, Grenzen und Regeln. Eine Regel nennt einen
-Host, exakt, als IP oder als Wildcard, und optional Port, Pfadpräfix und Methoden, ein Tunnel passt nur auf eine Regel mit
-Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos, und sollen
+Host, exakt, als \ac{IP}-Adresse oder als Wildcard, und optional Port, Pfadpräfix und Methoden. Ein Tunnel passt nur auf eine Regel mit
+Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Die Regeln sollen
 mandantenweit in der Skriptverwaltung gepflegt werden. Unabhängig von ihnen verwirft der Proxy private, Loopback-,
 Link-Local- und Metadaten-Adressen und die Adressbereiche des Clusters. Einen Treffer außerhalb der Regeln lehnt er im
-Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Prototyp registriert beide Profile in audit,
-weil die Skriptverwaltung noch keine Regeln hält: Ein Skript erreicht jede öffentliche Adresse, jeder Zugriff steht im
-Protokoll, und verwehrt bleiben nur die internen Bereiche. Den Token der Person setzt der Proxy bei Agentenläufen selbst
+Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Proxy wertet Agentenläufe ohne Angabe in enforce.
+Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. Er registrierte beide Profile in audit,
+und ein Skript erreichte jede öffentliche Adresse. In der Messumgebung stehen beide Profile seit dem 28.\ Oktober in
+enforce, mit einer Testregel und dem eigenen System je Lauf (T7, \autoref{sec:pruefung-isolation}). Jeder Zugriff steht
+im Protokoll, und verwehrt bleiben stets die internen Bereiche. Den Token der Person setzt der Proxy bei Agentenläufen selbst
 ein, er gelangt nie in die Sandbox. Lauschende Ports sind in beiden Profilen verwehrt.
 
 \subsubsection{Kompatibilitätsschicht}
@@ -564,16 +569,16 @@ Nach \autoref{sec:bestandsanalyse} scheitern 648 der 713 blockierten Mandanten a
 eine \ac{HTTP}-Gruppe und eine etwa zehnmal kleinere Socket-Gruppe. Der Aufwand der inneren Grenze konzentriert sich
 damit auf eine Fähigkeit. Beide Gruppen werden über einen Shim nachgebildet, der die vorhandene Netzwerkschnittstelle
 auf ein vermitteltes Binding abbildet, damit die bestehenden Skripte unverändert weiterlaufen. Die fertige
-Node-Kompatibilitätsschicht von Deno einzubinden wäre die naheliegende Abkürzung, bringt aber auch Bausteine für
+Node-Kompatibilitätsschicht von Deno einzubinden wäre eine Abkürzung. Sie bringt aber auch Bausteine für
 Prozesse, Dateisystem und Betriebssystemzugriff mit und stellt damit die Umgebungsautorität wieder her, wegen der
-Node.js in \autoref{sec:ausschluesse} als Vertrauensgrenze ausgeschieden ist, abgesichert allein durch das
+Node.js in \autoref{sec:ausschluesse} als Vertrauensgrenze ausgeschieden ist. Abgesichert wäre das allein durch das
 prozessweite Berechtigungsmodell, dessen Umgehungen der Hersteller dokumentiert
 \autocite{the_deno_authors_security_2026}. Ein eigener Shim deckt nur ab, was der Bestand benötigt.
 
 Ob dieser Zuschnitt trägt, ist durch Architekturbetrachtung nicht zu klären. Die Machbarkeit wurde deshalb vorab an der
 schwierigsten Stelle des Bestands geprüft, an \texttt{tedious}, dem Treiber unterhalb von \texttt{mssql}. Er stellt
 eine bestehende Verbindung mitten im Datenstrom auf \ac{TLS} um, indem er den Handshake in die Frames des
-\ac{TDS}-Protokolls verpackt. Der unveränderte Treiber läuft dafür über den Socket-Shim, die \ac{TLS}-Umstellung
+\ac{TDS}-Protokolls verpackt. Der unveränderte Treiber läuft dafür über den Socket-Shim. Die \ac{TLS}-Umstellung
 übernimmt eine Zustandsmaschine ohne eigene Ein- und Ausgabe, die nur über synchrone Bindings angesprochen wird,
 während der Treiber das Framing selbst verantwortet. Das Ergebnis berichtet
 \autoref{sec:pruefung-kompatibilitaet}.
@@ -589,16 +594,16 @@ Die Umsetzung der Schicht ist breiter als ein Shim für zwei Netzwerkschnittstel
 den Host nicht berührt, läuft Nodes eigener Code, wo er ihn berührt, wird er nachgebildet oder verweigert. Die erste
 Schicht ist unveränderter Quelltext des Node-Projekts, per Commit festgelegt und beim Bau gebündelt, etwa
 \texttt{Buffer}, \texttt{events}, Streams, \texttt{util.inspect}, \texttt{path}, \texttt{querystring} und Web Streams.
-Jeder Import, der in Node zu einer nativen Binding oder zum Host führte, ist ein Stub oder wirft beim Laden, und ein
+Jeder Import, der in Node zu einer nativen Binding oder zum Host führte, ist ein Stub oder wirft beim Laden. Ein
 unbekannter interner Import bricht den Bau ab, sodass keine Abhängigkeit unbemerkt nach außen reicht. Die zweite
 Schicht sind eigene Shims mit Bindings: \texttt{net}, \texttt{tls}, \texttt{http} und \texttt{https}, \texttt{zlib},
 \texttt{fetch}, \texttt{crypto} und \texttt{fs} als größenbegrenztes Dateisystem im Speicher, das je Ausführung leer
 beginnt. Die dritte sind die Web-Globals jeder Ausführung, darunter Timer, \texttt{URL} und \texttt{AbortController}.
-Nicht enthalten ist die Kompatibilitätsschicht von Deno, und \texttt{process} ist so klein wie dort: Die
+Nicht enthalten ist die Kompatibilitätsschicht von Deno. \texttt{process} ist so klein wie dort: Die
 Umgebungsvariablen des Hosts bleiben leer, die Variablen des Mandanten erreichen das Skript wie im Ausgangszustand
 über \texttt{req.variables()}. Die Globals bringen eine Uhr mit, die nur bei abgeschlossener Ein- und Ausgabe
 fortschreitet, wie bei der Workers-Plattform \autocite{cloudflare_security_2026}. Eine Schleife ohne Ein- und Ausgabe
-sieht keine Zeit vergehen, was die feine Zeitmessung nimmt, die Seitenkanäle im Prozess voraussetzen, ohne dass die
+sieht keine Zeit vergehen. Das nimmt die feine Zeitmessung, die Seitenkanäle im Prozess voraussetzen, ohne dass die
 Arbeit Seitenkanalfreiheit behauptete (\autoref{sec:randbedingungen}).
 
 Ob die Schicht trägt, wird auf drei Wegen geprüft, deren Ergebnisse \autoref{sec:Evaluation} berichtet. Ein
@@ -609,8 +614,8 @@ einem rohen Socket mit echten Gegenstellen und prüfen Backpressure, Redirects, 
 Weg prüft den Bestand gegen die Schicht: Ein Scanner bündelt jede gespeicherte Skriptversion mit esbuild wie der
 Builder der Plattform und prüft jeden Import und jeden freien Bezeichner gegen eine Liste dessen, was ein laufendes
 Isolate des Prototyps bereitstellt. Ein früher Lauf war die Arbeitsliste für die zweite Schicht. Da der Scanner auch
-Bezeichner in Zweigen zählt, die unter Node nie laufen, sind seine Urteile eine Obergrenze der Blocker, und gegen den
-heutigen Stand der Schicht wird er nicht wiederholt, \autoref{sec:pruefung-kompatibilitaet} leitet S6 stattdessen aus
+Bezeichner in Zweigen zählt, die unter Node nie laufen, sind seine Urteile eine Obergrenze der Blocker. Gegen den
+heutigen Stand der Schicht wird er nicht wiederholt. \autoref{sec:pruefung-kompatibilitaet} leitet S6 stattdessen aus
 der Bestandsanalyse ab.
 
 \subsubsection{Begrenzung der Ressourcen}
@@ -619,26 +624,26 @@ der Bestandsanalyse ab.
 Die Begrenzung erfolgt auf zwei Ebenen, weil keine der beiden für sich genommen trägt. Auf Ebene des Isolates greifen
 drei Mechanismen: eine über einen Callback durchgesetzte Obergrenze für den JavaScript-Heap, ein zählender Allokator
 für Speicher, den V8 außerhalb dieses Heaps anfordert, und ein Watchdog, der eine laufende Ausführung abbricht. Jeder
-hat eine Grenze. Das Heap-Limit wird an den Safepoints der Garbage Collection geprüft und ist eine Näherung, der
-Watchdog wirkt an den Prüfpunkten der Engine und nicht innerhalb eines laufenden nativen Aufrufs, und Vollständigkeit
+hat eine Grenze. Das Heap-Limit wird an den Safepoints der Garbage Collection geprüft und ist eine Näherung. Der
+Watchdog wirkt an den Prüfpunkten der Engine und nicht innerhalb eines laufenden nativen Aufrufs. Vollständigkeit
 entsteht bei allen dreien durch Aufzählung der abgedeckten Pfade, ein nicht aufgezählter Pfad bleibt offen.
 
-Auf Ebene des Pods greift deshalb ein cgroup je Mandant. Es erfasst jeden Allokationspfad und stellt die harte
-Schranke dar, feiner ist sie nach \autoref{sec:randbedingungen} nicht zu bekommen. Weil ein Pod genau einen Mandanten
+Auf Ebene des Pods greift deshalb ein cgroup je Mandant. Es erfasst jeden Allokationspfad und ist die harte
+Schranke, feiner ist sie nach \autoref{sec:randbedingungen} nicht zu bekommen. Weil ein Pod genau einen Mandanten
 trägt, fällt die feinste erreichbare Einheit mit der Mandantengrenze zusammen. Der Kern wählt sein Opfer bei
-Überschreitung nach eigener Bewertung, doch jede in Frage kommende Ausführung gehört demselben Mandanten, die
+Überschreitung nach eigener Bewertung, doch jede in Frage kommende Ausführung gehört demselben Mandanten. Die
 Zuordnung zur verursachenden Ausführung leistet die Ebene des Isolates. 
 
 Die Umsetzung bemisst die innere Ebene aus der äußeren. Der Worker liest das Speicherlimit seines Pods über die
 Downward \ac{API}, nicht aus den cgroup-Dateien, die gVisor nur emuliert
-\autocite{googlegvisor_contributors_sandboxed_2026}, und teilt es gleichmäßig auf die gleichzeitigen Ausführungen auf,
+\autocite{googlegvisor_contributors_sandboxed_2026}. Er teilt es gleichmäßig auf die gleichzeitigen Ausführungen auf,
 je zur Hälfte als Heap-Limit und als Limit für Puffer außerhalb des Heaps. Erreicht der Heap die Grenze, beendet der
 Callback das Isolate und gewährt festen Headroom, ohne den V8 den gesamten Prozess beendete. Der zählende Allokator
 verweigert eine Zuteilung oberhalb des Limits und meldet das als abfangbaren \texttt{RangeError}. Weitere Limits
 gelten für entpackte Bundles, Bodies und das Dateisystem im Speicher. Der Pod erhält ein Speicherlimit, aber kein
-\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt, Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
+\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
 von S4 eingeht (\autoref{tab:parameter}). Die Mechanismen auf Ebene des Isolates liefern damit die Attribution und
-einen im Skript abfangbaren Fehler, das cgroup die Garantie, und ihre Belastbarkeit prüft \autoref{sec:Evaluation}
+einen im Skript abfangbaren Fehler, das cgroup die Garantie. Ihre Belastbarkeit prüft \autoref{sec:Evaluation}
 anhand der Prüffälle aus \autoref{tab:prueffaelle}.
 
 \subsubsection{Zustellung und Caching des Skripts}
@@ -670,27 +675,28 @@ Herkunft des Skripts (\autoref{tab:vorbereitung}).
 \end{table}
 
 Der \emph{Laufzeit-Snapshot} trägt für jede Ausführung. Er hält eine Instanz fest, in der die Extensions des Workers
-und der JavaScript-Anteil der Shims aus \autoref{sec:kompatibilitaetsschicht} bereits ausgewertet sind, entsteht
+und der JavaScript-Anteil der Shims aus \autoref{sec:kompatibilitaetsschicht} bereits ausgewertet sind. Er entsteht
 einmalig beim Bau der Binärdatei und ist, weil er kein Mandantenskript enthält, für alle Mandanten, Profile und
 Skripte derselbe. Das entspricht dem von \textcite[S.~559]{ustiugov_benchmarking_2021} untersuchten Vorgehen. Im
-Prototyp enthält er das Buffer-Bundle und den Webhook-Adapter, Extensions mit eigenen Bindings tragen Zustand je
+Prototyp enthält er das Buffer-Bundle und den Webhook-Adapter. Extensions mit eigenen Bindings tragen Zustand je
 Ausführung und werden je Isolate registriert.
 
 Ein \emph{skriptbezogener Code-Cache} spart das wiederholte Kompilieren desselben Quelltexts und ist nur für
-gespeicherte Skripte sinnvoll, ein einmal laufendes Skript hat nichts wiederzuverwenden. Gecacht wird ausschließlich
+gespeicherte Skripte sinnvoll. Ein einmal laufendes Skript hat nichts wiederzuverwenden. Gecacht wird ausschließlich
 Unveränderliches, Quelltext und kompilierter Code, nie Heap-Zustand einer vorangegangenen Ausführung, denn ein
 Snapshot des Mandantenskripts verletzte M2 (T3 in \autoref{tab:prueffaelle}). Umgesetzt ist er über den Code-Cache
 von V8, der beim ersten vollständigen Lauf eines Bundles erzeugt, neben dem Quelltext unter demselben Content-Hash
-abgelegt und beim nächsten Lauf eingespeist wird. 
+abgelegt und beim nächsten Lauf eingespeist wird. Ein Angreifer, der aus der Engine ausbricht, könnte den Cache seines
+eigenen Mandanten verändern, das bleibt in dessen Vertrauensdomäne, und im Agentenprofil gibt es keinen Cache.  
 
 Nach \autoref{sec:bestandsanalyse} misst ein Bundle im Median 69,3\,KB und im 95.\ Perzentil 429,0\,KB. Schwer wiegt
 nicht die Übertragung, sondern der konstante Anteil eines Abrufs aus dem Objektspeicher, rund 50\,ms bei jedem Aufruf.
 Der Prozess hält deshalb einen Cache, dessen Schlüssel der Inhalt ist, mit vier Festlegungen. Er liegt im Speicher und
 nicht auf der Platte, denn ein Cache auf der Platte erzeugte bei jedem Zugriff Dateisystemaufrufe, die unter gVisor
 der Sentry beantwortet, eine Komponente der \ac{TCB} (\autoref{sec:randbedingungen}). Der Content-Hash kommt mit dem
-Aufruf, sonst wäre die Prüfung wertlos, weil das Laden gerade vermieden werden soll, und der Prozess prüft die
+Aufruf, sonst wäre die Prüfung wertlos, weil das Laden gerade vermieden werden soll. Der Prozess prüft die
 geladenen Bytes gegen ihn, ein \ac{SHA}-256 über die komprimierten Bytes, bevor er entpackt. Aufgenommen wird nur,
-was eine stabile Kennung hat. Zur Laufzeit erzeugter Code hat keine, und ohne diese Regel könnte ein Mandant über
+was eine stabile Kennung hat. Zur Laufzeit erzeugter Code hat keine. Ohne diese Regel könnte ein Mandant über
 Agentenaufrufe beliebig viele einmalige Skripte einlagern und die Bundles seines Webhook-Pfads verdrängen, die
 Erschöpfung einer geteilten Ressource aus A1. Und die Grenze ist ein Budget in Byte, denn einzelne Mandanten halten
 bis zu 151 gebündelte Versionen. Das Budget liegt neben den Heap-Limits unter demselben Speicherlimit des Pods
@@ -705,7 +711,7 @@ solche Treffer vorkämen, belegt die Bestandsanalyse, in der dieselbe Skriptkenn
 
 Dass ein frisches Isolate das Bundle je Ausführung erneut auswerten muss, ist gegenüber dem Ausgangszustand keine
 Verschlechterung, denn dort wird das Skript nach \autoref{sec:systemkontext} ebenfalls je Ausführung neu geladen und
-kompiliert, und der Aufwand beseitigt nur den Zustand auf Modulebene. Der Code-Cache ist eine Verbesserung an einer
+kompiliert. Der Aufwand beseitigt nur den Zustand auf Modulebene. Der Code-Cache ist eine Verbesserung an einer
 Stelle, an der der Ausgangszustand bei jeder Ausführung voll bezahlt.
 
 \subsubsection{Lebenszyklus einer Ausführung}
@@ -754,17 +760,17 @@ Stelle, an der der Ausgangszustand bei jeder Ausführung voll bezahlt.
 
 \autoref{fig:ablauf} fasst den Ablauf zusammen. Wiederholt werden bei Transportfehlern nur Bundle-Abruf, Callback und
 Log-Upload, nie die Ausführung selbst (\autoref{tab:parameter}). Nach dem Lauf wird zuerst ein großer Response-Body
-hochgeladen, dann dem wartenden Aufrufer geantwortet, die Nachricht bestätigt und der Slot freigegeben, und erst
-danach das Konsolen-Log an den Skriptdienst übertragen, damit ein langsames Log-Ziel weder die Antwort verzögert noch
-einen Slot belegt, den die Control Plane als Last zählt. Die Nachricht wird nach jedem Ausgang bestätigt oder beendet, auch wenn
-die Zustellung scheitert, damit nur ein Absturz die Ausführung wiederholt.
+hochgeladen, dann dem wartenden Aufrufer geantwortet, die Nachricht bestätigt und der Slot freigegeben. Erst
+danach wird das Konsolen-Log an den Skriptdienst übertragen, damit ein langsames Log-Ziel weder die Antwort verzögert noch
+einen Slot belegt, den die Control Plane als Last zählt. Die Nachricht wird nach jedem Ausgang bestätigt oder beendet,
+auch wenn die Zustellung scheitert, damit nur ein Absturz die Ausführung wiederholt.
 
-Eine Ausführung des Webhook-Profils endet, wenn das Ergebnis des Einstiegspunkts feststeht, wie im Ausgangszustand,
-offene Timer, Sockets und Leseoperationen werden mit dem Isolate verworfen. Im Agentenprofil läuft die Event Loop
+Eine Ausführung des Webhook-Profils endet, wenn das Ergebnis des Einstiegspunkts feststeht, wie im Ausgangszustand.
+Offene Timer, Sockets und Leseoperationen werden mit dem Isolate verworfen. Im Agentenprofil läuft die Event Loop
 dagegen leer, weil ein zur Laufzeit erzeugtes Skript keinen Handler hat, begrenzt durch die Frist des Watchdogs. Jede
 Ressource führt dafür eine Abbruchmöglichkeit mit, die beim Schließen ausgelöst wird, sonst trüge eine hängende
-Leseoperation die Ausführung über deren Ende hinaus (T1, T5). Ein Abbruch von außen beim Entzug der Zuweisung nutzt denselben Weg. Beim
-Herunterfahren per SIGTERM bricht der Worker dagegen nichts ab, sondern lässt laufende Ausführungen zu Ende kommen und
+Leseoperation die Ausführung über deren Ende hinaus (T1, T5). Ein Abbruch von außen beim Entzug der Zuweisung nutzt denselben Weg.
+Beim Herunterfahren per SIGTERM bricht der Worker dagegen nichts ab, sondern lässt laufende Ausführungen zu Ende kommen und
 nimmt keine Zuweisung mehr an.
 
 \subsection{Betrieb und offene Maßnahmen}
@@ -772,14 +778,15 @@ nimmt keine Zuweisung mehr an.
 
 Die Härtung des Worker-Pods ist Teil des Codes der Control Plane und keine Konfiguration. Sie setzt denselben
 Sicherheitskontext wie der Ausgangszustand nach \autoref{sec:systemkontext}, ergänzt um den Verzicht auf Root, ein
-schreibgeschütztes Root-Dateisystem und, wo die Plattform sie bereitstellt, die gVisor-Runtime-Klasse, die die Control
-Plane nach dem Namespace wählt. Fehlt sie dort, startet der Pod ohne sie, statt den Start zu verweigern, was ein Betrieb mit M3 verweigern sollte. Kein Deployment
+schreibgeschütztes Root-Dateisystem und, wo die Plattform sie bereitstellt, die gVisor-Runtime-Klasse. Die Control
+Plane wählt sie nach dem Namen der Infrastruktur. Auf OTC startet sie nicht, wenn ein Worker-Pod im Trockenlauf ohne die
+Klasse ankäme. Auf anderen Infrastrukturen laufen Worker ohne gVisor. Kein Deployment
 kann diese Felder lockern, das Image enthält außer der Binärdatei keine Shell, und eine Netzwerkrichtlinie lässt dem
-Pod ins Internet nur Port 443 zu. Nach einem Ausbruch den Proxy nicht umgehen zu können, setzt voraus, dass der Pod selbst nur
-noch den Proxy erreicht, und das ist nicht umgesetzt. NATS erreicht der Pod über ein Label der Cluster-Richtlinien, Redis gar nicht. Für M3 heißt
-das, dass die dem Gastcode zugängliche Kernel-Oberfläche nicht wächst, den Konfigurationsvergleich führt
-\autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines Pods neu, sodass ein Release ohne Lücke durch den
-Pool rollt. 
+Pod ins Internet nur Port 443 zu. Nach einem Ausbruch den Proxy nicht umgehen zu können, setzt voraus, dass der Pod selbst
+nur noch den Proxy erreicht, und das ist nicht umgesetzt. NATS erreicht der Pod über ein Label der Cluster-Richtlinien,
+Redis gar nicht. Für M3 heißt das, dass die dem Gastcode zugängliche Kernel-Oberfläche nicht wächst, den
+Konfigurationsvergleich führt \autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
+Pods neu, sodass ein Release ohne Lücke durch den Pool rollt.
 
 Das in \autoref{sec:vorauswahl-ergebnis} benannte Wartungsrisiko betrifft \texttt{deno\_core} selbst und hat sich
 während der Arbeit verschärft. Am 9.\,Oktober 2026 kündigte Deno an, dass das gesamte Team zu Cloudflare wechselt. Die
@@ -788,21 +795,23 @@ workerd zu integrieren \autocite{noauthor_deno_2026}. \texttt{deno\_core} nennt 
 Planung vorsorglich als auslaufend.
 
 Der Entwurf begrenzt das Risiko: Übernommen ist nur die Kernschicht, auf eine exakte Version festgelegt, nicht die
-Kompatibilitätsschicht von Deno (\autoref{sec:kompatibilitaetsschicht}), und der übernommene Node-Code ist auf einen
+Kompatibilitätsschicht von Deno (\autoref{sec:kompatibilitaetsschicht}). Der übernommene Node-Code ist auf einen
 Commit festgelegt, den der Differenztest bei jeder Anhebung mit neuen Fällen prüft. Wird \texttt{deno\_core} nicht
 weitergeführt, bleibt \texttt{rusty\_v8} als Grundlage. Zu ersetzen wäre die Einbettungsschicht, die der Prototyp in rund
 30 Quelldateien berührt, ein benennbarer, aber kein kleiner Eingriff, dessen Aufwand nicht geschätzt ist.
 
 Eine zweite offene Maßnahme betrifft die Härtung der Engine. Die Speichersandbox von V8 erfordert einen vollständigen
-Build der Engine, der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Die vollständige Sandbox ist für M1 bis M5 nicht erforderlich, weil die
-Mandantentrennung über die Pod-Grenze läuft, würde sie tragfähig, verlöre die Regel aus \autoref{sec:ebenen}, einen
+Build der Engine. Der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Die vollständige Sandbox
+ist für M1 bis M5 nicht erforderlich, weil die Mandantentrennung über die Pod-Grenze läuft. Würde die Sandbox
+tragfähig, verlöre die Regel aus \autoref{sec:ebenen}, einen
 Pod nie einem zweiten Mandanten zu geben, ihren Charakter als Sicherheitsmechanismus und würde zur
 Kostenentscheidung.
 
 Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich
 Ausführungen desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben
 Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandantengrenze ist. M2 und
-die Prüffälle betreffen aufeinanderfolgende Ausführungen.
+die Prüffälle betreffen aufeinanderfolgende Ausführungen. Die Uhr aus \autoref{sec:kompatibilitaetsschicht} mildert das.
+Ein Slot je Pod im Agentenprofil beseitigte die Lücke, kostete aber Pods. Die Abwägung gegen S1 und S3 steht aus.
 
 Eine vierte Einschränkung betrifft die Zugangsdaten. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
 NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth Callout aus
@@ -816,10 +825,10 @@ vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Na
 
 
 Vier weitere Maßnahmen folgen aus der Umsetzung und sind im Quellcode als solche markiert. Die mandantenweite Pflege
-der Regeln fehlt, solange die Skriptverwaltung keine hält, und beide Profile laufen deshalb im Modus audit, der nur die
-internen Bereiche verwehrt. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
-nicht umgesetzt, ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist
-nicht erhoben, die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Vor enforce ist das zu erheben, und S6
+der Regeln fehlt, solange die Skriptverwaltung keine hält, und der Prototyp gibt sie fest vor, im Modus audit, der nur die
+internen Bereiche verwehrt, oder wie am 28.\ Oktober in enforce mit einer Testregel. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
+nicht umgesetzt. Ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist
+nicht erhoben. Die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Für enforce im Betrieb ist das zu erheben, und S6
 und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für
 synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
 erzeugtes Isolate, weil die Isolate-Erzeugung nach \autoref{sec:warm} den größten Teil einer Ausführung ausmacht,

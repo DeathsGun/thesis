@@ -14,7 +14,7 @@ nimmt ein Pool vorgehaltener Pods vom Anfragepfad, den eine Control Plane über 
 Messaging-System zuteilt. Ein Skript erreicht die Außenwelt nur über Bindings und einen
 Egress-Proxy, und eine Kompatibilitätsschicht bildet die Node-Schnittstellen nach, die der Bestand nutzt.
 
-U1 fragte nach den Anforderungen. Sie stammen aus dem Betriebskonzept der Fallstudie und der
+U1 fragte nach den Anforderungen. Sie stammen aus Ausgangslage und Betrieb der Fallstudie und der
 Auswertung von 1.718 Mandanten mit 14.575 Skriptversionen. Der Kern des Problems ist die Verschiebung der Vertrauenseinheit vom Mandanten auf
 die einzelne Ausführung, sobald der Code von einem Agenten stammt. Daraus folgen fünf
 Muss- und sechs gewichtete Soll-Kriterien (\autoref{sec:kriterienkatalog}).
@@ -29,27 +29,27 @@ Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
 
 U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Die neun Prüffälle, die aus dem
 Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle, der Ausgangszustand sieben nicht
-(\autoref{sec:pruefung-isolation}). Zustand überdauert keine Ausführung, ein erschöpfter Heap
+(Stand 19.\ und 21.\ Oktober, \autoref{sec:pruefung-isolation}). Seither prüft ein Egress-Proxy die Ziele. T7 und T9 bestehen am 28.\ Oktober gegen ihn in enforce
+in beiden Profilen, mit einer festen Testregel und nicht mit dem Regelwerk eines Mandanten. Zustand überdauert keine Ausführung, ein erschöpfter Heap
 trifft nur die verursachende Ausführung, Netz und Dateisystem sind nur über die Bindings
-erreichbar, und eine Ausführung kann ihre Identität nicht fälschen. M3 gilt auf Clustern mit gVisor als erfüllt, weil
-der Pod in keinem Sicherheitsfeld lockerer ist als der Ausgangszustand (\autoref{tab:m3}), M1 bedingt, solange der
-Auth Callout fehlt.
+und den Proxy erreichbar, und eine Ausführung kann ihre Identität nicht fälschen. M3 gilt auf Clustern mit gVisor als erfüllt, weil
+der Pod in keinem Sicherheitsfeld lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M5, der gemessene Prototyp
+M2 bis M5: M1 ist lokal belegt (T10) und hängt auf der Plattform an der Einrichtung des Callouts.
 
 U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben Cluster startet der Prototyp mit Pool
-im Median in 344\,ms statt 2,54 Sekunden und bedient alle 90 statt 10 von 91 Mandanten innerhalb von zwei Sekunden. Ohne
-Pool liegt er auf dem Niveau des Ausgangszustands, der Vorsprung stammt also aus der Vorhaltung
-(\autoref{sec:kaltstart}). Der Overhead im Lastprofil liegt im Median bei 138 statt 259\,ms. Das 99.\ Perzentil,
-405\,ms gegen 4,57 Sekunden, überzeichnet den Abstand, weil der Tail des Ausgangszustands durch einen Ingress-Neustart
-und die Überbuchung der \ac{CPU} erhöht ist (\autoref{sec:warm}). Ein Worker-Pod belegt mit 59\,MiB zwei Drittel eines
-Runner-Pods, der Durchsatz liegt bei 500 statt 100 Aufrufen je Sekunde (\autoref{sec:durchsatz}), und beim Knotenentzug
-gehen keine Aufträge verloren (\autoref{sec:pruefung-m5}). In der Zusammenführung erreicht der Prototyp auf vier der
-sechs Kriterien die Höchstpunktzahl und bei S1 und S3 vier Punkte (\autoref{sec:nutzwert}).
+im Median in 344\,ms statt 2,54 Sekunden, bei dauerhaft rund 2,3\,GiB (hochgerechnet) und 0,75 Kernen für den Pool, und bedient alle 90 statt 10 von 91 Mandanten innerhalb von zwei Sekunden. Ohne
+Pool (S1b) verfehlt er den Zielwert und liegt auf dem Niveau des Ausgangszustands. Der Latenzgewinn stammt also aus der
+Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings, und beide sind trennbar (\autoref{sec:kaltstart}). Der Overhead im Lastprofil liegt am 28.\ Oktober mit Egress-Proxy im Median bei 155 statt 301\,ms, im 95.\ Perzentil bei 296 statt 746\,ms und im 99.\ bei 399\,ms statt 3,41 Sekunden, einschließlich der Begleitdienste.  (\autoref{sec:warm}). Ein Worker-Pod belegt mit 59\,MiB zwei Drittel eines
+Runner-Pods, der Durchsatz liegt wie ausgerollt bei 200 bis 300, mit größerem Gateway bei 500 statt 100 Aufrufen je Sekunde
+(\autoref{sec:durchsatz}), und beim Knotenentzug
+bleibt die Lücke für neue Ausführungen bei 0,2 bis 0,4 statt 2,1 bis 2,7 Sekunden, ohne verlorene oder doppelte Ausführung (\autoref{sec:pruefung-m5}). In der Zusammenführung erreicht der Prototyp auf vier der
+sechs Kriterien die Höchstpunktzahl und bei S1 und S3 vier Punkte (\autoref{sec:nutzwert}), wobei S6 abgeleitet statt gemessen ist. Für das Agentenprofil liegen nur
+Richtwerte für Kaltstart und warme Latenz vor, kein Durchsatz und kein Speicherbedarf.
 
 U5 beantworten die beiden folgenden Abschnitte. Zuvor gehören die Grenzen benannt. Die der Ergebnisse begründet
-\autoref{sec:messaufbau}, vier weitere folgen aus dem Entwurf. Beide Profile laufen im Egress-Proxy im Modus audit, S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht
-erhoben hat (\autoref{sec:pruefung-kompatibilitaet}), und T7 und T9 sind gegen diesen Stand nicht wiederholt. Das Agentenprofil hat keinen Vergleichswert, ein
-Richtlauf zeigt 623\,ms beim ersten und 148\,ms beim warmen Aufruf (\autoref{sec:kaltstart}), und seine
-Sicherheitsaussage gilt für aufeinanderfolgende Ausführungen. Und eine Ausführung läuft ein zweites Mal, wenn ihr
+\autoref{sec:messaufbau}, vier weitere folgen aus dem Entwurf. S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht erhoben hat
+(\autoref{sec:pruefung-kompatibilitaet}). Die Sicherheitsaussage für das Agentenprofil gilt für aufeinanderfolgende
+Ausführungen. Und eine Ausführung läuft ein zweites Mal, wenn ihr
 Worker oder ihre Sandbox mittendrin stirbt (\autoref{sec:zuteilung}).
 
 Gegenüber den bekannten Plattformen liegt der Beitrag in der Kombination für eine Plattform ohne Zugriff auf
@@ -73,8 +73,8 @@ Prototyps.
     und eine Sprachgrenze je Ausführung innerhalb davon. Kontext: fremder Code, dessen
     Vertrauenseinheit die einzelne Ausführung ist. Beleg: Architekturprüfung für die äußere Grenze,
     T1 bis T9 für die innere. Die Sprachgrenze trägt keine Mandantentrennung, die Kernelgrenze
-    keine Zustandsfreiheit zu vertretbaren Kosten. Jede Grenze trägt genau das Ziel, für das sie
-    billig genug ist.
+    keine Zustandsfreiheit zu vertretbaren Kosten. Gleichzeitige Ausführungen desselben Mandanten trennt allein die
+    Sprachgrenze (\autoref{sec:betriebsplanung}).
   \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
     Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, deren Isolates aus einem
     Snapshot entstehen, dessen Nachfüllen nie auf dem Anfragepfad liegt. Kontext: die Größe des
@@ -88,7 +88,7 @@ Prototyps.
     registrierter Bindings je Vertrauensklasse, die die Grenze selbst ist. Die Prüfung der Ziele im
     Egress-Proxy ist die zweite Linie. Kontext: der Inhalt des Codes taugt nicht als Grundlage,
     weil er im Agentenprofil von dem geschrieben wird, dessen Beeinflussbarkeit das
-    Bedrohungsmodell beschreibt. Beleg: T7 und T8.
+    Bedrohungsmodell beschreibt. Beleg: T7 und T8, Stand vor dem Egress-Proxy.
   \item[P4 Der Mandantenkontext liegt außerhalb des Heaps.] Ziel: dass eine Ausführung die Frage,
     in wessen Namen sie handelt, nicht beantworten und damit nicht falsch beantworten kann.
     Mechanismus: Kennung und Profil liegen im Zustand des Hosts, die zulässigen Ziele im Egress-Proxy, die Bindings
@@ -114,8 +114,9 @@ zurückgenommen, wenn die Fehlerrate die des Prototyps im Lastprofil übersteigt
 mit externen Zielen ihre Regeln, bevor der Proxy enforce durchsetzt, ein Mandant, dessen
 Prüfskripte \texttt{child\_process} ausführen, bleibt bewusst auf dem bisherigen Betrieb. Vor der ersten Stufe sind die
 offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands, der Standardwert der
-Socket-Freischaltung, der Egress-Default des Agentenprofils, hinzu kommt
-die Einrichtung des Auth Callouts durch das \acs{DDP}-Team.
+Socket-Freischaltung und enforce für das Agentenprofil, das keinen Bestand hat, den Regeln brechen könnten. Hinzu kommen
+die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, auf dem es fehlt, denn M3
+gilt nur dort. Mandanten mit Seiteneffekten bemerken, dass ein Skript nach einem Absturz ein zweites Mal läuft.
 
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
@@ -124,6 +125,6 @@ Drei Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft
 kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ließe sich später einsetzen, ohne Grenze und Zuteilung zu ändern,
 und der Wechsel des Deno-Teams zu Cloudflare macht \texttt{deno\_core} zu einer Abhängigkeit mit absehbarem Ende
 (\autoref{sec:betriebsplanung}). Die zweite betrifft die Zustellung. Ob eine zweite Ausführung nach einem Absturz für nicht idempotente Skripte
-hinnehmbar ist oder eine Startmarke je Nachricht (\autoref{sec:zuteilung}) sie als Fehlschlag melden soll, ist mit den
+hinnehmbar ist oder eine Startmarke je Nachricht (\autoref{sec:zuteilung}), etwa als Opt-in je Mandant, sie als Fehlschlag melden soll, ist mit den
 Mandanten zu klären und zu messen. Die dritte betrifft das Agentenprofil: Erst wenn ein Agent Skripte erzeugt, zeigt sich,
 ob sich das vorab erzeugte Isolate aus \autoref{sec:warm} lohnt.
