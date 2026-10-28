@@ -6,7 +6,7 @@ Dieses Kapitel prüft das Artefakt aus \autoref{sec:Entwurf} gegen den Kriterien
 Prüffallkatalog und die Architekturprüfung. Grundlage sind Messläufe vom 6.\ bis zum 26.\ Oktober 2026. Den
 Vergleich mit dem Ausgangszustand tragen allein die Läufe auf hyper-int-otc, die frühen Läufe dienten der Wahl der
 Entwurfsparameter. Sie haben sechs Fehler in der Zustellung aufgedeckt, die \autoref{sec:zuverlaessigkeit} festhält.
-Einzelne Detailtabellen stehen in \autoref{sec:messdaten} im Anhang.
+Einzelne Detailtabellen stehen im \ref{sec:messdaten}.
 
 \subsection{Messaufbau und Vorgehen}
 \label{sec:messaufbau}
@@ -40,7 +40,9 @@ Profilen.
 Die Messungen stammen aus zwei Ständen des Prototyps. Die vom 26.\ Oktober, also S1 mit Pool 40, der Overhead im
 Lastprofil und der Speicher je Pod, laufen mit der Trennung in Transport und Sandbox aus \autoref{sec:bausteine}
 und ohne Auth Callout, der auf der Plattform noch nicht eingerichtet ist. Alle übrigen stammen aus dem Stand
-davor, die Abschnitte nennen das Datum.
+davor, die Abschnitte nennen das Datum. Seit dem 27.\ Oktober gehen beide Profile über den Egress-Proxy aus
+\autoref{sec:faehigkeitsmodell}, und die Consumer stellen bis zu viermal zu (\autoref{sec:zuteilung}). Keine Messung und kein
+Prüffall deckt diesen Stand ab.
 
 Als Lastgenerator dient k6 \autocite{grafana_labs_k6_2026} auf einem Arbeitsplatzrechner, dessen Aufrufe wie echte
 Webhooks über Internet und Edge-Proxy der Plattform laufen. Sie gehen an 188 Testmandanten, deren Skripte jeder Lauf
@@ -102,7 +104,7 @@ wurde am 26.\ Oktober im Stand nach der Trennung in Transport und Sandbox wieder
 zeigt das Ergebnis.
 
 \begin{table}[H]
-  \caption{Kaltstart je Mandant auf hyper-int-otc, k6 im Einmalmodus, je neunzig Mandanten}
+  \caption{Kaltstart je Mandant auf hyper-int-otc, k6 im Einmalmodus, je neunzig Mandanten, der Ausgangszustand im verteilten Lauf mit 91}
   \label{tab:kaltstart-vergleich}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r r@{}}
@@ -141,20 +143,20 @@ genau vierzig Mandanten einen Worker innerhalb von zwei Sekunden, die Zielgröß
 warten bis zu acht Sekunden auf neue Pods. Dort müssen beide Modelle Pods starten, und der Prototyp bleibt mit
 höchstens 8,0 gegen 22,0 Sekunden schneller und ohne Fehler. Die Control Plane legt 48 Pods in 0,18 Sekunden an, die
 Anlage ist also nicht der Engpass. Der Start der Container streut auf den Knoten über 1,1 bis 7,3 Sekunden, und vom
-lauschenden Worker bis zur Zuweisung vergehen im Schub rund zwei Sekunden. Alle 17 Fehler des Ausgangszustands sind
+lauschenden Worker bis zur Zuweisung vergehen im Schub rund zwei Sekunden. Alle 17 Fehler des Ausgangszustands, 16 aus der Tabelle und einer aus dem Aufwärmlauf mit neun Mandanten, sind
 502 mit \enquote{no route to host} zum Queue-Proxy eines Runner-Pods, was darauf hindeutet, dass Knative frische Pods
 anspricht, bevor ihr Netz erreichbar ist. Belegt ist das nicht.
 
 Die Läufe mit Pool null ordnen den Vorsprung ein. Ohne vorgehaltene Pods startet der Prototyp etwa so schnell wie der
 Ausgangszustand, im verteilten Lauf 2,03 gegen 2,54 Sekunden im Median, im Schub 9,85 gegen 9,06. Der Vorsprung
 stammt damit aus dem Pool und nicht aus einem schnelleren Startmechanismus. Ohne Pool bleibt die Zuverlässigkeit:
-null von 188 Aufrufen scheitern gegen 17 von 190 beim Ausgangszustand. Dass der Tail mit 8,5 Sekunden im 95.\
+null von 188 Aufrufen scheitern gegen 17 von 190 beim Ausgangszustand, jeweils einschließlich eines Aufwärmlaufs mit acht
+beziehungsweise neun Mandanten. Dass der Tail mit 8,5 Sekunden im 95.\
 Perzentil länger ist als bei Knative, hat nach den Logs der Control Plane einen Grund: Ein wartender Mandant nimmt den
 nächsten Pod, der bereit wird, nicht den für ihn angelegten, und verliert im ungünstigen Fall mehrmals hintereinander,
 bis zu zwölf Sekunden. Eine Vergabe neuer Pods an den am längsten wartenden Mandanten würde den Tail kürzen und ist
 in \autoref{sec:betriebsplanung} als offene Maßnahme vermerkt. Der Pool ist eine vorgehaltene Ressource von vierzig
-Pods, die Knative nicht hat. Knative mit einer Mindestzahl warmer Pods je Mandant wäre bei über 1.700 meist
-inaktiven Mandanten keine gleichwertige Alternative, weil es über tausend leerlaufende Pods bedeutete
+Pods, die Knative nicht hat. Eine Mindestzahl warmer Pods je Mandant ist bei über 1.700 Mandanten keine Alternative
 (\autoref{sec:zuteilung}).
 
 Für das Agentenprofil gibt es keinen Ausgangswert. Als Richtwert wurden am 21.\ Oktober 2026 dreißig Mandanten im
@@ -212,14 +214,14 @@ Pods nicht einplanbar sind, weil die \ac{CPU}-Anforderungen bei 112 Prozent des 
 diesem Cluster zugleich eine Frage der Kapazität und im Messprotokoll nur teilweise belegt. Die dritte Gruppe sind
 Aufrufe an bereits beendete Runner-Pods. Der Prototyp hat in den Läufen 28 und 30 keinen beziehungsweise einen Fehler der Plattform. Die übrigen Fehler sind clientseitige Abbrüche und 504 des Edge-Proxys, hinter denen das
 Gateway nachweislich 200 geantwortet hatte, und treffen beide Modelle. Der Tail des Ausgangszustands ist durch den
-Ingress-Neustart und die Überbuchung erhöht. Der Wide-Lauf lief noch mit dem Executor vor den Korrekturen aus
+Ingress-Neustart und die Überbuchung erhöht, belastbar ist deshalb der Median, das 95.\ und 99.\ Perzentil
+überzeichnen den Abstand der Modelle. Der Wide-Lauf lief noch mit dem Executor vor den Korrekturen aus
 \autoref{sec:zuverlaessigkeit} und ist mit Lauf 28 nicht vergleichbar.
 
-Von den 150 langsamsten Aufrufen im ersten Lauf vom 26.\ Oktober sind 111 Erstkontakte mit einem Overhead von
-586\,ms im Median und 26 Aufrufe an Mandanten, deren Worker sich wegen Leerlaufs gerade beendet hatte, im Median
-1.445\,ms, bis die Control Plane den Mandanten neu zuwies. Seit die Control Plane den Leerlauf selbst beendet und
-den Mandanten vorher aus der Zuteilung nimmt, sinkt die Zahl der Aufrufe mit mindestens einer Sekunde Overhead von 37
-auf 25, die der Mandanten, denen sie bei wartender Nachricht einen Worker neu zuweisen muss, von 32 auf 2.
+Von den 150 langsamsten Aufrufen im ersten Lauf vom 26.\ Oktober sind 111 Erstkontakte (586\,ms im Median) und 26
+Aufrufe an Mandanten, deren Worker sich wegen Leerlaufs gerade beendet hatte (1.445\,ms, bis die Control Plane neu
+zuwies). Seit die Control Plane den Leerlauf selbst beendet, sinkt die Zahl der Aufrufe mit mindestens einer Sekunde
+Overhead von 37 auf 25.
 
 Wo die Zeit innerhalb des Prototyps entsteht, zeigt die Zerlegung von je vierzig Traces vom 6.\ Oktober in
 \autoref{tab:anfragepfad} im Anhang. Der Worker trägt bei zehn wie bei vierzig Aufrufern rund 17\,ms, die
@@ -237,7 +239,7 @@ aufzugeben.
 Für S4 stieg die Ankunftsrate in Stufen von je 60 Sekunden um 100 Aufrufe je Sekunde, nach einem Warm-up mit 50
 Aufrufen je Sekunde und über 100 Mandanten mit je einem Skript. Als Wert gilt die höchste Stufe mit einer
 Fehlerrate unter einem Prozent und einem 95.\ Perzentil unter zwei Sekunden. k6 lief als Job im Namespace des
-jeweiligen Modells, beide Modelle ohne Signatur- und \acs{IdP}-Prüfung über je eine Kopie des Einstiegsdienstes, die
+jeweiligen Modells, beide Modelle ohne Signatur- und \ac{IdP}-Prüfung über je eine Kopie des Einstiegsdienstes, die
 nur für diesen Test bestand. Der Ausgangszustand lief mit vier festen Replikas des Skriptdienstes, weil sich der
 Autoscaler nicht anlegen ließ, was Knative leicht begünstigt.
 
@@ -287,19 +289,18 @@ das Fenster mit Pool 40 verkürzte.
 \subsection{Zuverlässigkeit der Zustellung}
 \label{sec:zuverlaessigkeit}
 
-\autoref{sec:zuteilung} legt fest, dass jede Nachricht höchstens einmal zugestellt wird, weil eine Skriptausführung
-nicht idempotent ist. Die Läufe zeigen die Kehrseite: Eine Nachricht, die ein Worker entgegennimmt und nicht
+Bis zum 26.\ Oktober stellten die Consumer jede Nachricht höchstens einmal zu, weil eine Skriptausführung nicht
+idempotent ist. Die Läufe zeigen die Kehrseite: Eine Nachricht, die ein Worker entgegennimmt und nicht
 behandelt, ist verloren, und der Aufrufer wartet bis zum Timeout. \autoref{tab:zustellung} im Anhang führt die sechs
 Fälle auf, in denen Aufrufe verloren gehen oder erst nach dem Timeout laufen. Jeder wurde über die Trace-Kennung bis
 zur Ursache verfolgt, die Korrekturen sind durch Tests gegen einen lokalen NATS-Cluster mit fünf Servern
 festgehalten. Drei der sechs Fälle haben dieselbe Form: Ein Pull, in den der Server noch zustellen kann, wird vom
-Worker aufgegeben, durch Prozessende, einen verworfenen Pull oder einen Pull ohne Leader. Unter höchstens einmaliger
-Zustellung ruht die Korrektheit damit auf der Disziplin des Workers, eine zugestellte Nachricht nie aufzugeben, und
-die Festlegung, je Nachricht genau einen Pull zu ziehen und sich nur zwischen zwei Pulls zu beenden, ist das
-Ergebnis dieser Läufe. Zwei Fälle liegen außerhalb des Entwurfs, das Consumer-Limit des Kontos und ausbleibende
+Worker aufgegeben, durch Prozessende, einen verworfenen Pull oder einen Pull ohne Leader. Unter einer einzigen Zustellung
+ruhte die Korrektheit damit auf der Disziplin des Workers, eine zugestellte Nachricht nie aufzugeben, und die
+Festlegung, je Nachricht genau einen Pull zu ziehen und sich nur zwischen zwei Pulls zu beenden, ist das Ergebnis dieser
+Läufe. Seit dem 27.\ Oktober käme sie nach fünf Sekunden zurück, ungemessen. Zwei Fälle liegen außerhalb des Entwurfs, das Consumer-Limit des Kontos und ausbleibende
 Antworten auf langlebigen Verbindungen, deren Ursache offen ist und für die der Reconnect ein Workaround bleibt. Der
-verbleibende Fall zeigt eine zweite Lücke: Skripte laufen 111 bis 173 Sekunden nach dem Aufruf, wenn der Aufrufer längst aufgegeben hat. Dafür nennt \autoref{sec:betriebsplanung} eine Ablauffrist auf synchronen Aufträgen als
-offene Maßnahme. Damit ein Timeout der Plattform von einem des Edge-Proxys unterscheidbar bleibt, gibt das Gateway
+verbleibende Fall zeigt eine zweite Lücke: Skripte laufen 111 bis 173 Sekunden nach dem Aufruf, wenn der Aufrufer längst aufgegeben hat. Seit dem 27.\ Oktober verwirft der Worker sie ungelaufen (\autoref{sec:zuteilung}), ungemessen. Damit ein Timeout der Plattform von einem des Edge-Proxys unterscheidbar bleibt, gibt das Gateway
 seit Lauf 28 nach 53 statt 55 Sekunden auf und antwortet mit einem eigenen Fehlerkörper.
 
 \subsection{Isolation und Zustandsfreiheit (M1 bis M4)}
@@ -345,7 +346,7 @@ ausgelesen.
          liefern 200. \\
     T7 & nicht bestanden & bestanden & Knative: \texttt{fetch} ins Internet liefert 200,
          \acs{TCP} zur Kubernetes-\acs{API} und zum Port des eigenen Runners wird aufgebaut.
-         Prototyp: Jedes Ziel außer dem eigenen Mandanten wird abgewiesen, und
+         Prototyp, vor dem Egress-Proxy: Jedes Ziel außer dem eigenen Mandanten wird abgewiesen, und
          \texttt{Deno.core.ops} ist nicht erreichbar. \\
     T8 & bestanden & bestanden & Beide: \texttt{/etc}, \texttt{/proc} und das Token des
          Service-Accounts sind nicht lesbar, im Ausgangszustand durch das Permission Model von
@@ -373,10 +374,14 @@ Testmandanten, als Snippets über den Endpunkt der Agentenausführungen, übertr
 (Prototypen und Globals, dynamische Importe, \texttt{fetch}), weil es weder \texttt{require} noch \texttt{process}
 noch eine Konsole bereitstellt. Der Ausgangszustand hat dafür kein Gegenstück. T1 bis T3 liefen zusätzlich mit zwei
 gleichzeitigen Ausführungen. Der Prototyp besteht alle neun Fälle. Zustand erreicht keine andere Ausführung, auch
-keine gleichzeitige (T1 bis T3), Module, Dateisystem und Betriebssystem lassen sich nicht laden (T4, T8),
+keine gleichzeitige (T1 bis T3, ohne Aussage zu Seitenkanälen zwischen den bis zu vier Isolates eines Prozesses,
+\autoref{sec:betriebsplanung}), Module, Dateisystem und Betriebssystem lassen sich nicht laden (T4, T8),
 \texttt{fetch} scheitert zu jedem Ziel, auch vor und nach dem Überschreiben aller erreichbaren Kopien der Identität
 (T5, T7, T9), und die Speicherbombe endet nach 0,3 Sekunden mit dem Fehler \texttt{scriptExecutionOutOfMemory}, die
 fünf folgenden Ausführungen liefern 200 (T6).
+
+Die Egress-Aussagen zu T7, T9 und den folgenden Läufen gelten für die vorläufige Politik vom 19.\ und 21.\ Oktober. Der
+Egress-Proxy lässt im Modus audit jede öffentliche Adresse durch, T7 und T9 sind gegen ihn nicht wiederholt.
 
 Ergänzend wurden die 51 Eigenschaften von SandboxEval \autocite[S.~1--2]{rabin_sandboxeval_2025} für JavaScript
 angepasst, das Original ist auf Python und Linux zugeschnitten, und auf dem Ausgangszustand und beiden Profilen des
@@ -391,10 +396,12 @@ zugängliche Kernel-Oberfläche bestimmen, aus laufenden Pods auf hyper-int-otc 
 Container, der den Gastcode ausführt. Die Felder des Prototyps stimmen mit der Pod-Spezifikation im Quellcode überein,
 keines ist ein Betriebsparameter. Das Plattform-Team hat entschieden, gVisor nur auf \ac{OTC} bereitzustellen, die
 Control Plane setzt die Runtime-Klasse deshalb nur, wenn der Domänenname des Namespace \texttt{otc} enthält, und der
-Vergleich gilt für hyper-int-otc. In keiner Zeile ist der Prototyp lockerer als der Ausgangszustand, sechs Felder sind
+Vergleich gilt für hyper-int-otc. Wo das Kennzeichen fehlt, startet der Pod ohne Runtime-Klasse, statt den Start zu verweigern. In keiner Zeile ist der Prototyp lockerer als der Ausgangszustand, sechs Felder sind
 gleich, zwei sind zusätzlich gesetzt. Sie beschränken, was der Prozess im Container verändern kann, nicht die
-Systemaufrufe, die gVisor annimmt. M3 ist damit erfüllt, die Aussage stützt sich auf die Konfiguration und sagt nichts
-über Lücken in gVisor selbst.
+Systemaufrufe, die gVisor annimmt. M3 ist damit auf Clustern mit gVisor erfüllt, die Aussage stützt sich auf die Konfiguration und sagt nichts
+über Lücken in gVisor selbst. M1 ist bedingt erfüllt: Ein Ausbruch aus Engine und Container erreicht ohne den Auth
+Callout die gemeinsamen NATS-Zugangsdaten, und der Callout ist auf der Plattform noch nicht eingerichtet
+(\autoref{sec:betriebsplanung}).
 
 \subsection{Verfügbarkeit beim Knotenentzug (M5)}
 \label{sec:pruefung-m5}
@@ -448,11 +455,15 @@ scheitern im Ausgangszustand ebenfalls, bei vier ist der Import ungenutzt und be
 Schreiben nach \texttt{\_\_dirname} in beiden. Ein Mandant führt Prüfskripte mit
 \texttt{child\_process} aus, die der Prototyp absichtlich blockiert, und vier haben gebündelte
 Skripte, die nicht unterstützt sind und nicht als Ausfall zählen. Damit laufen mindestens 1.717 von
-1.718 Mandanten, 99,9 Prozent, nicht schlechter als im Ausgangszustand, sofern die Schicht hält, was die Prüfungen an Beispielen zeigen. Der Scanner-Lauf
+1.718 Mandanten, 99,9 Prozent, nicht schlechter als im Ausgangszustand, sofern die Schicht hält, was die Prüfungen an Beispielen zeigen,
+und sofern ihre Ziele erreichbar sind. Das sind sie im Prototyp: Der Egress-Proxy
+(\autoref{sec:faehigkeitsmodell}) lässt im Modus audit jede öffentliche Adresse und jeden Port durch, nur Ziele in
+privaten Netzen erreicht kein Skript mehr. Unter enforce läuft ein Skript mit externen Zielen erst mit einer Regel, und
+wie viele Mandanten das betrifft, ist nicht erhoben. Der Scanner-Lauf
 vom 25.\ September 2026 gegen einen frühen Stand der Schicht wird nicht wiederholt, weil er
 Bezeichner in nie ausgeführten Zweigen mitzählt und damit nur eine Obergrenze der Blocker liefert.
 S7, der Aufwand für den Rest, ist für 64 der 65 Mandanten null, weil keine Anpassung am Skript nötig
-ist, und für den letzten nicht gewollt.
+ist, und für den letzten nicht gewollt. Der Aufwand für Regeln steht darin nicht, er fällt erst unter enforce an.
 
 Die Machbarkeitsprüfung an \texttt{tedious} aus \autoref{sec:kompatibilitaetsschicht} ist bestanden. Der
 unveränderte Treiber verbindet sich über den Socket-Shim mit einer echten Datenbankinstanz und führt eine Abfrage
@@ -479,13 +490,13 @@ Punkte, bei S6 und S7 nach derselben absoluten Regel fünf.
     S1 & 0,30 & S1a, Pool 40: verteilt P95 525\,ms, Schub P95 6,90\,s, 40 von 90 unter 2\,s.
       S1b, Pool 0: verteilt P95 8,54\,s, Schub P95 18,1\,s & verteilt P95 3,33\,s,
       Schub P95 19,5\,s, 0 von 90 unter 2\,s, 17\,\% Fehler im Schub & S1a 5, S1b 2,2, S1 4$^{a}$ \\
-    S6 & 0,25 & mindestens 99,9\,\% der Mandanten nicht schlechter lauffähig, abgeleitet & -- & 5$^{b}$ \\
+    S6 & 0,25 & mindestens 99,9\,\% der Mandanten nicht schlechter lauffähig, abgeleitet, Regeln nicht erhoben & -- & 5$^{b}$ \\
     S2 & 0,15 & Overhead P50 / P95 / P99 138 / 293 / 405\,ms
       & 259\,ms / 2,31\,s / 4,57\,s & 5$^{c}$ \\
     S3 & 0,10 & 59\,MiB je Worker-Pod unter gVisor (Median), Steuerung 113 bis 167\,MiB, Pool
       1,9\,GiB & 90\,MiB je
       Runner-Pod (Median), Steuerung 1,4\,GiB & 4$^{d}$ \\
-    S7 & 0,10 & keine Anpassung bei 64 von 65 Mandanten, 1 nicht gewollt & -- & 5$^{f}$ \\
+    S7 & 0,10 & keine Skriptänderung bei 64 von 65 Mandanten, 1 nicht gewollt, Regelaufwand nicht bewertet & -- & 5$^{f}$ \\
     S4 & 0,10 & 500 Aufrufe/s, wie ausgerollt 200 bis 300 & 100 Aufrufe/s & 5$^{e}$ \\
         Nutzwert & 1,00 & 4,6 & 3,7 & \\
         -- & -- & Fehlerrate 0 bis 14 von rund 57.000, die 14 nicht nach Ursache aufgeschlüsselt & 408 von 56.976 (0,71\,\%), davon der
@@ -493,9 +504,9 @@ Punkte, bei S6 und S7 nach derselben absoluten Regel fünf.
     \hline
     \multicolumn{5}{@{}p{\textwidth}@{}}{\footnotesize $^{a}$ S1a: P95 verteilt Faktor 6,3, Schub 2,8, beide fünf Punkte.
       S1b, Stand vom 15.\ Oktober: Faktor 0,4 (1,2 Punkte) und 1,1 (3,2 Punkte), im Mittel 2,2. S1 je zur Hälfte, 3,6 gerundet 4. $^{b}$ Anteil über 80\,\%. Abgeleitet, nicht
-      ausgeführt. $^{c}$ Faktor 1,9 im Median (4,8 Punkte, gerundet 5), 7,9 im 95.\ und 11 im 99.\ Perzentil, einschließlich der verschiedenen Begleitdienste. $^{d}$ Faktor
+      ausgeführt, ohne den Bedarf an Regeln für enforce. $^{c}$ Faktor 1,9 im Median (4,8 Punkte, gerundet 5), 7,9 im 95.\ und 11 im 99.\ Perzentil, einschließlich der verschiedenen Begleitdienste. $^{d}$ Faktor
       1,5 je Pod, 4,0 Punkte. Der Pool von 1,9\,GiB ist nicht je Pod gerechnet. $^{e}$ Faktor 5,0,
-      wie ausgerollt 2 bis 3. $^{f}$ 98,5\,\% der 65 Mandanten ohne Anpassung.} \\
+      wie ausgerollt 2 bis 3. $^{f}$ 98,5\,\% der 65 Mandanten ohne Skriptänderung.} \\
   \end{tabularx}
 \end{table}
 
@@ -503,7 +514,9 @@ Auf vier der sechs Kriterien erreicht der Prototyp die Höchstpunktzahl, bei S1 
 Bei S1 fehlt der Punkt, weil S1b bei leerem Pool den Zielwert im Tail der verteilten Erstkontakte
 verfehlt, bei S3, weil ein Worker-Pod mit Transport und Sandbox 59 statt 46\,MiB hält und der Faktor
 gegenüber dem Runner damit 1,5 statt 2,0 beträgt. Der Ausgangszustand
-erhält bei S6 und S7 fünf und sonst definitionsgemäß drei Punkte. Der Nutzwert ist damit kein Beleg für Überlegenheit
+erhält bei S6 und S7 fünf und sonst definitionsgemäß drei Punkte. Der Vorsprung hängt an S6, das unter enforce an den Regeln hängt: Fiele es auf zwei
+Punkte, also auf höchstens 40\,\% der Mandanten, läge der Prototyp mit 3,85 knapp vor 3,7, bei einem Punkt mit
+3,6 dahinter. Der Nutzwert ist damit kein Beleg für Überlegenheit
 in jeder Hinsicht, sondern das Ergebnis einer Zuordnung, deren Vorbehalte in
 \autoref{sec:messaufbau} stehen: eine Konfiguration je Lauf, S6 abgeleitet statt gemessen, und bei S3 ein Pool, dessen Kosten je Pod nicht
 sichtbar sind.

@@ -29,8 +29,8 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert.
       längsten nicht genutzten Eintrags \\
     & Selbstbeendigung ohne Auftrag (Rückfall) & 5\,min (Umgebungsvariable), geprüft alle 30\,s, nur im
       zugewiesenen Zustand und nur zwischen zwei Pulls \\
-    & Mandanten-Consumer & dauerhaft, Repliken wie der Stream (drei), höchstens eine Zustellung, Bestätigungsfrist
-      900\,s, gelöscht nach 300\,s ohne Nutzung, offene Zustellungen höchstens Slots $\times$ 10,
+    & Mandanten-Consumer & dauerhaft, Repliken wie der Stream (drei), höchstens vier Zustellungen, BackOff 5, 10 und
+      20\,s, gelöscht nach 300\,s ohne Nutzung, offene Zustellungen höchstens Slots $\times$ 10,
       ein Pull je Nachricht mit Frist 2\,s, Warten auf den Leader bis 2\,s \\
     & Lesen des Consumers & Frist 2\,s, drei Versuche, Reconnect nach einem Versuch ohne Antwort \\
     & NATS-Verbindung bei der ersten Zuweisung & 500\,ms je Versuch, Wiederholung bis 30\,s, danach höchstens 66
@@ -66,7 +66,8 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert.
     & Token der Zuweisung & RS256, gültig 80\,min, also Zuweisungsdauer plus Grace Period und Reserve \\
     & Grace Period & 900\,s \\
     & Service Mesh & Sidecar-Injection deaktiviert \\
-    & Egress & Internet nur TCP 443, NATS über ein Label der Cluster-Richtlinien, kein Redis \\
+    & Egress & Worker-Pod: Internet nur TCP 443, Egress-Proxy auf Port 3128, NATS über ein Label der Cluster-Richtlinien, kein
+      Redis. Proxy-Pod: jeder öffentliche Port, private Bereiche ausgenommen \\
     \hline
   \end{tabularx}
 \end{table}
