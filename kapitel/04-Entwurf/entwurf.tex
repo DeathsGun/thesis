@@ -13,7 +13,8 @@ Drei Eigenschaften der bestehenden Umgebung stehen nicht zur Disposition.
 
 Die erste ist das Fehlen eines Hypervisors. Firecracker setzt Zugriff auf \texttt{/dev/kvm} voraus
 \autocite{the_firecracker_authors_getting_2026}, den der Zielcluster nicht bereitstellt, und MicroVM-basierte Ansätze
-scheiden damit aus. Das ist ein Plattformausschluss und kein Sicherheitsurteil, denn die von
+scheiden damit aus. Das gilt auch für Kata Containers, das Pods in leichtgewichtigen virtuellen Maschinen startet und
+dafür einen Hypervisor braucht \autocite{the_kata_containers_authors_hypervisors_2026}. Das ist ein Plattformausschluss und kein Sicherheitsurteil, denn die von
 \textcite[S.~420, 424]{agache_firecracker_2020} beschriebene Grenze ist die stärkste der betrachteten.
 
 Die zweite ist die bereits eingesetzte Sandbox-Laufzeit. M3 untersagt, die dem Gastcode zugängliche Oberfläche des
@@ -105,7 +106,8 @@ Paket befindet sich im Wartungsmodus und warnt selbst, dass es nicht vertrauensw
 macht \autocite{laverdet_isolated-vm_2026}. Der Host bleibt ein Node.js-Prozess, dessen Projekt Code im eigenen Prozess
 nicht als Vertrauensgrenze behandelt \autocite{the_nodejs_project_security_2026}. Und Kompatibilitätsschicht,
 Ressourcenkontrolle und Bindings müssten in JavaScript gegen eine native Erweiterung entstehen, was aufwendiger ist
-als in Rust gegen V8. Das Wartungsrisiko trägt \texttt{deno\_core} nach \autoref{sec:betriebsplanung} ebenso.
+als in Rust gegen V8. Das Wartungsrisiko trägt \texttt{deno\_core} nach \autoref{sec:betriebsplanung} ebenso, die
+Entscheidung stützt sich deshalb auf die beiden übrigen Gründe.
 
 \subsubsection{V8-Isolate gegen eine nach WebAssembly kompilierte Engine}
 \label{sec:wasm-zurueckgestellt}
@@ -141,7 +143,9 @@ hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweite
 
 \begin{table}[H]
 \centering
-\caption{Anwendung der Muss-Kriterien auf die Kandidaten und Ergebnis der Auswahl}
+\caption[Anwendung der Muss-Kriterien auf die Kandidaten und Ergebnis der Auswahl]{Anwendung der Muss-Kriterien auf
+  die Kandidaten und Ergebnis der Auswahl. M5 entscheidet die Vorauswahl nicht und ist nur am Prototyp geprüft, daher
+  \enquote{offen} für die übrigen Kandidaten. \enquote{Bedingt} bei M1 heißt: erfüllt mit Auth Callout}
 \label{tab:kandidaten}
 \small
 \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X *{5}{>{\centering\arraybackslash}p{0.065\textwidth}} >{\RaggedRight\arraybackslash}p{0.17\textwidth}@{}}
@@ -149,6 +153,8 @@ hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweite
 Kandidat & M1 & M2 & M3 & M4 & M5 & Ergebnis \\
 \hline
 Ausgangszustand bei der Analyse, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja &
+  scheidet aus \\
+Ausgangszustand am 30.\ Oktober, Worker-Thread je Ausführung & ja & ja & ja & nein & ja &
   scheidet aus \\
 Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen &
   scheidet aus \\
@@ -306,7 +312,9 @@ entfernt er Header, mit denen ein Skript die Richtlinien der Plattform-Origin sc
 \label{sec:ebenen}
 
 Das Modell trennt auf vier Ebenen, die von außen nach innen kurzlebiger und billiger werden. Nur
-zwei davon trennen Mandanten oder Ausführungen.
+zwei davon trennen Mandanten oder Ausführungen. Eine zweistufige Trennung kennt bereits SAND, mit einem Container je
+Anwendung und einem Prozess je Funktion \autocite[S.~923]{akkus_sand_2018}. Hier ist die äußere Einheit der Mandant und
+die innere die einzelne Ausführung.
 
 \begin{table}[H]
 \centering
@@ -558,7 +566,8 @@ Beide Profile schicken \texttt{fetch} als \ac{HTTP}-Anfrage und Sockets als \tex
 Redirect-Kette einzeln. Die Registrierung des Gateways nennt Mandant, Profil, Grenzen und Regeln. Eine Regel nennt einen
 Host, exakt, als \ac{IP}-Adresse oder als Wildcard, und optional Port, Pfadpräfix und Methoden. Ein Tunnel passt nur auf eine Regel mit
 Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Die Regeln sollen
-mandantenweit in der Skriptverwaltung gepflegt werden. Unabhängig von ihnen verwirft der Proxy private, Loopback-,
+mandantenweit in der Skriptverwaltung gepflegt werden. Aus demselben Grund setzt bei Agentenläufen das Gateway die Regeln
+selbst, und der Aufruf des Agentensystems, dessen Eingaben nach V2 beeinflussbar sind, kann keine mitbringen. Unabhängig von ihnen verwirft der Proxy private, Loopback-,
 Link-Local- und Metadaten-Adressen und die Adressbereiche des Clusters. Einen Treffer außerhalb der Regeln lehnt er im
 Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Proxy wertet Agentenläufe ohne Angabe in enforce.
 Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. Er registrierte beide Profile in audit,
@@ -814,8 +823,8 @@ Kostenentscheidung.
 Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich
 Ausführungen desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben
 Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandantengrenze ist. M2 und
-die Prüffälle betreffen aufeinanderfolgende Ausführungen. Die Uhr aus \autoref{sec:kompatibilitaetsschicht} mildert das.
-Ein Slot je Pod im Agentenprofil beseitigte die Lücke, kostete aber Pods. Die Abwägung gegen S1 und S3 ist gemessen: 64\,\% mehr Pods, 52\,\% mehr Speicher, S1a unverändert (\autoref{sec:durchsatz}).
+die Prüffälle betreffen aufeinanderfolgende Ausführungen. Die Uhr aus \autoref{sec:kompatibilitaetsschicht} mildert das,
+schließt es aber nicht, weil ein entfernter Timer sie umgeht.
 
 Eine vierte Einschränkung betrifft die Zugangsdaten. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
 NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth Callout aus
@@ -837,3 +846,5 @@ und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibil
 synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
 erzeugtes Isolate (\autoref{sec:warm}) wahren M2, solange jedes Isolate genau eine Ausführung trägt. Eine weitere folgt aus der Messung mit leerem Pool
 (\autoref{sec:kaltstart}): Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der Kaltstarts.
+Die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}) ist umgesetzt, aber nicht evaluiert, weil alle Läufe mit der
+festen Zielgröße vierzig liefen.

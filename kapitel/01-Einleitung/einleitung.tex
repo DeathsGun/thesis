@@ -54,7 +54,8 @@ Ein Wechsel des Ausführungsmodells darf dabei nicht hinter die heutige Sicherhe
 und für das Agentenprofil reicht sie nicht einmal aus. Alle Ausführungen eines Mandanten teilten
 sich bei Beginn der Arbeit einen Node.js-Prozess, sodass Zustand eine Ausführung überdauerte. Der Runner führt
 jede Ausführung inzwischen in einem eigenen Worker-Thread aus (\autoref{sec:messaufbau}), Umgebung, Dateisystem und Netz des Prozesses
-bleiben dem Skript aber offen. Stammt der Code von
+bleiben dem Skript aber offen. Die Zustandsfreiheit hat der Ausgangszustand damit während der Arbeit selbst hergestellt, und
+die Evaluation misst gegen diesen Stand. Stammt der Code von
 einem Agenten, dessen Eingaben Dritte beeinflussen können, wird daraus ein Vertraulichkeitsproblem
 innerhalb des Mandanten.
 Gesucht ist deshalb ein Modell, das schneller startet und zugleich jede Ausführung für sich
@@ -63,8 +64,8 @@ isoliert.
 Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die
 Anforderungen des eigenen Betriebs begründet, etwa Amazon Web Services mit Firecracker
 \autocite[S.~419]{agache_firecracker_2020} oder Cloudflare mit dem Isolationsmodell der
-Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten stellen jeweils eine
-Lösung vor. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
+Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten begründen jeweils die eigene
+Lösung. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
 erzeugter Funktionen konstruiert und anschließend gegen einen produktiven Ausgangszustand
 gemessen wird, ist in den gesichteten Arbeiten dagegen nicht zu finden. Gesucht wurde im Oktober 2026 als gezielte Lückensuche über Websuche, Crossref und arXiv, ohne Fachdatenbanken mit Konto und ohne Anspruch auf Vollständigkeit, nach Modellen, die ein Isolate je Ausführung, einen
 Pool vorgehaltener Pods und eine Messung gegen einen produktiven Ausgangszustand verbinden. Die nächsten Vorarbeiten sind sprachbasierte Isolation je Funktion
@@ -77,6 +78,10 @@ Kubernetes-Projekts Agent Sandbox \autocite{kuo_running_2026}.
 Groundhog stellt zwischen aufeinanderfolgenden Aufrufen einen sauberen Zustand durch Wiederherstellen
 eines Snapshots her \autocite[S.~1]{alzayat_groundhog_2023}, Photons und Catalyzer zielen auf
 Speicherbedarf und Kaltstart \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020}.
+SAND trennt zweistufig, mit einem Container je Anwendung und einem Prozess je Funktion
+\autocite[S.~923]{akkus_sand_2018}, und Faastlane führt die Funktionen eines Workflows als Threads eines Prozesses aus
+\autocite[S.~805]{kotni_faastlane_2021}. Cloudflare begründet das Isolate-Modell der Workers-Plattform mit Kaltstart und
+Speicherbedarf gegenüber Containern \autocite{bloom_cloud_2018}.
 Das Muster eines frischen Isolates je Ausführung in einem Node.js-Host kennen Produktdokumentationen,
 etwa mit \texttt{isolated-vm} je Code-Schritt \autocite{activepieces_sandboxing_2026} und je Aufruf
 \autocite{tanstack_code_2026}, und Cloudflare nutzt für generierten Code ein Isolate je Ausführung

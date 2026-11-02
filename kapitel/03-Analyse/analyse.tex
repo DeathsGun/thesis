@@ -202,8 +202,8 @@ nach Anwendungs- und Infrastrukturebene \autocite[S.~8]{marin_serverless_2022}.
 \subsubsection{A1, Anwendungsebene: Zustand zwischen Ausführungen}
 
 Weil der Code in denselben Prozess geladen wird, überdauern über \texttt{setTimeout} oder \texttt{setInterval}
-registrierte Callbacks das Ende ihrer Ausführung und können Daten späterer Ausführungen mitlesen
-\autocite{dvelop_ag_dvelop_2026}. Ebenso überdauern globale Variablen, veränderte Prototypen und offene Verbindungen,
+registrierte Callbacks das Ende ihrer Ausführung und können Daten späterer Ausführungen mitlesen. Das ist im
+Ausgangszustand beobachtet und in Prüffall T1 nachgebildet (\autoref{sec:pruefung-isolation}). Ebenso überdauern globale Variablen, veränderte Prototypen und offene Verbindungen,
 denn das Zurücksetzen des Dateisystems und das Verwerfen des Module Cache greifen nur für Zustand auf Datei- und
 Modulebene. Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb eines Mandanten, und seine
 Bewertung folgt der Verschiebung der Vertrauenseinheit aus \autoref{sec:systemkontext}. Derselbe geteilte Prozess trägt
@@ -271,7 +271,7 @@ verletzt, ist keine Lösung.
     \hline
     M1 & \textbf{Prozessgrenze je Mandant.} Zwischen zwei Mandanten verläuft eine Grenze auf
          Prozess- oder Virtualisierungsebene. Eine sprachbasierte Grenze allein genügt nicht. &
-         A2 & Architektur\-prüfung, T10 \\[2pt]
+         A2 & Architektur\-prüfung, T10 (während der Evaluation ergänzt) \\[2pt]
     M2 & \textbf{Zustandsfreiheit je Ausführung.} Kein Zustand einer Ausführung ist einer
          späteren zugänglich, auch nicht innerhalb eines Mandanten. Umfasst Prozessspeicher,
          globale Variablen, registrierte Callbacks, offene Verbindungen und Dateisystem. &
@@ -357,7 +357,8 @@ das Artefakt ausgeführt, sodass die Gegenüberstellung zugleich belegt, welche 
 erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach, T6 prüft zugleich die Verfügbarkeit innerhalb eines
 Mandanten, für die kein Muss-Kriterium besteht, T4 prüft, ob dessen Reset des temporären
 Verzeichnisses auch im Artefakt greift, und die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die
-noch nicht beobachtet wurden. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M1. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
+noch nicht beobachtet wurden. T1 bis T8 standen fest, bevor der jeweilige Mechanismus umgesetzt war, sodass der
+Entwurf sich nicht nach den Prüffällen richten konnte. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M1. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
 Sprachmodellen erzeugten Code ausführen, enthält SandboxEval mit 51 Eigenschaften
 \autocite[S.~1--2]{rabin_sandboxeval_2025}, zugeschnitten auf Python und Linux und in
 \autoref{sec:pruefung-isolation} für JavaScript angepasst ergänzend ausgeführt.

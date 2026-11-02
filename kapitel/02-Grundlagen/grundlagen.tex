@@ -58,7 +58,11 @@ Wie die Arbeit den Kaltstart misst, legt \autoref{sec:kriterienkatalog} fest.
 speichert Nachrichten serverseitig für ein oder mehrere Subjects, ein \emph{Consumer} ist eine
 serverseitige Sicht auf einen Stream, die festhält, wie weit ein Client ihn gelesen hat. Bestätigt
 ein Client eine Nachricht nicht rechtzeitig, stellt der Server sie erneut zu
-\autocite{the_nats_authors_jetstream_2026}. Die Plattform der Fallstudie betreibt einen solchen
+\autocite{the_nats_authors_jetstream_2026}. Wie lange der Server auf die Bestätigung wartet, legt die \emph{Ack-Wait}
+des Consumers fest. Ein \emph{Pull-Consumer} liefert nur, wenn der Client Nachrichten anfordert, sodass jeder Client
+selbst bestimmt, wie viel er gleichzeitig annimmt \autocite{the_nats_authors_consumers_2026}. In einem Cluster wird
+jeder Consumer von einem der Server geführt, seinem \emph{Leader}, und erst wenn dieser gewählt ist, kann der
+Consumer zustellen \autocite{the_nats_authors_clustering_2026}. Die Plattform der Fallstudie betreibt einen solchen
 Stream bereits für ihre Kommandos und Events, und das Ausführungsmodell nutzt ihn mit, wie
 \autoref{sec:bausteine} beschreibt.
 

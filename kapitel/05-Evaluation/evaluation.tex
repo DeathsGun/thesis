@@ -69,15 +69,18 @@ zu.
 
 
 
-Die Perzentile stammen aus k6 und sind exakt über alle Aufrufe eines Laufs berechnet, Zahlen zu Pods, Zuweisungen,
-Speicher und \ac{CPU} aus Prometheus, die Zerlegung einzelner Aufrufe aus Tempo. Fehler mit Status 0, also
+Die Perzentile stammen aus k6 und sind exakt über alle Aufrufe eines Laufs berechnet. Zahlen zu Pods, Zuweisungen,
+Speicher und \ac{CPU} stammen aus Prometheus, dem Metriksystem des Clusters, das die Container-Werte von cAdvisor
+sammelt. Die Zerlegung einzelner Aufrufe stammt aus den Traces, die Gateway, Control Plane und Worker an Tempo senden. Fehler mit Status 0, also
 Verbindungs- und Lesefehler auf dem Weg zum Edge-Proxy, haben die Plattform nie erreicht und werden ausgewiesen,
 aber nicht als Fehler der Plattform gezählt.
 
 Drei Bedrohungen der Validität gelten für alle Zahlen. Intern lief der Ausgangszustand mit dem alten Skriptdienst und
 dem Node.js-Runner, der Prototyp mit dem neuen Skriptdienst und dem Rust-Executor, sodass der
 Vergleich zwei Modelle samt ihrer Begleitdienste misst. Der Prototyp wurde bis zum 28.\ Oktober abgestimmt, der Ausgangszustand
-einmal. Extern wurde auf einem Cluster der Integrationsstufe mit nachgespieltem Lastprofil gemessen, von einem einzelnen
+einmal. Hinzu kommt, dass alle Läufe ohne Auth Callout liefen. Der Callout prüft jede NATS-Verbindung eines Workers, und
+der Transport baut sie bei der Zuweisung auf (\autoref{sec:zuteilung}). Er liegt damit auf dem Pfad, den S1a misst, und
+seine Kosten sind in keinem Wert enthalten. Extern wurde auf einem Cluster der Integrationsstufe mit nachgespieltem Lastprofil gemessen, von einem einzelnen
 Rechner über das Internet. Konstruktbedingt nähert der Overhead die warme Latenz an, und die Pod-Löschung ersetzt bei M5 ein Drain.
 
 Für S1, S2 und M5 liefen je Modell drei Läufe in verschränkter Reihenfolge (Prototyp, Ausgangszustand, Prototyp ...), je
@@ -152,8 +155,6 @@ auf demselben Prototyp (Stand vom 2.\ November, ein Snippet, das nur einen Wert 
 Agent mit 85\,ms im Median und 122\,ms im 95.\ Perzentil unter dem Webhook mit 118 und 183\,ms, weil er den Quelltext mitbringt und die Auflösung
 des Skripts entfällt. Ein einzelner Mandant erreicht bis 64 gleichzeitige Aufrufe rund 510 Aufrufe je Sekunde ohne Fehler (\autoref{tab:agent-parallel}), eine
 ausgehende Anfrage über den Proxy kostet im Skript rund 88\,ms (\autoref{tab:agent-egress}), und die Größe von Ein- und Ausgabe zeigt \autoref{tab:agent-groesse}.
-Ein Slot je Pod ändert S1a nicht, weil je Mandant ein
-Aufruf eintrifft (89 von 90 unter zwei Sekunden, Median 286\,ms).
 
 \subsection{Overhead und warme Latenz (S2)}
 \label{sec:warm}
@@ -238,7 +239,9 @@ Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Modell gibt e
 \end{table}
 
 Der Prototyp hält 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht. Bei 300 Aufrufen je Sekunde reißt der Prototyp das
-Kriterium (P95 3,6 Sekunden, 740 ausgelassene Iterationen), die Ursache ist nicht zerlegt, bei 400 läuft er wieder sauber. Bei 500 liegt das
+Kriterium (P95 3,6 Sekunden, 740 ausgelassene Iterationen), die Ursache ist nicht zerlegt, bei 400 läuft er wieder sauber.
+Der Wert von 400 stammt aus diesem einen Lauf und ist deshalb vorläufig. Gälte die Stufe 200, läge der Prototyp gleichauf
+mit dem Ausgangszustand, und der Nutzwert sänke um 0,2. Bei 500 liegt das
 95.\ Perzentil mit 2,3 Sekunden knapp darüber, bei 600 liefert er noch 564 Aufrufe je Sekunde. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
 bestehenden App: Der Resolve braucht im Lauf höchstens 1,3 Kerne, das Gateway 0,64. Der Ausgangszustand hat sich gegenüber dem 20.\ Oktober von 100 auf 200 verbessert, was zum Runner mit
 Worker-Threads und zur Abstimmung des Autoscalers passt. Die Stufen sind 100 Aufrufe
@@ -254,14 +257,8 @@ gegen 376 bis 391) mit 14,4 bis 15,0\,GiB weniger als die Hälfte der 33,0 bis 3
 Steuerungsschicht fällt stärker auseinander: Knative Serving mit Kourier und dem Controller, der die Runner anlegt, hält unter Last 2,3\,GiB, Control Plane,
 Gateway und Egress-Proxy des Prototyps 267\,MiB. Der Pool kostet im Ruhezustand 3,0\,GiB und 1,02 Kerne (40 Worker zu
 je 78,7\,MiB), gemessen und nicht mehr hochgerechnet, der Ausgangszustand dort nichts außer Knative Serving
-mit 1,9\,GiB im Ruhezustand. Der Pool kauft die Kaltstarts. NATS ist dem Prototyp nicht zugerechnet.
-
-Ein Slot je Worker-Pod, in dieser Messung für beide Profile, ist die Obergrenze der Kosten für das
-Agentenprofil. Unter dem Lastprofil braucht der Prototyp dann 340 statt 207 Worker-Pods, 22,8 statt 15,0\,GiB (52\,\% mehr)
-und im Mittel 4,26 statt 3,31 Kerne (28\,\% mehr), liegt aber unter den 33 bis 34\,GiB des Ausgangszustands. Der Pool von vierzig
-deckt dann nur vierzig statt 160 gleichzeitige Ausführungen. Die Control Plane wurde mit ihrem Limit von 128\,MiB
-dreimal wegen Speichermangels neu gestartet, was 27 Fehler brachte. Das ist ein Befund
-zur Dimensionierung (jetzt 256\,MiB) und keine Eigenschaft des Slot-Modells.
+mit 1,9\,GiB im Ruhezustand. Der Pool kauft die Kaltstarts. Unter Last spart der Prototyp damit mehr Speicher, als der Pool
+im Ruhezustand kostet. NATS ist dem Prototyp nicht zugerechnet.
 
 \subsection{Zuverlässigkeit der Zustellung}
 \label{sec:zuverlaessigkeit}
@@ -357,8 +354,8 @@ Ziel, und die Speicherbombe endet nach 0,3 Sekunden mit \texttt{scriptExecutionO
 T7 und T9 wurden am 28.\ und 30.\ Oktober gegen den Egress-Proxy mit beiden Profilen in enforce wiederholt, mit der Testregel
 example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen der eigene Mandant und die
 Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, TCP zu 1.1.1.1:53, die Testregel auf Port 80,
-\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil mit einer Regel des Aufrufers
-(example.net, GET) gehen der eigene Mandant, diese Regel mit GET und die Testregel durch, abgewiesen werden dieselbe Regel
+\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil mit einer zweiten Regel,
+die das Gateway für den Lauf registriert (example.net, GET), gehen der eigene Mandant, diese Regel mit GET und die Testregel durch, abgewiesen werden dieselbe Regel
 mit POST, example.com, ein fremder Mandant, 1.1.1.1 und die internen Ziele, und das Anfrageprotokoll führt alle Versuche.
 Beide Profile bestehen, die Politik wirkt also, nicht nur der Durchsetzungspunkt. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
 
@@ -377,7 +374,9 @@ Quellcode überein. Der Vergleich gilt für hyper-int-otc, wo gVisor bereitsteht
 In keiner Zeile der Kernel-Oberfläche ist der Prototyp lockerer als der Ausgangszustand: Sechs Felder sind
 gleich, zwei sind zusätzlich gesetzt. Sie beschränken, was der Prozess im Container verändern kann, nicht die
 Systemaufrufe, die gVisor annimmt. Nur \texttt{enableServiceLinks} ist im Worker-Pod gesetzt und im Runner nicht, was
-Umgebungsvariablen im Pod betrifft, die das Skript nicht sieht (T8). M3 ist damit auf Clustern mit gVisor erfüllt. Die Aussage stützt sich auf die
+Umgebungsvariablen im Pod betrifft, die das Skript nicht sieht (T8). M3 ist damit auf Clustern mit gVisor erfüllt.
+M3 betrifft allein den Host-Kernel. Was der Prototyp innerhalb des Pods hinzufügt, den Transport mit seinem Kommando-Port und
+die Loopback-Verbindung zur Sandbox, gehört zu M1 und ist in \autoref{sec:ebenen} und über T10 bewertet. Die Aussage stützt sich auf die
 Konfiguration und sagt nichts über Lücken in gVisor selbst. M1 ist im Entwurf mit Auth Callout erfüllt (T10), im gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
 NATS-Zugangsdaten. Der Callout ist auf der Plattform noch nicht eingerichtet
 (\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster, am 29.\ Oktober erneut geprüft, zeigt: Die Container teilen
@@ -396,8 +395,8 @@ ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von
 620 bis 666\,ms im 95.\ Perzentil. Den Unterschied macht die Reichweite: Der Prototyp begrenzt A auf zehn Worker, die auf sieben Knoten liegen und einen
 bis zwei voll auslasten. Knative skaliert A auf rund fünfzig Pods und lastet sieben bis neun von zwölf Knoten aus, sodass fast
 jeder Mandant B auf einem belasteten Knoten liegt. Im Prototyp steigt das 95.\ Perzentil auch auf Knoten ohne Worker von A (305 bis
-440\,ms gegen 268 bis 390), weil Gateway und Egress-Proxy auf Knoten von A lagen. P5 ist damit auf den
-Speicher begrenzt: Die Garantie liefert das cgroup, die CPU ist in keinem der Modelle je Mandant begrenzt.
+440\,ms gegen 268 bis 390), weil Gateway und Egress-Proxy auf Knoten von A lagen. Die Ressourcenbegrenzung auf zwei
+Ebenen (\autoref{sec:diffusion:prinzipien}) reicht damit nur bis zum Speicher: Die Garantie liefert das cgroup, die CPU ist in keinem der Modelle je Mandant begrenzt.
 Der erhöhte Client-Anteil im ersten Lauf des Prototyps (95.\ Perzentil bis 898\,ms) kehrte nicht wieder und ist nicht erklärt.
 
 \subsection{Verfügbarkeit beim Knotenentzug (M5)}
@@ -479,21 +478,23 @@ verteilten und 2,0 im Schub (beide fünf Punkte), S1b 0,41 und 1,33 (1,2 und 3,7
 3,7, gerundet vier. S2 liegt im Median bei 2,1, S3 bei 1,17 (3,3 Punkte, gerundet drei) und S4 bei 2,0.
 
 \begin{table}[tbp]
-  \caption{Stand der Bewertung entlang der Soll-Kriterien}
+  \caption[Stand der Bewertung entlang der Soll-Kriterien]{Stand der Bewertung entlang der Soll-Kriterien. Die
+    Muss-Kriterien M2 bis M5 erfüllt der gemessene Stand, M1 nur der Entwurf, lokal belegt über T10
+    (\autoref{sec:pruefung-isolation})}
   \label{tab:nutzwert}
   \footnotesize
-  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X r r@{}}
+  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} r r@{}}
     \hline
-    Nr. & Gewicht & Messwert Prototyp & Messwert Ausgangszustand & \multicolumn{2}{c@{}}{Punkte} \\
-     & & & & Prototyp & Ausgang \\
+    Nr. & Gewicht & Messwert Prototyp & Messwert Ausgangszustand & Herkunft & \multicolumn{2}{c@{}}{Punkte} \\
+     & & & & & Prototyp & Ausgang \\
     \hline
-    S1 & 0,30 & P95 verteilt 0,41 bis 0,53\,s, Schub 7,4 bis 8,6\,s & P95 verteilt 3,1 bis 3,3\,s, Schub 13,9 bis 16,5\,s & 4 & 3 \\
-    S6 & 0,25 & bis zu 99,9\,\% der Mandanten & -- & 5 & 5 \\
-    S2 & 0,15 & P50 139 bis 145\,ms, P95 220 bis 291\,ms, P99 313 bis 361\,ms & P50 300 bis 312\,ms, P95 720 bis 745\,ms, P99 3,5 bis 3,7\,s & 5 & 3 \\
-    S3 & 0,10 & 70,5\,MiB je Pod & 82,7\,MiB je Pod & 3 & 3 \\
-    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & -- & 5 & 5 \\
-    S4 & 0,10 & 400 Aufrufe/s & 200 Aufrufe/s & 5 & 3 \\
-    Nutzwert & 1,00 & & & 4,5 & 3,7 \\
+    S1 & 0,30 & P95 verteilt 0,41 bis 0,53\,s, Schub 7,4 bis 8,6\,s & P95 verteilt 3,1 bis 3,3\,s, Schub 13,9 bis 16,5\,s & gemessen, ohne Callout & 4 & 3 \\
+    S6 & 0,25 & bis zu 99,9\,\% der Mandanten (Obergrenze) & -- & abgeleitet & 5 & 5 \\
+    S2 & 0,15 & P50 139 bis 145\,ms, P95 220 bis 291\,ms, P99 313 bis 361\,ms & P50 300 bis 312\,ms, P95 720 bis 745\,ms, P99 3,5 bis 3,7\,s & gemessen & 5 & 3 \\
+    S3 & 0,10 & 70,5\,MiB je Pod & 82,7\,MiB je Pod & gemessen & 3 & 3 \\
+    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & -- & abgeleitet & 5 & 5 \\
+    S4 & 0,10 & 400 Aufrufe/s, Stufe 300/s verfehlt & 200 Aufrufe/s & ein Lauf, vorläufig & 5 & 3 \\
+    Nutzwert & 1,00 & & & & 4,5 & 3,7 \\
     \hline
   \end{tabularx}
 \end{table}

@@ -232,7 +232,6 @@ pub fn for_profile(profile: Profile) -> Self {
     Beleg & Datum & Stand \\
     \hline
     S1a, S1b, S2, S3, S4, M5, Zustellung 06 bis 08 und Absturz, T1 bis T9, SandboxEval, M1 und M3 & 29.\ und 30.\ Oktober & Endstand: Gateway \texttt{b2aa8e7}, Executor \texttt{5db344b}, Control Plane \texttt{55331df} \\
-    Versuch mit einem Slot je Pod & 30.\ Oktober & wie Endstand, ein Slot je Pod \\
     Noisy Neighbour, Lauf P1 und K1 & 2.\ November, morgens & wie Endstand \\
     Noisy Neighbour, Läufe P2 bis K3, Proxy-Abmeldung im Hintergrund, Mikrobenchmarks, Prozessstart unter gVisor, reale Bundles & 2.\ November & Gateway \texttt{e52c21d}, Executor \texttt{5276a03}, Control Plane 256\,MiB \\
     S1a und S2 vor dem Endstand, M5 mit Prober, T7 und T9 & 26.\ bis 28.\ Oktober & ohne Worker-ID in der Antwort, ab 26.\ Oktober mit Transport und Sandbox, ab 28.\ Oktober Proxy in enforce \\
@@ -413,7 +412,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
 
 \begin{table}[H]
   \caption[Agentenprofil, Größe von Ein- und Ausgabe, Client P50 / P95 in Millisekunden]{Agentenprofil, Größe von Ein- und Ausgabe, ein Mandant, je Größe 20 Aufrufe nacheinander, Client P50 / P95 in Millisekunden. Oberhalb
-    von 64\,KiB geht der Körper über S3 mit vorsignierten Adressen}
+    von 64\,KiB geht der Körper über den Objektspeicher mit vorsignierten Adressen}
   \label{tab:agent-groesse}
   \footnotesize
   \setlength{\tabcolsep}{3pt}

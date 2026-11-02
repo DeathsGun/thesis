@@ -1,5 +1,5 @@
 \newpage
-\section{Diffusion} \label{sec:Diffusion}
+\section{Fazit und Diffusion} \label{sec:Diffusion}
 
 Dieses Kapitel beantwortet die Oberfrage und die fünf Unterfragen aus \autoref{sec:einleitung:zielsetzung} und löst die
 Ergebnisse von der Fallstudie.
@@ -13,6 +13,10 @@ Pods erhält jede Ausführung ein eigenes V8-Isolate, das nach dem Lauf verworfe
 nimmt ein Pool vorgehaltener Pods vom Anfragepfad, den eine Control Plane über das vorhandene
 Messaging-System zuteilt. Ein Skript erreicht die Außenwelt nur über Bindings und einen
 Egress-Proxy, und eine Kompatibilitätsschicht bildet die Node-Schnittstellen nach, die der Bestand nutzt.
+Belegt ist diese Antwort nicht überall gleich stark. Die Mandantengrenze ist im Entwurf und lokal belegt (T10), der
+gemessene Plattformstand lief ohne den Auth Callout. Zustandsfreiheit und Fähigkeitsgrenze sind auf der Plattform geprüft. Alle
+Vergleichszahlen stammen aus dem Webhook-Profil, und im Agentenprofil gilt die Sicherheitsaussage nur für
+aufeinanderfolgende Ausführungen.
 
 U1 fragte nach den Anforderungen. Sie stammen aus Ausgangslage und Betrieb der Fallstudie und der
 Auswertung von 1.718 Mandanten mit 14.575 Skriptversionen. Der Kern des Problems ist die Verschiebung der Vertrauenseinheit vom Mandanten auf
@@ -26,10 +30,11 @@ und fein bei den Rechten, feste Bindings je Profil mit einer mandantenweiten Fre
 rohe Sockets. Die Instanzverwaltung hält die Zuteilung vom Anfragepfad fern und entkoppelt die
 Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
 
-U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Die neun Prüffälle, die aus dem
-Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle. Der Ausgangszustand besteht am 30.\ Oktober sieben,
-T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem, und nicht bei M2, seit
-sein Runner jedes Skript in einem Worker-Thread ausführt. T7 und T9 bestehen im Prototyp gegen den Proxy in enforce, mit einer festen Testregel. Zustand überdauert keine Ausführung, ein erschöpfter Heap
+U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Gegenüber dem Ausgangszustand vom 30.\ Oktober liegt
+der Unterschied allein bei M4, also bei Netz, Umgebung und Dateisystem. Die Zustandsfreiheit hat der Ausgangszustand
+während der Arbeit selbst hergestellt, seit sein Runner jedes Skript in einem Worker-Thread ausführt. Die neun Prüffälle, die aus dem
+Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle. Der Ausgangszustand besteht sieben,
+T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). T7 und T9 bestehen im Prototyp gegen den Proxy in enforce, mit einer festen Testregel. Zustand überdauert keine Ausführung, ein erschöpfter Heap
 trifft nur die verursachende, und Netz, Dateisystem und Identität sind nur über Bindings und Proxy erreichbar. M3 gilt auf Clustern mit gVisor als erfüllt, weil
 der Pod in keinem Feld der Kernel-Oberfläche lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M5, der gemessene Prototyp
 M2 bis M5: M1 ist lokal belegt (T10) und hängt auf der Plattform an der Einrichtung des Callouts.
@@ -38,17 +43,27 @@ U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben 
 im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden und bedient in drei Läufen alle 90 Mandanten innerhalb von zwei Sekunden, der
 Ausgangszustand höchstens 3, bei dauerhaft 3,0\,GiB und 1,0 Kernen für den Pool. Ohne
 Pool (S1b) verfehlt er den Zielwert und liegt auf dem Niveau des Ausgangszustands. Der Latenzgewinn stammt also aus der
-Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings, und beide sind trennbar (\autoref{sec:kaltstart}). Der Overhead im Lastprofil liegt im Median bei 139 bis 145 statt 300 bis 312\,ms, im 95.\ Perzentil bei 220 bis 291 statt 720 bis 745\,ms und im 99.\ bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden, einschließlich der Begleitdienste (\autoref{sec:warm}). Ein Worker-Pod belegt mit 70,5\,MiB 85\,\% eines
-Runner-Pods, unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis 34\,GiB, der Durchsatz liegt bei 400 statt 200 Aufrufen je Sekunde
+Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings, und beide sind trennbar (\autoref{sec:kaltstart}). Gemessen ist
+allerdings der Gewinn des Gesamtsystems mit Control Plane, Zustellung und Skriptdienst. Der Anteil der Engine ist nur
+über die Läufe ohne Pool eingegrenzt, und ein heutiger Runner mit Pool ist nicht gemessen. Der Overhead im Lastprofil liegt im Median bei 139 bis 145 statt 300 bis 312\,ms, im 95.\ Perzentil bei 220 bis 291 statt 720 bis 745\,ms und im 99.\ bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden, einschließlich der Begleitdienste (\autoref{sec:warm}). Ein Worker-Pod belegt mit 70,5\,MiB 85\,\% eines
+Runner-Pods, unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis 34\,GiB, der Durchsatz liegt in einem Lauf bei 400 statt 200 Aufrufen je Sekunde, mit einer verfehlten Stufe bei 300
 (\autoref{sec:durchsatz}), und beim Knotenentzug
 bleibt die Lücke für neue Ausführungen bei 0,2 bis 0,3 statt 2,1 bis 2,7 Sekunden, ohne verlorene und ohne doppelte Ausführung in drei Läufen mit 48 Ausführungen (\autoref{sec:pruefung-m5}). In der Zusammenführung erreicht der Prototyp auf vier der
-sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte, und kommt auf 4,5 gegen 3,7 (\autoref{sec:nutzwert}), wobei S6 abgeleitet statt gemessen ist. Für das Agentenprofil gibt es Messwerte gegen das Webhook-Profil auf dem Prototyp und den Speicherbedarf mit einem Slot je Pod.
+sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte, und kommt auf 4,5 gegen 3,7 (\autoref{sec:nutzwert}), wobei S6 abgeleitet statt gemessen ist.
+
+Für das Agentenprofil ist gezeigt, dass der Prototyp alle neun Prüffälle besteht, T1 bis T3 auch mit zwei gleichzeitigen
+Ausführungen, und dass Erstaufruf und warme Latenz im Bereich des Webhook-Profils liegen (\autoref{sec:kaltstart}). Einen
+Ausgangswert gibt es nicht. Angenommen bleiben Lastprofil, Nutzlast, Parallelität und Regelbedarf, weil für das Profil keine
+Betriebsdaten vorliegen (\autoref{sec:bedrohungsmodell}). Gleichzeitige Ausführungen desselben Mandanten trennt dort allein die
+Isolate-Grenze (\autoref{sec:betriebsplanung}).
 
 U5 beantworten die beiden folgenden Abschnitte. Zuvor die Grenzen. Die der Ergebnisse begründet
 \autoref{sec:messaufbau}, weitere folgen aus dem Entwurf (\autoref{sec:betriebsplanung}). S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht erhoben hat
 (\autoref{sec:pruefung-kompatibilitaet}). Die Sicherheitsaussage für das Agentenprofil gilt für aufeinanderfolgende
 Ausführungen, und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Und eine Ausführung läuft ein zweites Mal, wenn ihr
-Worker oder ihre Sandbox mittendrin stirbt (\autoref{sec:zuteilung}).
+Worker oder ihre Sandbox mittendrin stirbt (\autoref{sec:zuteilung}). Offen bleiben drei Beobachtungen aus der Evaluation: das
+95.\ Perzentil von 898\,ms im ersten Noisy-Neighbour-Lauf, die Korrektur vom 2.\ November, die nicht erneut unter Last gemessen
+ist, und das Verwerfen verspäteter Skripte, das seit dem 27.\ Oktober umgesetzt, aber nicht gemessen ist.
 
 Der Beitrag liegt in der Kombination für eine Plattform ohne \ac{KVM}, die über Messaging skaliert, und im Vergleich mit einem produktiven Ausgangszustand.
 
@@ -109,15 +124,16 @@ Prüfskripte \texttt{child\_process} ausführen, bleibt bewusst auf dem bisherig
 offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands, der Standardwert der
 Socket-Freischaltung und enforce für das Agentenprofil, das keinen Bestand hat, den Regeln brechen könnten. Hinzu kommen
 die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, denn M3
-gilt nur dort.
+gilt nur dort. Festzulegen ist außerdem das Zustellversprechen gegenüber den Mandanten: Der Ausgangszustand stellt
+höchstens einmal zu, der Prototyp führt ein Skript nach einem Absturz ein zweites Mal aus. Eine Startmarke je Nachricht
+(\autoref{sec:zuteilung}) erhielte das bisherige Versprechen.
 
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
 
-Drei Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft die Engine: Eine nach WebAssembly
+Zwei Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft die Engine: Eine nach WebAssembly
 kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ließe sich später einsetzen, ohne Grenze und Zuteilung zu ändern,
 und der Wechsel des Deno-Teams zu Cloudflare macht \texttt{deno\_core} zu einer Abhängigkeit mit absehbarem Ende
 (\autoref{sec:betriebsplanung}). Die zweite betrifft die Zustellung. Ob eine zweite Ausführung nach einem Absturz für nicht idempotente Skripte
 hinnehmbar ist oder eine Startmarke je Nachricht (\autoref{sec:zuteilung}), sie als Fehlschlag melden soll, ist mit den
-Mandanten zu klären und zu messen. Die dritte betrifft das Agentenprofil: Erst wenn ein Agent Skripte erzeugt, zeigt sich,
-ob sich ein Slot je Pod lohnt.
+Mandanten zu klären und zu messen.
