@@ -220,7 +220,7 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 
 Der zweite Weg greift eine Isolationsgrenze an, die innerhalb eines Prozesses verläuft und
 Angriffe unterhalb der Softwareebene nicht abfangen kann. Über einen entfernten Timer ließ sich
-aus einem ko-lokierten Cloudflare Worker ein \ac{JWT} mit bis zu zwölf Bit pro Sekunde bei
+aus einem ko-lokierten Cloudflare Worker ein \ac{JWT}\acused{JSON} mit bis zu zwölf Bit pro Sekunde bei
 einer Genauigkeit von rund 99 Prozent auslesen, und zwar auf einer produktiven Plattform, die V8
 Isolates einsetzt \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Denselben Befund hatte zuvor
 die Einführung der Site Isolation in Chrome, wo eine sprachbasierte Trennung zweier Origins im
@@ -314,7 +314,7 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
     S6 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
          Ausgangszustand & 0,25 \\
     S2 & Warme Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
-    S3 & Speicherbedarf & Bedarf je Pod in der Kaltstartmessung, Pool als Vorbehalt & 0,10 \\
+    S3 & Speicherbedarf & Bedarf je Pod unter dem Lastprofil, Pool als Vorbehalt & 0,10 \\
     S7 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,10 \\
     \hline
@@ -345,7 +345,9 @@ nicht von der Darstellung abhängt.
 Der Zielwert ist für S1 und S2 der Wert des Ausgangszustands im selben Messaufbau, den der Prototyp unterbieten muss, bei S1 für das gewichtete Maß aus S1a und S1b.
 Eine Zahl wird nicht vorab gesetzt, weil der Ausgangszustand bisher nicht unter den Lastprofilen dieser Arbeit
 gemessen wurde. S3 und S4 werden dem Ausgangszustand gegenübergestellt, ohne dass ein Zielwert sie entscheidet. S6 und
-S7 haben keinen Vergleichswert, ihr Maßstab ist die Bestandsanalyse aus \autoref{sec:bestandsanalyse}.
+S7 haben keinen Vergleichswert, ihr Maßstab ist die Bestandsanalyse aus \autoref{sec:bestandsanalyse}. Die Messgrößen von S3 und S6 wurden
+während der Evaluation präzisiert, S3 misst nun unter dem Lastprofil statt im Kaltstartlauf, weil nur dort mehrere Ausführungen zugleich laufen,
+und S6 wird über Bestandsanalyse und Prüfungen der Kompatibilitätsschicht abgeleitet.
 
 \subsubsection{Prüffallkatalog}
 

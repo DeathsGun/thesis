@@ -46,8 +46,8 @@ größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren S
 die Belege den Ständen und Commits zu, die früheren Läufe vom 6.\ bis 28.\ Oktober stehen dort ebenfalls.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Der Runner führt jedes Skript
-seither (DVS-1418) in einem eigenen, verworfenen Worker-Thread aus, trägt seit dem 17.\ Oktober statt 100\,m ein
-\ac{CPU}-Limit von zwei Kernen (DVS-1460), und der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster von 6 und
+seither in einem eigenen, verworfenen Worker-Thread aus, trägt seit dem 17.\ Oktober statt 100\,m ein
+\ac{CPU}-Limit von zwei Kernen, und der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster von 6 und
 60 Sekunden Scale-Down-Delay. Alle Läufe ab dem 28.\ Oktober messen diesen Stand, die Prüffälle vom 19.\ Oktober, Lauf 18 und
 die Pod-Ressourcen vom 15.\ Oktober den früheren.
 
@@ -85,7 +85,7 @@ Lauf mit vorher geprüfter Route. Angegeben ist die Spannweite der drei Läufe. 
 \autocite[S.~4]{hoefler_scientific_2015}, zeigt aber, ob ein Unterschied größer ist als die Streuung. Die Perzentile
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
 berichten \autocites[S.~6]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}.
-Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung, die Prüffälle und B6 haben je einen Lauf. Innerhalb eines Laufs geben
+Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung, die Prüffälle und der Noisy-Neighbour-Test haben je einen Lauf. Innerhalb eines Laufs geben
 \autoref{tab:kaltstart-ki} (S1) und \autoref{tab:konfidenz} (S2) im Anhang Intervalle für die Läufe vom 29.\ Oktober an.
 
 \subsection{Kaltstartlatenz (S1)}
@@ -137,17 +137,17 @@ Sekunden, die Zielgröße des Pools. Die übrigen fünfzig warten auf neue Pods,
 Der Prototyp bleibt mit einem 95.\ Perzentil von 7,4 bis 8,6 gegen 13,9 bis 16,5 Sekunden schneller und ohne Fehler. Die acht Fehler
 des Ausgangszustands in zwei Läufen sind 502 mit \enquote{no route to host} zum Queue-Proxy eines Runner-Pods. Das deutet darauf hin,
 dass Knative frische Pods anspricht, bevor ihr Netz erreichbar ist, belegt ist das nicht. Der Egress-Proxy ist in allen
-Läufen des Prototyps enthalten und macht den Kaltstart nicht messbar teurer.
+Läufen des Prototyps enthalten, einen Lauf ohne ihn gibt es nicht.
 
 Die Läufe mit Pool null ordnen den Vorsprung ein. Ohne vorgehaltene Pods liegt der Prototyp im verteilten Lauf im Median
 mit 2,52 bis 2,65 Sekunden so hoch wie der Ausgangszustand, im Schub mit 6,6 bis 7,7 gegen 8,1 bis 8,6 Sekunden etwas darunter. Der Vorsprung
 stammt damit aus dem Pool und nicht aus einem schnelleren Startmechanismus. Ohne Pool bleibt die Zuverlässigkeit: Alle 540
 Aufrufe gelingen. Dass der Tail im verteilten Lauf mit 6,6 bis 8,2 Sekunden im 95.\ Perzentil länger ist als bei Knative,
 liegt nach den Logs der Control Plane daran, dass ein wartender Mandant den nächsten bereiten Pod nimmt, nicht den für ihn angelegten.
-Die Vergabe an den am längsten wartenden Mandanten ist in \autoref{sec:betriebsplanung} als offene Maßnahme vermerkt.
+Die Vergabe an den am längsten wartenden Mandanten steht in \autoref{sec:betriebsplanung} als offene Maßnahme.
 
-Für das Agentenprofil gibt es keinen Ausgangswert. Als Richtwert wurden am 21.\ Oktober 2026 dreißig Mandanten im
-Sekundentakt erstmals über den Endpunkt der Agentenausführungen aufgerufen, mit einem Snippet, das nur rechnet:
+Für das Agentenprofil gibt es keinen Ausgangswert. Als Richtwert riefen am 21.\ Oktober 2026 dreißig Mandanten im
+Sekundentakt erstmals den Endpunkt der Agentenausführungen auf, mit einem rechnenden Snippet:
 Median 623\,ms, 95.\ Perzentil 816\,ms, alle unter zwei Sekunden.
 Ein Slot je Pod ändert S1a nicht, weil je Mandant ein
 Aufruf eintrifft (89 von 90 unter zwei Sekunden, Median 286\,ms).
@@ -192,10 +192,9 @@ Ausgangszustands, im 95.\ Perzentil bei 220 bis 291 gegen 720 bis 745\,ms und im
 weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
-zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht. Lauf 18 vom 13.\ Oktober (P99 4,57 Sekunden,
-408 Fehler) litt unter einem Neustart des Ingress auf einem überbuchten Cluster, deshalb wurde der Ausgangszustand neu gemessen.
+zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht. Der frühere Lauf 18 (13.\ Oktober) litt unter einem Ingress-Neustart und wurde ersetzt.
 Das 504 im Lauf P3 geht auf einen Fehler im Executor zurück: Ein frischer Consumer ohne Leader lieferte beim ersten Pull ein 503, und der
-Worker zog danach nie wieder. Die Korrektur vom 2.\ November (\texttt{5276a03}) ist nicht erneut unter Last gemessen. Die übrigen Fehler des Prototyps sind clientseitige Abbrüche, im Ausgangszustand sind 51 von 85 Fehlern 502 \enquote{no route to host} und zwölf 504, dazu 9 bis 27 ausgelassene Iterationen.
+Worker zog danach nie wieder. Die Korrektur vom 2.\ November ist nicht erneut unter Last gemessen. Die übrigen Fehler des Prototyps sind clientseitige Abbrüche, im Ausgangszustand sind 51 von 85 Fehlern 502 \enquote{no route to host} und zwölf 504, dazu 9 bis 27 ausgelassene Iterationen.
 
 Der Egress-Proxy kostet je Aufruf rund 17\,ms, je 8,2\,ms für Anmeldung und Abmeldung im Median (95.\ Perzentil 21 bis
 22\,ms). Das sind 30\,\% des serverseitigen Overheads von 51 bis 52\,ms (Gateway-Zeit abzüglich \texttt{run\_script}) und rund ein Achtel des Overheads
@@ -204,8 +203,7 @@ beim Client. Seit dem 2.\ November läuft die Abmeldung im Hintergrund und spart
 am meisten \texttt{pdfmake} mit seinen Schriften, und bleiben mit einem 95.\ Perzentil unter 1,5 Sekunden unter dem Kaltstart des
 Ausgangszustands. Im Median sind warme Aufrufe 1,6- bis 2,2-mal schneller als dort, je Paket nach fünf Kaltstarts und 20 warmen Aufrufen.
 
-Die Erzeugung eines Isolates kostet im Cluster im Median 18,7\,ms (95.\ Perzentil 77\,ms) und liegt seit dem Executor
-\texttt{5db344b} als warmes Isolate vor dem Aufruf, nicht mehr im Anfragepfad. Das ist der Preis der Isolate-Grenze aus
+Die Erzeugung eines Isolates kostet im Cluster im Median 18,7\,ms (95.\ Perzentil 77\,ms) und liegt seit dem Executor-Stand vom 29.\ Oktober als warmes Isolate vor dem Aufruf, nicht mehr im Anfragepfad. Das ist der Preis der Isolate-Grenze aus
 \autoref{sec:ebenen}. Ein frischer Node.js-Prozess je Ausführung kostet unter gVisor im Median 53\,ms, doppelt so viel wie unter runc, und ein eigener
 Snapshot hilft nicht (\autoref{tab:prozessstart} im Anhang).
 
@@ -234,17 +232,17 @@ Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Konfiguration
     Prototyp, Gateway 1 Kern und 512\,MiB, eine Replika für den Resolve & 200/s & 300/s: P95 5,6\,s, 1.248
       ausgelassene Iterationen \\
     Prototyp, Gateway 1 Kern und 512\,MiB, drei Replikas für den Resolve & 400/s, bei 300/s P95 3,6\,s & 500/s: P95 2,3\,s, 492/s
-      erreicht, 700/s: 9,4\,\% Fehler \\
+      erreicht, 600/s: P95 4,4\,s, 564/s erreicht, 700/s: 9,4\,\% Fehler \\
     \hline
   \end{tabularx}
 \end{table}
 
-Der Prototyp hält mit drei Replikas für den Resolve 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht, und trägt
-bis rund 600. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
+Der Prototyp hält mit drei Replikas für den Resolve 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht. Darüber
+reißt er das Kriterium (500/s: P95 2,3 Sekunden), liefert bei 600 aber noch 564 Aufrufe je Sekunde. Der Wert gilt für das vergrößerte Gateway, wie
+ausgerollt liegt der Prototyp bei 200, gleichauf mit dem Ausgangszustand. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
 bestehenden App: Mit einer Replika ist der Resolve bei 0,92 Kernen ausgelastet und meldet
 \texttt{scriptResolverUnavailable}, mit drei braucht er höchstens 1,3 Kerne und ist kein Engpass mehr. Bei 300 Aufrufen je Sekunde reißt der Prototyp in allen drei Konfigurationen das Kriterium
-(P95 3,3 bis 5,6 Sekunden), am 20.\ Oktober lief diese Stufe noch glatt. Das deutet auf eine einmalige Anlaufphase hin, etwa die
-Hochskalierung der Worker über den Pool von vierzig, ist aber nicht zerlegt. Der Ausgangszustand hat sich gegenüber dem
+(P95 3,3 bis 5,6 Sekunden), am 20.\ Oktober lief die Stufe noch glatt. Die Ursache ist nicht zerlegt. Der Ausgangszustand hat sich gegenüber dem
 20.\ Oktober von 100 auf 200 verbessert, was zum Runner mit Worker-Threads und zur Abstimmung des Autoscalers passt. Die Stufen sind 100 Aufrufe
 breit und der Wert ist eine untere Schranke.
 
@@ -255,10 +253,10 @@ Runner-Pod belegt im Median 82,7\,MiB, ein Worker-Pod 70,5\,MiB, das 1,2-Fache. 
 waren es noch das Anderthalbfache (90 gegen 59\,MiB, \autoref{tab:ressourcen-trennung}). Im Ruhezustand liegt der Worker bei 78,7\,MiB, vermutlich wegen der warmen Isolates und
 der zwei Container, die cAdvisor unter gVisor nicht einzeln ausweist. Unter Last braucht der Prototyp wegen der geringeren Pod-Zahl (202 bis 207
 gegen 376 bis 391) mit 14,4 bis 15,0\,GiB weniger als die Hälfte der 33,0 bis 34,1\,GiB, die \ac{CPU} unterscheidet sich kaum. Die
-Steuerungsschicht fällt stärker auseinander: Knative Serving mit Kourier und Superperforator hält 2,3\,GiB, Control Plane,
+Steuerungsschicht fällt stärker auseinander: Knative Serving mit Kourier und dem Controller, der die Runner anlegt, hält unter Last 2,3\,GiB, Control Plane,
 Gateway und Egress-Proxy des Prototyps 267\,MiB. Der Pool kostet im Ruhezustand 3,0\,GiB und 1,02 Kerne (40 Worker zu
 je 78,7\,MiB), gemessen und nicht mehr hochgerechnet, der Ausgangszustand dort nichts außer Knative Serving
-mit 1,9\,GiB. Der Pool kauft die Kaltstarts. NATS ist dem Prototyp nicht zugerechnet.
+mit 1,9\,GiB im Ruhezustand. Der Pool kauft die Kaltstarts. NATS ist dem Prototyp nicht zugerechnet.
 
 Ein Slot je Worker-Pod, in dieser Messung für beide Profile, ist die Obergrenze der Kosten für das
 Agentenprofil. Unter dem Lastprofil braucht der Prototyp dann 340 statt 207 Worker-Pods, 22,8 statt 15,0\,GiB (52\,\% mehr)
@@ -285,7 +283,7 @@ Am 30.\ Oktober liefen die Szenarien 06 bis 08 auf dem Endstand erneut, 01 bis 0
 Konfigurationsänderungen bräuchten. Szenario 08 liefert 41.026 Aufrufe ohne Fehler und 33 Zuweisungen für 33 Mandanten. In Szenario 06 kommen alle 386
 Aufrufe an, wo am 9.\ Oktober zwölf verloren gingen, weil die Control Plane ruhige Mandanten seit dem 26.\ Oktober selbst zurückzieht.
 Szenario 07 zeigt erst der Absturz: Unter Last, mit Prober und langen Aufrufen, wurden fünf Worker eines Knotens
-mit \texttt{--grace-period=0} gelöscht. Die Control Plane räumte sie binnen 0,1 Sekunden ab und wies einen der betroffenen Mandanten
+mit \texttt{-{}-grace-period=0} gelöscht. Die Control Plane räumte sie binnen 0,1 Sekunden ab und wies einen der betroffenen Mandanten
 neu zu. Es gab keinen Fehler, die längste Lücke des Probers beträgt 0,30 Sekunden. Die langen Aufrufe der beiden getroffenen
 Mandanten dauerten 44,2 und 44,3 statt 25,2 Sekunden, weil die Nachricht nach fünf Sekunden Ack-Wait neu zugestellt und
 auf einem anderen Worker zu Ende geführt wurde. Je Ausführungs-ID gibt es genau eine abgeschlossene Ausführung, der abgebrochene erste Versuch
@@ -391,7 +389,7 @@ Kommandos abweist und NATS ohne Zugangsdaten nichts zulässt, ist nur lokal gepr
 
 Ein Skript erreicht das Netz nur über den Proxy (T7).
 
-Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte B6 am 2.\ November, je Modell dreimal verschränkt.
+Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noisy-Neighbour-Test am 2.\ November, je Modell dreimal verschränkt.
 Mandant A ruft mit 40 Aufrufern ein Skript auf, das zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein
 Skript von rund 150\,ms auf. Gewertet wird die Latenz von B nach der CPU-Last des Knotens, auf dem der Aufruf lief
 (\autoref{tab:b6} im Anhang). Beide Modelle isolieren die CPU nicht. Auf einem von A
@@ -468,7 +466,9 @@ ist, und für den letzten nicht gewollt. Der Aufwand für Regeln steht darin nic
 Die Machbarkeitsprüfung an \texttt{tedious} aus \autoref{sec:kompatibilitaetsschicht} wurde am 2.\ November am Endstand
 wiederholt und ist bestanden: Der unveränderte Treiber (20.3.8) verbindet sich in drei Läufen über den Socket-Shim mit einer
 echten Datenbankinstanz, stellt im \ac{TDS}-Datenstrom auf \ac{TLS} um und fragt ab, beide Negativkontrollen schlagen wie in Node fehl.
-Auch der Differenztest mit 757 Fällen und die 440 Tests des Executors bestehen.
+Auch der Differenztest mit 757 Fällen und die 440 Tests des Executors bestehen. Gebündelte Pakete laufen ebenfalls
+(\autoref{tab:bundles} im Anhang): Mit den häufigsten, darunter \texttt{axios} und \texttt{@dvelop-sdk/dms}, gelingen alle 250 Aufrufe im
+Prototyp, kalt unter 1,5 Sekunden.
 
 \subsection{Zusammenführung}
 \label{sec:nutzwert}
@@ -505,5 +505,4 @@ verteilten und 2,0 im Schub (beide fünf Punkte), S1b 0,41 und 1,33 (1,2 und 3,7
 
 Auf vier der sechs Kriterien erreicht der Prototyp die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte. Die Rangfolge hängt nicht von den Gewichten ab, denn der Prototyp ist bei S3, S6 und S7 gleichauf und bei den
 übrigen besser. Nur der Vorsprung von 0,8 ändert sich. Er hängt an S6, das unter enforce von den Regeln abhängt: Bei zwei
-Punkten, also höchstens 40\,\% der Mandanten, läge der Prototyp mit 3,75 knapp vor 3,7, bei einem mit 3,5 dahinter. Der
-Nutzwert ist das Ergebnis einer Zuordnung, deren Vorbehalte in \autoref{sec:messaufbau} stehen.
+Punkten, also höchstens 40\,\% der Mandanten, läge der Prototyp mit 3,75 knapp vor 3,7, bei einem mit 3,5 dahinter. Die Vorbehalte der Zuordnung stehen in \autoref{sec:messaufbau}.

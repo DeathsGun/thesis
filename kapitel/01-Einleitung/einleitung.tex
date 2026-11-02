@@ -51,8 +51,10 @@ die betroffenen Mandanten nicht ausführungsfähig sein. Die geringe Wartbarkeit
 Verfügbarkeit messen lässt.
 
 Ein Wechsel des Ausführungsmodells darf dabei nicht hinter die heutige Sicherheit zurückfallen,
-und für das Agentenprofil reicht sie nicht einmal aus. Alle Ausführungen eines Mandanten teilen
-sich heute einen Node.js-Prozess, sodass Zustand eine Ausführung überdauert. Stammt der Code von
+und für das Agentenprofil reicht sie nicht einmal aus. Alle Ausführungen eines Mandanten teilten
+sich bei Beginn der Arbeit einen Node.js-Prozess, sodass Zustand eine Ausführung überdauerte. Der Runner führt
+jede Ausführung inzwischen in einem eigenen Worker-Thread aus (\autoref{sec:messaufbau}), Umgebung, Dateisystem und Netz des Prozesses
+bleiben dem Skript aber offen. Stammt der Code von
 einem Agenten, dessen Eingaben Dritte beeinflussen können, wird daraus ein Vertraulichkeitsproblem
 innerhalb des Mandanten.
 Gesucht ist deshalb ein Modell, das schneller startet und zugleich jede Ausführung für sich

@@ -170,7 +170,9 @@ Die Wahl stützt sich auf den Entwurf.
 
 Der Ausgangszustand verletzte bei der Analyse M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
 teilen, und verletzt M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Seit er jedes Skript in einem
-Worker-Thread ausführt, besteht er die Prüffälle zur Zustandsfreiheit (\autoref{sec:pruefung-isolation}).
+Worker-Thread ausführt, besteht er die Prüffälle zur Zustandsfreiheit (\autoref{sec:pruefung-isolation}). Ein Worker-Thread ist im Kern
+ein eigenes V8-Isolate im selben Prozess, der Ausgangszustand liegt damit nahe an der Bauart mit einem Isolate je Ausführung in einem
+Node.js-Host. Der Unterschied zum Prototyp liegt bei M4: Das Skript sieht weiter Umgebung und Netz des Hosts, T7 und T9 schlagen fehl.
 
 Ein frischer Node-Prozess je Ausführung stellt Zustandsfreiheit her und
 erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Auch mit Egress-Proxy und Netzwerkrichtlinie
@@ -835,5 +837,5 @@ nicht erhoben. Die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. 
 und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für
 synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
 erzeugtes Isolate wahren M2, solange jedes Isolate genau eine Ausführung trägt. Der Executor baut seit
-\texttt{5db344b} je Profil das nächste Isolate vorab (\autoref{sec:warm}). Eine weitere folgt aus der Messung mit leerem Pool
+den Messungen vom 29.\ Oktober je Profil das nächste Isolate vorab (\autoref{sec:warm}). Eine weitere folgt aus der Messung mit leerem Pool
 (\autoref{sec:kaltstart}): Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der Kaltstarts.

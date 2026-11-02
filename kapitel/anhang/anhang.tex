@@ -232,9 +232,9 @@ pub fn for_profile(profile: Profile) -> Self {
     Beleg & Datum & Stand \\
     \hline
     S1a, S1b, S2, S3, S4, M5, Zustellung 06 bis 08 und Absturz, T1 bis T9, SandboxEval, M1 und M3 & 29.\ und 30.\ Oktober & Endstand: Gateway \texttt{b2aa8e7}, Executor \texttt{5db344b}, Control Plane \texttt{55331df} \\
-    B4, ein Slot je Pod & 30.\ Oktober & wie Endstand, ein Slot je Pod \\
-    B6 Lauf P1 und K1 & 2.\ November, morgens & wie Endstand \\
-    B6 Läufe P2 bis K3, Proxy-Abmeldung im Hintergrund, Mikrobenchmarks, C1, C3 & 2.\ November & Gateway \texttt{e52c21d}, Executor \texttt{5276a03}, Control Plane 256\,MiB \\
+    Versuch mit einem Slot je Pod & 30.\ Oktober & wie Endstand, ein Slot je Pod \\
+    Noisy Neighbour, Lauf P1 und K1 & 2.\ November, morgens & wie Endstand \\
+    Noisy Neighbour, Läufe P2 bis K3, Proxy-Abmeldung im Hintergrund, Mikrobenchmarks, Prozessstart unter gVisor, reale Bundles & 2.\ November & Gateway \texttt{e52c21d}, Executor \texttt{5276a03}, Control Plane 256\,MiB \\
     S1a und S2 vor dem Endstand, M5 mit Prober, T7 und T9 & 26.\ bis 28.\ Oktober & ohne Worker-ID in der Antwort, ab 26.\ Oktober mit Transport und Sandbox, ab 28.\ Oktober Proxy in enforce \\
     Kaltstartverlauf, S1b und S2 Läufe 28 und 30, Pod-Ressourcen & bis 15.\ Oktober & vor der Trennung in Transport und Sandbox \\
     T10 & 28.\ Oktober, lokal & mit Auth Callout \\
@@ -268,9 +268,9 @@ pub fn for_profile(profile: Profile) -> Self {
     K1 Ausgang & 8,23\,s & 15,3\,s & 20,2\,s & 20,2\,s & 0 & 0 \\
     K2 Ausgang & 8,12\,s & 13,9\,s & 21,8\,s & 21,8\,s & 0 & 5 \\
     K3 Ausgang & 8,64\,s & 16,5\,s & 23,6\,s & 24,3\,s & 0 & 3 \\
-    P0-1 Pool 0 & 6,55\,s & 11,3\,s & 12,5\,s & -- & 0 & 0 \\
-    P0-2 Pool 0 & 7,23\,s & 11,5\,s & 12,6\,s & -- & 0 & 0 \\
-    P0-3 Pool 0 & 7,65\,s & 11,9\,s & 13,1\,s & -- & 0 & 0 \\
+    P0-1 Pool 0 & 6,55\,s & 11,3\,s & 12,5\,s & 12,6\,s & 0 & 0 \\
+    P0-2 Pool 0 & 7,23\,s & 11,5\,s & 12,6\,s & 14,5\,s & 0 & 0 \\
+    P0-3 Pool 0 & 7,65\,s & 11,9\,s & 13,1\,s & 13,9\,s & 0 & 0 \\
     \hline
   \end{tabularx}
 \end{table}
@@ -316,7 +316,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Noisy Neighbour (B6), Latenz der Mandanten B beim Client, P50 / P95 in Millisekunden, 2.\ November, K3 mit 150 Kaltstarts vor der Last}
+  \caption{Noisy Neighbour, Latenz der Mandanten B beim Client, P50 / P95 in Millisekunden, 2.\ November, K3 mit 150 Kaltstarts vor der Last}
   \label{tab:b6}
   \footnotesize
   \setlength{\tabcolsep}{4pt}
@@ -364,12 +364,12 @@ pub fn for_profile(profile: Profile) -> Self {
     \multicolumn{2}{@{}l}{\emph{Cluster, Prozess je \texttt{spawnSync}, 40 Läufe, Node v24.22.1}} \\
     \texttt{node -e 0}, gVisor & 53,1 / 58,7 \\
     \texttt{node -e 0}, runc & 26,0 / 32,0 \\
-    \texttt{--snapshot-blob}, leerer Snapshot, gVisor / runc & 65,6 / 72,9 und 30,2 / 35,6 \\
-    \texttt{--snapshot-blob} mit \texttt{util}, \texttt{events}, \texttt{url}, gVisor / runc & 67,1 / 77,6 und 27,8 / 33,1 \\
-    Isolat des Webhook-Profils bauen, warm, im Cluster & 18,7 / 77 \\
+    \texttt{-{}-snapshot-blob}, leerer Snapshot, gVisor / runc & 65,6 / 72,9 und 30,2 / 35,6 \\
+    \texttt{-{}-snapshot-blob} mit \texttt{util}, \texttt{events}, \texttt{url}, gVisor / runc & 67,1 / 77,6 und 27,8 / 33,1 \\
+    Isolate des Webhook-Profils bauen, warm, im Cluster & 18,7 / 77 \\
     \multicolumn{2}{@{}l}{\emph{Lokal, Mac (arm64), Release-Build des Executors \texttt{5db344b}, 300 Läufe}} \\
-    Isolat bauen, Webhook-Profil / Agentenprofil & 3,30 / 3,61 und 2,64 / 2,96 \\
-    \enquote{Hello World} im frischen Isolat, gesamt & 3,92 / 4,39 \\
+    Isolate bauen, Webhook-Profil / Agentenprofil & 3,30 / 3,61 und 2,64 / 2,96 \\
+    \enquote{Hello World} im frischen Isolate, gesamt & 3,92 / 4,39 \\
     Prozess \texttt{/usr/bin/true} & 3,68 / 8,94 \\
     Prozess \texttt{node -e 0}, 50 Läufe & 68,9 / 77,6 \\
     \hline
@@ -402,20 +402,22 @@ pub fn for_profile(profile: Profile) -> Self {
 
 
 \begin{table}[H]
-  \caption{Unsicherheit der Kaltstartläufe aus \autoref{tab:kaltstart-vergleich}: konservatives 95-\%-Intervall für P95 aus den
-    Ordnungsstatistiken (P90 bis Maximum) und Anteil unter 2\,s mit 95-\%-Intervall nach Clopper-Pearson}
+  \caption{Unsicherheit der Kaltstartläufe aus \autoref{tab:kaltstart-vergleich}: konservatives 95-\%-Intervall je Lauf für P95 aus
+    den Ordnungsstatistiken (P90 bis Maximum von je 90 Aufrufen) und Anteil unter 2\,s über die drei Läufe (270 Aufrufe) mit
+    95-\%-Intervall nach Clopper-Pearson}
   \label{tab:kaltstart-ki}
-  \small
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r@{}}
     \hline
-    Spalte & P95 & Intervall für P95 & unter 2\,s & Intervall \\
+    Bedingung & P95, Lauf 1 & P95, Lauf 2 & P95, Lauf 3 & unter 2\,s & Intervall \\
     \hline
-    Ausgangszustand, verteilt & 3,33\,s & 3,15 bis 6,07\,s & 10 von 91 & 5,4 bis 19,3\,\% \\
-    Pool 40, verteilt & 525\,ms & 431 bis 639\,ms & 90 von 90 & 96,0 bis 100\,\% \\
-    Pool 0, verteilt & 8,54\,s & 6,24 bis 12,0\,s & 42 von 90 & 36,1 bis 57,5\,\% \\
-    Ausgangszustand, Schub & 19,5\,s & 18,9 bis 22,0\,s & 0 von 90 & 0 bis 4,0\,\% \\
-    Pool 40, Schub & 6,90\,s & 6,79 bis 8,0\,s & 40 von 90 & 34,0 bis 55,3\,\% \\
-    Pool 0, Schub & 18,1\,s & 17,7 bis 19,2\,s & 0 von 90 & 0 bis 4,0\,\% \\
+    Ausgang, verteilt & 3,12 bis 3,30\,s & 3,22 bis 5,02\,s & 2,92 bis 5,18\,s & 3 & 0,2 bis 3,2\,\% \\
+    Pool 40, verteilt & 358 bis 555\,ms & 350\,ms bis 1,22\,s & 406\,ms bis 1,37\,s & 270 & 98,6 bis 100\,\% \\
+    Pool 0, verteilt & 5,70 bis 7,58\,s & 6,06 bis 23,5\,s & 6,32 bis 9,65\,s & 99 & 30,9 bis 42,7\,\% \\
+    Ausgang, Schub & 14,1 bis 20,2\,s & 12,7 bis 21,8\,s & 15,3 bis 24,3\,s & 0 & 0 bis 1,4\,\% \\
+    Pool 40, Schub & 6,45 bis 10,8\,s & 6,89 bis 11,0\,s & 6,85 bis 8,72\,s & 119 & 38,1 bis 50,2\,\% \\
+    Pool 0, Schub & 9,90 bis 12,6\,s & 10,4 bis 14,5\,s & 10,9 bis 13,9\,s & 0 & 0 bis 1,4\,\% \\
     \hline
   \end{tabularx}
 \end{table}
