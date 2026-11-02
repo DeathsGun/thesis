@@ -347,15 +347,28 @@ Dieselben neun Prüffälle liefen am 21.\ Oktober 2026, T7 am 30.\ Oktober erneu
 Testmandanten, als Snippets über den Endpunkt der Agentenausführungen, übertragen auf die Mittel des Profils, weil es weder
 \texttt{require} noch \texttt{process} noch eine Konsole bereitstellt. Der Ausgangszustand hat dafür kein Gegenstück. T1 bis T3 liefen
 zusätzlich mit zwei gleichzeitigen Ausführungen. Der Prototyp besteht alle neun Fälle. Zustand erreicht keine andere Ausführung, auch
-keine gleichzeitige (ohne Aussage zu Seitenkanälen zwischen den bis zu vier Isolates eines Prozesses,
-\autoref{sec:betriebsplanung}). Module, Dateisystem und Betriebssystem lassen sich nicht laden, \texttt{fetch} scheitert zu jedem
+keine gleichzeitige, über gemeinsamen Zustand. Module, Dateisystem und Betriebssystem lassen sich nicht laden, \texttt{fetch} scheitert zu jedem
 Ziel, und die Speicherbombe endet nach 0,3 Sekunden mit \texttt{scriptExecutionOutOfMemory}, die fünf folgenden Ausführungen liefern 200.
+
+Ob gleichzeitige Ausführungen über die Zeit Daten austauschen, prüfte am 2.\ November ein verdeckter Kanal im Agentenprofil
+auf hyper-int-otc. Ein Sender kennt 64 Zufallsbits und rechnet in einem Fenster von 40\,ms für eine 1 und wartet für eine 0.
+Ein Empfänger zählt je Fenster, wie oft eine feste Probe durchläuft, mit \texttt{await setTimeout(0)} als Uhr, die damals
+auf die echte Zeit sprang. Drei Sender liefen entweder im Worker des Empfängers oder als Ausführungen dreier anderer
+Mandanten, deren Worker auf demselben Knoten lagen. Die Platzierung jeder Ausführung ist aus den Logs geprüft. Weil die
+Polarität aus den Daten gewählt wird, entspricht Raten einer Bitfehlerrate von rund 0,45. Unter \ac{CPU}-Last lag sie im
+selben Pod in fünf Läufen bei 0,30 bis 0,39, zwischen den Pods bei 0,38 bis 0,48. Unter Allocation-Last, die den Garbage
+Collector treibt, lag sie in beiden Fällen bei 0,25 bis 0,44, und ein Pod je Ausführung schlösse diesen Weg nicht. Mit dem
+Executor-Stand vom selben Tag, dessen Uhr bei Timern virtuell läuft (\autoref{sec:kompatibilitaetsschicht}), erreichte
+kein Lauf mehr seine Fenster. Eine externe Zeitquelle über eine Regel aus dem Aufruf, wie sie der Stand ohne Schnittmenge
+zuließ (\autoref{sec:faehigkeitsmodell}), öffnete den Kanal im selben Pod wieder, unzuverlässig mit 0,08 bis 0,50 in sieben
+Läufen bei 16 Bits und 500-ms-Fenstern, ohne Wahl der Polarität gegen 0,5 für Raten. Zwischen den Pods lag er bis auf einen
+Lauf (0,31) auf Zufallsniveau. Die Läufe sind wenige, die Richtung bei \ac{CPU}-Last ist einheitlich, die Größe nicht belastbar.
 
 T7 und T9 wurden am 28.\ und 30.\ Oktober gegen den Egress-Proxy mit beiden Profilen in enforce wiederholt, mit der Testregel
 example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen der eigene Mandant und die
 Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, TCP zu 1.1.1.1:53, die Testregel auf Port 80,
-\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil mit einer zweiten Regel,
-die das Gateway für den Lauf registriert (example.net, GET), gehen der eigene Mandant, diese Regel mit GET und die Testregel durch, abgewiesen werden dieselbe Regel
+\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil mit einer Regel aus dem Aufruf
+(example.net, GET), die der damalige Stand ohne Schnittmenge übernahm (\autoref{sec:faehigkeitsmodell}), gehen der eigene Mandant, diese Regel mit GET und die Testregel durch, abgewiesen werden dieselbe Regel
 mit POST, example.com, ein fremder Mandant, 1.1.1.1 und die internen Ziele, und das Anfrageprotokoll führt alle Versuche.
 Beide Profile bestehen, die Politik wirkt also, nicht nur der Durchsetzungspunkt. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
 

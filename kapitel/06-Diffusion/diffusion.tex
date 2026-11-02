@@ -60,7 +60,8 @@ Isolate-Grenze (\autoref{sec:betriebsplanung}).
 U5 beantworten die beiden folgenden Abschnitte. Zuvor die Grenzen. Die der Ergebnisse begründet
 \autoref{sec:messaufbau}, weitere folgen aus dem Entwurf (\autoref{sec:betriebsplanung}). S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht erhoben hat
 (\autoref{sec:pruefung-kompatibilitaet}). Die Sicherheitsaussage für das Agentenprofil gilt für aufeinanderfolgende
-Ausführungen, und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Und eine Ausführung läuft ein zweites Mal, wenn ihr
+Ausführungen. Zwischen gleichzeitigen im selben Pod trägt ein verdeckter Kanal, sobald ein freigegebenes Ziel eine Uhr
+liefert (\autoref{sec:pruefung-isolation}), und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Und eine Ausführung läuft ein zweites Mal, wenn ihr
 Worker oder ihre Sandbox mittendrin stirbt (\autoref{sec:zuteilung}). Offen bleiben drei Beobachtungen aus der Evaluation: das
 95.\ Perzentil von 898\,ms im ersten Noisy-Neighbour-Lauf, die Korrektur vom 2.\ November, die nicht erneut unter Last gemessen
 ist, und das Verwerfen verspäteter Skripte, das seit dem 27.\ Oktober umgesetzt, aber nicht gemessen ist.
@@ -131,9 +132,11 @@ höchstens einmal zu, der Prototyp führt ein Skript nach einem Absturz ein zwei
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
 
-Zwei Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft die Engine: Eine nach WebAssembly
+Drei Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft die Engine: Eine nach WebAssembly
 kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ließe sich später einsetzen, ohne Grenze und Zuteilung zu ändern,
 und der Wechsel des Deno-Teams zu Cloudflare macht \texttt{deno\_core} zu einer Abhängigkeit mit absehbarem Ende
 (\autoref{sec:betriebsplanung}). Die zweite betrifft die Zustellung. Ob eine zweite Ausführung nach einem Absturz für nicht idempotente Skripte
 hinnehmbar ist oder eine Startmarke je Nachricht (\autoref{sec:zuteilung}), sie als Fehlschlag melden soll, ist mit den
-Mandanten zu klären und zu messen.
+Mandanten zu klären und zu messen. Die dritte betrifft gleichzeitige Agentenläufe: Teilten sich nur Ausführungen derselben
+Person einen Pod statt aller eines Mandanten, entfiele der Kanal aus \autoref{sec:pruefung-isolation} zwischen Personen,
+ohne einen Pod je Ausführung. Ob das nötig ist, zeigt sich erst, wenn Agenten Skripte erzeugen.

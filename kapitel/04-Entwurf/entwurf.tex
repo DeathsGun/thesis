@@ -565,9 +565,11 @@ Die Menge der Bindings legt fest, \emph{ob} ein Skript nach außen sprechen kann
 Beide Profile schicken \texttt{fetch} als \ac{HTTP}-Anfrage und Sockets als \texttt{CONNECT}-Tunnel an den Proxy, jeden Hop einer
 Redirect-Kette einzeln. Die Registrierung des Gateways nennt Mandant, Profil, Grenzen und Regeln. Eine Regel nennt einen
 Host, exakt, als \ac{IP}-Adresse oder als Wildcard, und optional Port, Pfadpräfix und Methoden. Ein Tunnel passt nur auf eine Regel mit
-Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Die Regeln sollen
-mandantenweit in der Skriptverwaltung gepflegt werden. Aus demselben Grund setzt bei Agentenläufen das Gateway die Regeln
-selbst, und der Aufruf des Agentensystems, dessen Eingaben nach V2 beeinflussbar sind, kann keine mitbringen. Unabhängig von ihnen verwirft der Proxy private, Loopback-,
+Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Sie stammen
+aus der Konfiguration des Mandanten, die die Skriptverwaltung mandantenweit pflegen soll. Ein Aufruf kann Regeln mitgeben,
+sie aber nur einschränken: Das Gateway registriert die Schnittmenge aus den Regeln des Aufrufs und denen des Mandanten. Das
+betrifft vor allem Agentenläufe, deren Aufrufer nach V2 beeinflussbar ist und sonst jedes Ziel freigeben könnte, auch eine
+Zeitquelle für den Kanal aus \autoref{sec:pruefung-isolation}. Unabhängig von den Regeln verwirft der Proxy private, Loopback-,
 Link-Local- und Metadaten-Adressen und die Adressbereiche des Clusters. Einen Treffer außerhalb der Regeln lehnt er im
 Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Proxy wertet Agentenläufe ohne Angabe in enforce.
 Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. Er registrierte beide Profile in audit,
@@ -615,10 +617,13 @@ Schicht sind eigene Shims mit Bindings: \texttt{net}, \texttt{tls}, \texttt{http
 beginnt. Die dritte sind die Web-Globals jeder Ausführung, darunter Timer, \texttt{URL} und \texttt{AbortController}.
 Nicht enthalten ist die Kompatibilitätsschicht von Deno. \texttt{process} ist so klein wie dort: Die
 Umgebungsvariablen des Hosts bleiben leer, die Variablen des Mandanten erreichen das Skript wie im Ausgangszustand
-über \texttt{req.variables()}. Die Globals bringen eine Uhr mit, die nur bei abgeschlossener Ein- und Ausgabe
-fortschreitet, wie bei der Workers-Plattform \autocite{cloudflare_security_2026}. Eine Schleife ohne Ein- und Ausgabe
-sieht keine Zeit vergehen. Das erschwert die feine Zeitmessung, die Seitenkanäle im Prozess voraussetzen, verhindert sie aber nicht, denn ein
-entfernter Timer umgeht die Uhr \autocite{schwarzl_remote-timer-as--service_2026}. Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
+über \texttt{req.variables()}. Die Globals bringen eine Uhr mit, die während synchroner Ausführung steht, nach dem Vorbild
+der Workers-Plattform \autocite{cloudflare_security_2026}. Ein Timer rückt sie nur um seine eigene Verzögerung vor, gerechnet
+ab dem Stand beim Anlegen. Die echte Zeit zeigt sie erst beim Start und nach abgeschlossener Ein- und Ausgabe, auf 100\,ms
+abgerundet nach einem zufälligen Versatz aus der Zufallsquelle des Hosts. Ein Skript kann seine eigene Arbeit damit nicht in
+echten Millisekunden messen und sich nicht an der Wanduhr ausrichten. Eine Zeitquelle außerhalb der Sandbox umgeht die Uhr
+\autocite{schwarzl_remote-timer-as--service_2026}, sofern die Regeln aus \autoref{sec:faehigkeitsmodell} sie erreichbar
+machen. Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
 
 Ob die Schicht trägt, wird auf drei Wegen geprüft, deren Ergebnisse \autoref{sec:Evaluation} berichtet. Ein
 Differenztest führt 757 Fälle, die in einem echten Node derselben Version erzeugt wurden, in einem frischen Isolate
@@ -823,8 +828,16 @@ Kostenentscheidung.
 Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich
 Ausführungen desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben
 Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandantengrenze ist. M2 und
-die Prüffälle betreffen aufeinanderfolgende Ausführungen. Die Uhr aus \autoref{sec:kompatibilitaetsschicht} mildert das,
-schließt es aber nicht, weil ein entfernter Timer sie umgeht.
+die Prüffälle betreffen aufeinanderfolgende Ausführungen. Auf hyper-int-otc trug zwischen ihnen ein verdeckter Kanal über die
+\ac{CPU}, den getrennte Pods auf demselben Knoten nicht zeigten (\autoref{sec:pruefung-isolation}). Seit die Uhr aus
+\autoref{sec:kompatibilitaetsschicht} bei Timern virtuell läuft, braucht er eine externe Zeitquelle, und die erreicht ein
+Skript nur über die Regeln aus \autoref{sec:faehigkeitsmodell}. Ausschließen lässt sie sich damit nicht: Jedes Ziel, das
+der Mandant freigibt, kann Zeitstempel liefern, mindestens das eigene System mit seinem \texttt{Date}-Header auf die
+Sekunde. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite eines solchen Kanals deckelte, ist nicht vorgesehen.
+Ungeprüft bleibt der gemeinsame Adressraum: Ohne die Speichersandbox von V8 erreicht ein Speicherfehler in der Engine die
+Heaps der gleichzeitigen Isolates desselben Prozesses. Der Entwurf behält trotzdem mehrere Slots je Pod. Das Restrisiko
+bleibt innerhalb eines Mandanten, und ein Pod je Ausführung schlösse den Kanal über den Garbage Collector nicht, der auch
+zwischen Pods auf demselben Knoten trug (\autoref{sec:pruefung-isolation}).
 
 Eine vierte Einschränkung betrifft die Zugangsdaten. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
 NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth Callout aus

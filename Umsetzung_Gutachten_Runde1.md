@@ -11,13 +11,13 @@ Stand: 2. November 2026. Abschnittsnummern nach der überarbeiteten Fassung.
 | R3 | umgesetzt | 1.2 (Ausgangszustand hat Zustandsfreiheit selbst hergestellt, Evaluation misst gegen diesen Stand); 6.1 U3 beginnt mit „Unterschied allein bei M4“; Tab. 3 neue Zeile „Ausgangszustand am 30. Oktober, Worker-Thread je Ausführung“ |
 | R4 | umgesetzt | Tab. 11: S6 „(Obergrenze)“, Herkunft „abgeleitet“; S7 ebenfalls „abgeleitet“. Scanner-Lauf nicht wiederholt. |
 | R5 | umgesetzt (Kennzeichnung) | 5.4: Wert aus einem Lauf, vorläufig, bei Stufe 200 Nutzwert −0,2; Tab. 11 „Stufe 300/s verfehlt“, Herkunft „ein Lauf, vorläufig“; 6.1 U4 „in einem Lauf … verfehlte Stufe bei 300“. Keine Wiederholung. |
-| R6 | umgesetzt | 4.3.4: Bei Agentenläufen setzt das Gateway die Regeln, der Aufruf des Agentensystems kann keine mitbringen; 5.6: „Regel des Aufrufers“ ersetzt durch „zweite Regel, die das Gateway für den Lauf registriert“ |
+| R6 | umgesetzt | 4.3.4: Regeln stammen aus der Mandantenkonfiguration, Regeln aus dem Aufruf schränken sie nur ein (Schnittmenge im Gateway); 5.6: die Testregel im Agentenprofil kam aus dem Aufruf und wurde vom damaligen Stand ohne Schnittmenge übernommen. Schnittmenge im Gateway am 3. November umzusetzen. |
 
 ## Empfohlene Änderungen
 
 | Ref | Status | Wo |
 |---|---|---|
-| S1 | Variante entfernt | Ein Slot je Pod aus der Arbeit gestrichen (4.4, 5.2, 5.4, 6.1, Ausblick, Tab. „Stand je Beleg“). 4.4 nennt die Lücke bei gleichzeitigen Ausführungen weiter, ohne Abhilfe. Ausblick hat jetzt zwei Fragen. |
+| S1 | Variante entfernt, Kanal gemessen | Ein Slot je Pod aus der Arbeit gestrichen (4.4, 5.2, 5.4, 6.1, Ausblick, Tab. „Stand je Beleg“). 4.4 nennt die Lücke bei gleichzeitigen Ausführungen weiter. 5.6 misst einen verdeckten Kanal zwischen gleichzeitigen Ausführungen (gleicher Pod gegen getrennte Pods auf einem Knoten), 4.3.5 beschreibt die Uhr mit virtueller Zeit bei Timern. 4.4 begründet, warum mehrere Slots bleiben, und nennt das Restrisiko (Zeitquellen über freigegebene Ziele, keine Begrenzung der Anfragen je Zeit, gemeinsamer Adressraum). Ausblick: dritte Frage zur Trennung nach Person. |
 | S2 | umgesetzt | 1.2 SAND, Faastlane, Cloudflare-Blog (Bloom 2018); 4.1 Kata Containers; 4.3.2 SAND als Vorbild der zweistufigen Trennung. Vier neue Bib-Einträge. |
 | S3 | umgesetzt | 3.4.3: T1–T8 standen vor der Umsetzung der Mechanismen fest; T9/T10 während der Evaluation |
 | S4 | umgesetzt | 5.6 nach dem M3-Befund |
