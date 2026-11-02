@@ -356,7 +356,8 @@ pub fn for_profile(profile: Profile) -> Self {
 \begin{table}[H]
   \caption{Agentenprofil auf dem Prototyp, Endstand vom 2.\ November, k6 vom Laptop über den Edge-Proxy. Warm: fünf Mandanten mit zusammen 10 Aufrufen je Sekunde
     über drei Minuten, je 1.801 Aufrufe, Agent und Webhook-Profil (Hello World) direkt nacheinander, P50 / P95 / P99 in Millisekunden.
-    Kaltstart: 30 Mandanten seit dem 30.\ Oktober ohne Aufruf, ein Erstaufruf je Sekunde, 30 Sekunden später je zehn warme Aufrufe}
+    Kaltstart: 30 Mandanten seit dem 30.\ Oktober ohne Aufruf, ein Erstaufruf je Sekunde, 30 Sekunden später je zehn warme Aufrufe. Die Gateway-Werte stammen aus Histogrammen in Tempo, ihre oberen Quantile sind grob und
+    können über den Client-Werten liegen}
   \label{tab:agent-latenz}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
@@ -462,6 +463,7 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     Alle Mandanten & 1.718 & \\
     Ohne blockierendes Merkmal & 1.005 & läuft \\
+    \quad davon nur durch einen Parse-Fehler betroffen & 4 & nicht einstufbar, in der Obergrenze als lauffähig gezählt \\
     Nur ein Netzwerk-Binding blockiert (HTTP 629, Sockets 63, beide 44) & 648 & läuft über die Schicht, Annahme \\
     Übrige, nur \texttt{http}, \texttt{https}, \texttt{net} oder \texttt{tls} & 16 & läuft über die Schicht, Annahme \\
     Übrige, Skripte gelesen und im Probelauf geprüft & 49 & \\

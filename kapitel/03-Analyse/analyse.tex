@@ -113,8 +113,8 @@ Ausgewertet wurden 1.718 Mandanten mit 14.575 Skriptversionen, die sich auf 8.31
 zuverlässig bestimmen lassen (269 Inhalte, 519 Skriptversionen, 25 Mandanten), eine Gegenrechnung ohne den Filter
 verschiebt die Kennzahlen um gut einen Prozentpunkt. Jedes Skript wird anhand seiner Importe klassifiziert, wobei die
 härteste Einschränkung zählt, und ein Mandant erhält die Einstufung seines härtesten Skripts. Die Analyse ist
-statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündeltes Kompilat, 24 Skripte fallen als
-Parse-Fehler an und gelten vorsorglich als blockierend. Ein Import sagt nichts darüber, was ein npm-Paket seinerseits
+statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündeltes Kompilat, 27 Versionen bei 24 Mandanten sind
+Parse-Fehler und nicht einstufbar. Ein Import sagt nichts darüber, was ein npm-Paket seinerseits
 benötigt, weshalb für die Pakete mit nennenswertem Mandantengewicht der ausgelieferte Quelltext gelesen wurde, 27 von
 203 verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
 
@@ -174,7 +174,7 @@ Der Datensatz deckt allein die heutige Webhook-Verarbeitung ab, zum Agentenprofi
 hat, lässt sich aus ihm nichts ableiten. Aufrufzahlen enthält er nicht, ein Mandant mit einem Skript pro Monat wiegt so
 schwer wie einer mit hoher Aufruffrequenz, weshalb die Mandantenquote eine Obergrenze der praktischen Betroffenheit
 ist und keine Schätzung. Die transitive Hülle ist unvollständig, was das angegebene Intervall abbildet. Die Auswertung
-erfolgte aggregiert, ohne Codeausschnitte und ohne Mandantenkennungen.
+erfolgte mit Freigabe der d.velop AG, aggregiert und ohne Codeausschnitte und Mandantenkennungen.
 
 \subsection{Angreifermodell und relevante Angriffswege}
 \label{sec:angreifermodell}
