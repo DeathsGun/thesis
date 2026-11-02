@@ -421,16 +421,20 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{95-\%-Bootstrap-Intervalle des Overheads in Millisekunden, Blöcke von 1.000 aufeinanderfolgenden Aufrufen,
-    1.000 Ziehungen}
+  \caption{95-\%-Bootstrap-Intervalle des Overheads in Millisekunden je Lauf vom 29.\ Oktober, Blöcke von 1.000
+    aufeinanderfolgenden Aufrufen, 1.000 Ziehungen}
   \label{tab:konfidenz}
   \small
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
     \hline
-    Lauf vom 26.\ Oktober (Aufrufe) & P50 & P90 & P95 & P99 \\
+    Lauf & P50 & P90 & P95 & P99 \\
     \hline
-    Nach der Trennung in Transport und Sandbox (57.001) & 126 bis 131 & 162 bis 168 & 178 bis 190 & 423 bis 444 \\
-    Control Plane beendet den Leerlauf (56.987) & 136 bis 140 & 234 bis 243 & 287 bis 297 & 386 bis 420 \\
+    P1, Prototyp & 143 bis 148 & 227 bis 249 & 284 bis 296 & 354 bis 371 \\
+    P2, Prototyp & 138 bis 141 & 177 bis 186 & 208 bis 233 & 301 bis 327 \\
+    P3, Prototyp & 141 bis 147 & 194 bis 217 & 241 bis 267 & 326 bis 345 \\
+    K1, Ausgangszustand & 305 bis 312 & 474 bis 530 & 676 bis 875 & 3.204 bis 5.045 \\
+    K2, Ausgangszustand & 308 bis 316 & 490 bis 541 & 690 bis 857 & 3.061 bis 4.628 \\
+    K3, Ausgangszustand & 298 bis 302 & 445 bis 494 & 670 bis 814 & 3.066 bis 4.483 \\
     \hline
   \end{tabularx}
 \end{table}

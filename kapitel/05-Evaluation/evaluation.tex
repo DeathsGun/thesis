@@ -86,7 +86,7 @@ Lauf mit vorher geprüfter Route. Angegeben ist die Spannweite der drei Läufe. 
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
 berichten \autocites[S.~6]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}.
 Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung, die Prüffälle und B6 haben je einen Lauf. Innerhalb eines Laufs geben
-\autoref{tab:konfidenz} und \autoref{tab:kaltstart-ki} im Anhang Bootstrap-Intervalle für die Läufe vom 26.\ Oktober an.
+\autoref{tab:kaltstart-ki} (S1) und \autoref{tab:konfidenz} (S2) im Anhang Intervalle für die Läufe vom 29.\ Oktober an.
 
 \subsection{Kaltstartlatenz (S1)}
 \label{sec:kaltstart}
@@ -189,7 +189,7 @@ kleinen Anteil Erstkontakte.
 Auf demselben Cluster und unter demselben Profil liegt der Prototyp im Median bei 139 bis 145\,ms gegen 300 bis 312\,ms des
 Ausgangszustands, im 95.\ Perzentil bei 220 bis 291 gegen 720 bis 745\,ms und im 99.\ bei 313 bis 361\,ms gegen 3,5 bis
 3,7 Sekunden. Gemessen an den mittleren Läufen ist das das 2,1-, 2,4-, 2,9- und 10-Fache im 50., 90., 95.\ und 99.\ Perzentil, und
-die Spannweiten überlappen sich in keinem. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
+weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
 zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht. Lauf 18 vom 13.\ Oktober (P99 4,57 Sekunden,
