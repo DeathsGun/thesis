@@ -28,9 +28,8 @@ Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
 
 U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Die neun Prüffälle, die aus dem
 Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle. Der Ausgangszustand besteht am 30.\ Oktober sieben,
-T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Der Unterschied liegt bei M4 und nicht bei M2, seit
-sein Runner jedes Skript in einem Worker-Thread ausführt. T7 und T9 bestehen gegen den Egress-Proxy in enforce
-in beiden Profilen, mit einer festen Testregel und nicht mit dem Regelwerk eines Mandanten. Zustand überdauert keine Ausführung, ein erschöpfter Heap
+T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem, und nicht bei M2, seit
+sein Runner jedes Skript in einem Worker-Thread ausführt. T7 und T9 bestehen im Prototyp gegen den Proxy in enforce, mit einer festen Testregel. Zustand überdauert keine Ausführung, ein erschöpfter Heap
 trifft nur die verursachende, und Netz, Dateisystem und Identität sind nur über Bindings und Proxy erreichbar. M3 gilt auf Clustern mit gVisor als erfüllt, weil
 der Pod in keinem Feld der Kernel-Oberfläche lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M5, der gemessene Prototyp
 M2 bis M5: M1 ist lokal belegt (T10) und hängt auf der Plattform an der Einrichtung des Callouts.
@@ -43,7 +42,7 @@ Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings, und beide sind trenn
 Runner-Pods, unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis 34\,GiB, der Durchsatz liegt bei 400 statt 200 Aufrufen je Sekunde
 (\autoref{sec:durchsatz}), und beim Knotenentzug
 bleibt die Lücke für neue Ausführungen bei 0,2 bis 0,3 statt 2,1 bis 2,7 Sekunden, ohne verlorene und ohne doppelte Ausführung in drei Läufen mit 48 Ausführungen (\autoref{sec:pruefung-m5}). In der Zusammenführung erreicht der Prototyp auf vier der
-sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte, und kommt auf 4,5 gegen 3,7 (\autoref{sec:nutzwert}), wobei S6 abgeleitet statt gemessen ist. Für das Agentenprofil gibt es nur Richtwerte und den Speicherbedarf mit einem Slot je Pod.
+sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte, und kommt auf 4,5 gegen 3,7 (\autoref{sec:nutzwert}), wobei S6 abgeleitet statt gemessen ist. Für das Agentenprofil gibt es Messwerte gegen das Webhook-Profil auf dem Prototyp und den Speicherbedarf mit einem Slot je Pod.
 
 U5 beantworten die beiden folgenden Abschnitte. Zuvor die Grenzen. Die der Ergebnisse begründet
 \autoref{sec:messaufbau}, weitere folgen aus dem Entwurf (\autoref{sec:betriebsplanung}). S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht erhoben hat

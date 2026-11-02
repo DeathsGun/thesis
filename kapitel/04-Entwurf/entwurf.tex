@@ -53,7 +53,7 @@ unterschiedlichen Stellen: Ein Container ist eine äußere, vom Kern durchgesetz
 Grenze innerhalb eines Prozesses. Eine äußere Grenze existiert in jedem Entwurf. Wie viel die innere beim Start
 spart, zeigen \textcite[S.~645--646]{boucher_putting_2018} für sprachbasierte Isolation in Rust: Kaltstarts im Median
 von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Für V8 sind die Größenordnungen andere:
-Ein Isolate zu bauen kostet im Executor lokal 3,3\,ms und im Cluster 19\,ms, ein Node.js-Prozess lokal 69 und unter gVisor 53\,ms
+Ein Isolate zu bauen kostet im Executor lokal auf einem Mac 3,3\,ms und im Cluster 19\,ms, ein Node.js-Prozess dort 69 und unter gVisor 53\,ms
 (\autoref{tab:prozessstart}). Offen sind daher zwei andere
 Fragen, ob zusätzlich eine innere Grenze eingezogen wird und wie viele Ausführungseinheiten sich eine Grenze teilen.
 
@@ -170,9 +170,8 @@ Die Wahl stützt sich auf den Entwurf.
 
 Der Ausgangszustand verletzte bei der Analyse M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
 teilen, und verletzt M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Seit er jedes Skript in einem
-Worker-Thread ausführt, besteht er die Prüffälle zur Zustandsfreiheit (\autoref{sec:pruefung-isolation}). Ein Worker-Thread ist im Kern
-ein eigenes V8-Isolate im selben Prozess, der Ausgangszustand liegt damit nahe an der Bauart mit einem Isolate je Ausführung in einem
-Node.js-Host. Der Unterschied zum Prototyp liegt bei M4: Das Skript sieht weiter Umgebung und Netz des Hosts, T7 und T9 schlagen fehl.
+Worker-Thread ausführt, im Kern ein V8-Isolate im selben Prozess, besteht er die Prüffälle zur Zustandsfreiheit (\autoref{sec:pruefung-isolation}) und liegt nahe an
+der Bauart mit einem Isolate je Ausführung in einem Node.js-Host. Bei M4 bleibt der Unterschied: Das Skript sieht Umgebung, Netz und das echte Dateisystem des Containers (T7 und T9 schlagen fehl).
 
 Ein frischer Node-Prozess je Ausführung stellt Zustandsfreiheit her und
 erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Auch mit Egress-Proxy und Netzwerkrichtlinie
@@ -833,9 +832,8 @@ Weitere Maßnahmen folgen aus der Umsetzung und sind im Quellcode als solche mar
 der Regeln fehlt, solange die Skriptverwaltung keine hält, und der Prototyp gibt sie fest vor, im Modus audit, der nur die
 internen Bereiche verwehrt, oder wie am 28.\ Oktober in enforce mit einer Testregel. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
 nicht umgesetzt. Ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist
-nicht erhoben. Die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Für enforce im Betrieb ist das zu erheben, und S6
+nicht erhoben, denn die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Für enforce im Betrieb ist das zu erheben, und S6
 und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für
 synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
-erzeugtes Isolate wahren M2, solange jedes Isolate genau eine Ausführung trägt. Der Executor baut seit
-den Messungen vom 29.\ Oktober je Profil das nächste Isolate vorab (\autoref{sec:warm}). Eine weitere folgt aus der Messung mit leerem Pool
+erzeugtes Isolate (\autoref{sec:warm}) wahren M2, solange jedes Isolate genau eine Ausführung trägt. Eine weitere folgt aus der Messung mit leerem Pool
 (\autoref{sec:kaltstart}): Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der Kaltstarts.

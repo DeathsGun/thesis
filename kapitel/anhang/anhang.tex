@@ -354,6 +354,82 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
+  \caption{Agentenprofil auf dem Prototyp, Endstand vom 2.\ November, k6 vom Laptop über den Edge-Proxy. Warm: fünf Mandanten mit zusammen 10 Aufrufen je Sekunde
+    über drei Minuten, je 1.801 Aufrufe, Agent und Webhook-Profil (Hello World) direkt nacheinander, P50 / P95 / P99 in Millisekunden.
+    Kaltstart: 30 Mandanten seit dem 30.\ Oktober ohne Aufruf, ein Erstaufruf je Sekunde, 30 Sekunden später je zehn warme Aufrufe}
+  \label{tab:agent-latenz}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
+    \hline
+    Messgröße & Agent & Webhook-Profil \\
+    \hline
+    Client & 85,0 / 121,9 / 140,8 & 118,0 / 183,0 / 238,6 \\
+    Gateway gesamt & 23,9 / 32,8 / 49,9 & 49,3 / 107,7 / 215,3 \\
+    Skript auflösen (Skriptdienst) & -- & 25,7 / 65,9 / 126,6 \\
+    Registrierung beim Proxy & 7,8 / 15,7 / 16,8 & -- \\
+    \texttt{execute script}, NATS bis Antwort & 11,9 / 16,4 / 26,2 & 12,5 / 26,6 / 33,1 \\
+    Isolate erzeugen, P50 / P95 & 8 / 10 & -- \\
+    Skript ausführen, P50 / P95 & 1 / 3 & -- \\
+    \multicolumn{3}{@{}l}{\emph{Kaltstart}} \\
+    Erstaufruf, Client, P50 / P95 / Maximum & 546 / 647 / 954 & -- \\
+    Erstaufruf, Gateway, P50 / P95 / P99 & 157 / 852 / 1.074 & -- \\
+    Warme Aufrufe danach, Client, P50 / P95 / Maximum & 84 / 121 / 174 & -- \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Agentenprofil, Größe von Ein- und Ausgabe, ein Mandant, je Größe 20 Aufrufe nacheinander, Client P50 / P95 in Millisekunden. Oberhalb
+    von 64\,KiB geht der Körper über S3 mit vorsignierten Adressen}
+  \label{tab:agent-groesse}
+  \footnotesize
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabularx}{\textwidth}{@{}l r r r r r r r@{}}
+    \hline
+     & 1\,KiB & 32\,KiB & 63\,KiB & 65\,KiB & 256\,KiB & 1\,MiB & 4\,MiB \\
+    \hline
+    Eingabe & 105 / 124 & 100 / 156 & 134 / 177 & 237 / 392 & 371 / 549 & 510 / 1.127 & 1.102 / 1.937 \\
+    Ausgabe & 85 / 118 & 91 / 131 & 102 / 138 & 155 / 337 & 231 / 393 & 335 / 611 & 843 / 1.392 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Agentenprofil, ausgehende Anfragen an das eigene System über den Proxy in enforce, je Anzahl 30 Läufe nacheinander, Millisekunden}
+  \label{tab:agent-egress}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}r r r r@{}}
+    \hline
+    Anfragen je Lauf & Client P50 / P95 & Skript P50 & je Anfrage laut Proxy P50 / P95 \\
+    \hline
+    0 & 81 / 126 & 1 & -- \\
+    1 & 176 / 240 & 95 & 75 / 108 \\
+    5 & 544 / 599 & 454 & 74 / 110 \\
+    10 & 981 / 1.098 & 882 & 74 / 109 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Agentenprofil, Parallelität auf einem Mandanten, geschlossene Schleife, je Stufe 60 Sekunden, Millisekunden. Alle Aufrufe gelangen mit
+    Status 200 durch}
+  \label{tab:agent-parallel}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}r r r r r@{}}
+    \hline
+    gleichzeitig & Aufrufe & Aufrufe/s & Client P50 / P95 / P99 & Gateway P50 / P95 / P99 \\
+    \hline
+    1 & 619 & 10,4 & 89 / 125 / 139 & 23,9 / 33,0 / 54,2 \\
+    4 & 2.481 & 41,4 & 89 / 130 / 149 & 23,9 / 33,1 / 53,8 \\
+    8 & 4.986 & 83,2 & 89 / 127 / 149 & 23,9 / 33,0 / 51,9 \\
+    16 & 8.543 & 142,4 & 109 / 161 / 249 & 24,2 / 37,8 / 60,7 \\
+    32 & 16.932 & 282,3 & 110 / 157 / 185 & 26,3 / 59,3 / 70,3 \\
+    64 & 30.805 & 512,9 & 120 / 185 / 230 & 32,9 / 108,9 / 142,0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
   \caption{Start eines Isolates und eines Node.js-Prozesses, P50 / P95 in Millisekunden}
   \label{tab:prozessstart}
   \footnotesize
@@ -393,7 +469,7 @@ pub fn for_profile(profile: Profile) -> Self {
     \quad lesen Windows-Pfade & 4 & nicht schlechter, ebenso \\
     \quad Import ungenutzt & 4 & läuft \\
     \quad schreiben nach \texttt{\_\_dirname} & 2 & läuft in beiden \\
-    \quad \texttt{child\_process} & 1 & absichtlich blockiert, ausgenommen \\
+    \quad \texttt{child\_process} & 1 & absichtlich blockiert, der eine nicht lauffähige Mandant \\
     \quad gebündelte Skripte & 4 & nicht unterstützt, nicht als Ausfall gezählt \\
     S6, bis zu & 1.717 von 1.718 & 99,9\,\%, mit den vier gebündelten als Ausfall 1.713, 99,7\,\% \\
     \hline
@@ -412,9 +488,9 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     Bedingung & P95, Lauf 1 & P95, Lauf 2 & P95, Lauf 3 & unter 2\,s & Intervall \\
     \hline
-    Ausgang, verteilt & 3,12 bis 3,30\,s & 3,22 bis 5,02\,s & 2,92 bis 5,18\,s & 3 & 0,2 bis 3,2\,\% \\
-    Pool 40, verteilt & 358 bis 555\,ms & 350\,ms bis 1,22\,s & 406\,ms bis 1,37\,s & 270 & 98,6 bis 100\,\% \\
-    Pool 0, verteilt & 5,70 bis 7,58\,s & 6,06 bis 23,5\,s & 6,32 bis 9,65\,s & 99 & 30,9 bis 42,7\,\% \\
+    Ausgang, verteilt & 3,12 bis 3,31\,s & 3,22 bis 5,03\,s & 2,92 bis 5,18\,s & 3 & 0,2 bis 3,2\,\% \\
+    Pool 40, verteilt & 358 bis 555\,ms & 350\,ms bis 1,23\,s & 406\,ms bis 1,37\,s & 270 & 98,6 bis 100\,\% \\
+    Pool 0, verteilt & 5,70 bis 7,59\,s & 6,06 bis 23,5\,s & 6,32 bis 9,65\,s & 99 & 30,9 bis 42,7\,\% \\
     Ausgang, Schub & 14,1 bis 20,2\,s & 12,7 bis 21,8\,s & 15,3 bis 24,3\,s & 0 & 0 bis 1,4\,\% \\
     Pool 40, Schub & 6,45 bis 10,8\,s & 6,89 bis 11,0\,s & 6,85 bis 8,72\,s & 119 & 38,1 bis 50,2\,\% \\
     Pool 0, Schub & 9,90 bis 12,6\,s & 10,4 bis 14,5\,s & 10,9 bis 13,9\,s & 0 & 0 bis 1,4\,\% \\
@@ -457,6 +533,7 @@ pub fn for_profile(profile: Profile) -> Self {
       Containerstatistiken je Pod unter dem Lastprofil \\
     S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces, 30.\ Oktober & ebenso \\
     Fehlerrate & fehlgeschlagene Aufrufe je Lauf, ohne clientseitige Netzfehler & drei Läufe am 29.\ Oktober \\
+    Agentenprofil & k6 gegen den Agent-Endpunkt, 2.\ November: warm, Erstaufruf, Größe, ausgehende Anfragen, Parallelität & kein Endpunkt \\
     \hline
   \end{tabularx}
 \end{table}

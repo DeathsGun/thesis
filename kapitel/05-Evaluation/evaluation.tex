@@ -34,7 +34,7 @@ Produktivbetrieb der AWS-nativen Variante und ist nur Quelle des Lastprofils.
 Der Prototyp lief in der Konfiguration aus \autoref{tab:parameter}, mit einer Pool-Zielgröße von vierzig und einer
 Skalierungsschwelle von drei Vierteln, beide aus den ersten Läufen. Alle Läufe nutzen das Webhook-Profil mit
 synchroner Antwort. Das Agentenprofil hat keinen Vergleichswert, weil es im Ausgangszustand nicht existiert.
-\autoref{sec:kaltstart} nennt einen Richtwert. Die Prüffälle aus \autoref{sec:pruefung-isolation} laufen in beiden
+\autoref{sec:kaltstart} nennt Messwerte gegen das Webhook-Profil. Die Prüffälle aus \autoref{sec:pruefung-isolation} laufen in beiden
 Profilen.
 
 Die Messungen des Endstands, also S1 bis S4, M5, die Zustellung, T1 bis T9, SandboxEval und M3, liefen am 29.\ und
@@ -146,9 +146,12 @@ Aufrufe gelingen. Dass der Tail im verteilten Lauf mit 6,6 bis 8,2 Sekunden im 9
 liegt nach den Logs der Control Plane daran, dass ein wartender Mandant den nächsten bereiten Pod nimmt, nicht den für ihn angelegten.
 Die Vergabe an den am längsten wartenden Mandanten steht in \autoref{sec:betriebsplanung} als offene Maßnahme.
 
-Für das Agentenprofil gibt es keinen Ausgangswert. Als Richtwert riefen am 21.\ Oktober 2026 dreißig Mandanten im
-Sekundentakt erstmals den Endpunkt der Agentenausführungen auf, mit einem rechnenden Snippet:
-Median 623\,ms, 95.\ Perzentil 816\,ms, alle unter zwei Sekunden.
+Für das Agentenprofil gibt es keinen Ausgangswert, weil Knative keinen Endpunkt dafür hat. Verglichen wird es mit dem Webhook-Profil
+auf demselben Prototyp (Stand vom 2.\ November, ein Snippet, das nur einen Wert zurückgibt). Der Erstaufruf von 30 Mandanten ohne Aufruf seit dem
+30.\ Oktober braucht beim Client im Median 546\,ms, im 95.\ Perzentil 647\,ms, höchstens 954\,ms (\autoref{tab:agent-latenz} im Anhang). Warm liegt der
+Agent mit 85\,ms im Median und 122\,ms im 95.\ Perzentil unter dem Webhook mit 118 und 183\,ms, weil er den Quelltext mitbringt und die Auflösung
+des Skripts entfällt. Ein einzelner Mandant erreicht bis 64 gleichzeitige Aufrufe rund 510 Aufrufe je Sekunde ohne Fehler (\autoref{tab:agent-parallel}), eine
+ausgehende Anfrage über den Proxy kostet im Skript rund 88\,ms (\autoref{tab:agent-egress}), und die Größe von Ein- und Ausgabe zeigt \autoref{tab:agent-groesse}.
 Ein Slot je Pod ändert S1a nicht, weil je Mandant ein
 Aufruf eintrifft (89 von 90 unter zwei Sekunden, Median 286\,ms).
 
@@ -214,8 +217,9 @@ Für S4 stieg die Ankunftsrate in Stufen von je 60 Sekunden um 100 Aufrufe je Se
 Aufrufen je Sekunde und über 100 Mandanten mit je einem Skript. Als Wert gilt die höchste Stufe mit einer
 Fehlerrate unter einem Prozent und einem 95.\ Perzentil unter zwei Sekunden. Fehler gehen in die Perzentile ein. k6 lief als Job im Namespace des
 jeweiligen Modells. Beide Modelle liefen ohne Signatur- und \ac{IdP}-Prüfung über je eine Kopie des Einstiegsdienstes, die
-nur für diesen Test bestand. Der Ausgangszustand lief mit mehreren festen Replikas des Skriptdienstes, weil sich der
-Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Konfiguration gibt es einen Lauf vom 30.\ Oktober.
+nur für diesen Test bestand. Das Gateway des Prototyps hatte einen Kern und 512\,MiB, der Resolve der bestehenden App lief mit drei Replikas.
+Der Ausgangszustand lief mit mehreren festen Replikas des Skriptdienstes, weil sich der
+Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Modell gibt es einen Lauf vom 30.\ Oktober.
 
 \begin{table}[H]
   \caption{Durchsatz (S4) auf hyper-int-otc, höchste Stufe mit Fehlerrate unter einem Prozent und
@@ -227,23 +231,17 @@ Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Konfiguration
     Konfiguration & Stufe & Nächste Stufe \\
     \hline
     Ausgangszustand & 200/s & 300/s: 0,10\,\% Fehler, P95 3,1\,s, ab dort Plateau bei 320 bis 380/s \\
-    Prototyp, Gateway wie ausgerollt (200\,m, 128\,MiB) & 200/s & 300/s: 6,9\,\% Fehler, Gateway zweimal
-      \texttt{OOMKilled} \\
-    Prototyp, Gateway 1 Kern und 512\,MiB, eine Replika für den Resolve & 200/s & 300/s: P95 5,6\,s, 1.248
-      ausgelassene Iterationen \\
-    Prototyp, Gateway 1 Kern und 512\,MiB, drei Replikas für den Resolve & 400/s, bei 300/s P95 3,6\,s & 500/s: P95 2,3\,s, 492/s
-      erreicht, 600/s: P95 4,4\,s, 564/s erreicht, 700/s: 9,4\,\% Fehler \\
+    Prototyp & 400/s, bei 300/s P95 3,6\,s & 500/s: P95 2,3\,s, 492/s erreicht, 600/s: P95 4,4\,s, 564/s erreicht,
+      700/s: 9,4\,\% Fehler \\
     \hline
   \end{tabularx}
 \end{table}
 
-Der Prototyp hält mit drei Replikas für den Resolve 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht. Darüber
-reißt er das Kriterium (500/s: P95 2,3 Sekunden), liefert bei 600 aber noch 564 Aufrufe je Sekunde. Der Wert gilt für das vergrößerte Gateway, wie
-ausgerollt liegt der Prototyp bei 200, gleichauf mit dem Ausgangszustand. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
-bestehenden App: Mit einer Replika ist der Resolve bei 0,92 Kernen ausgelastet und meldet
-\texttt{scriptResolverUnavailable}, mit drei braucht er höchstens 1,3 Kerne und ist kein Engpass mehr. Bei 300 Aufrufen je Sekunde reißt der Prototyp in allen drei Konfigurationen das Kriterium
-(P95 3,3 bis 5,6 Sekunden), am 20.\ Oktober lief die Stufe noch glatt. Die Ursache ist nicht zerlegt. Der Ausgangszustand hat sich gegenüber dem
-20.\ Oktober von 100 auf 200 verbessert, was zum Runner mit Worker-Threads und zur Abstimmung des Autoscalers passt. Die Stufen sind 100 Aufrufe
+Der Prototyp hält 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht. Bei 300 Aufrufen je Sekunde reißt der Prototyp das
+Kriterium (P95 3,6 Sekunden, 740 ausgelassene Iterationen), die Ursache ist nicht zerlegt, bei 400 läuft er wieder sauber. Bei 500 liegt das
+95.\ Perzentil mit 2,3 Sekunden knapp darüber, bei 600 liefert er noch 564 Aufrufe je Sekunde. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
+bestehenden App: Der Resolve braucht im Lauf höchstens 1,3 Kerne, das Gateway 0,64. Der Ausgangszustand hat sich gegenüber dem 20.\ Oktober von 100 auf 200 verbessert, was zum Runner mit
+Worker-Threads und zur Abstimmung des Autoscalers passt. Die Stufen sind 100 Aufrufe
 breit und der Wert ist eine untere Schranke.
 
 S3 wird je Pod erhoben, weil der Ausgangszustand je Ausführung ohnehin einen ganzen Pod belegt und ein Worker-Pod
@@ -335,7 +333,7 @@ ausgelesen.
          Kubernetes-\acs{API} und zum Loopback wird aufgebaut, \texttt{worker\_threads} ist verfügbar. Prototyp, enforce: nur
          der eigene Mandant und die Testregel, \texttt{Deno.core.ops} nicht erreichbar. \\
     T8 & bestanden & bestanden & bestanden & Alle: \texttt{/etc}, \texttt{/proc} und das Token des Service-Accounts sind nicht lesbar.
-         Ausgangszustand: 23 Umgebungsvariablen sichtbar, Prototyp: keine. \\
+         Ausgangszustand: echtes Dateisystem des Containers, 23 Umgebungsvariablen sichtbar. Prototyp: nur ein Dateisystem im Speicher, keine Umgebungsvariablen. \\
     T9 & nicht best. & nicht best. & bestanden & Alle: Überschreibungen gelingen im Skript. Ausgangszustand: Der Host eines anderen Mandanten
          ist erreichbar, es gibt keine Identitätsbindung. Prototyp: eigener Host 200, fremder abgewiesen. \\
     \hline
@@ -346,7 +344,7 @@ ausgelesen.
 Ausgangszustand heute zwei nicht, T7 und T9, und bei T8 Umgebungsvariablen preisgibt. Am 19.\ Oktober waren es sieben.
 Die Fehlschläge bei T1 bis T3, T5 und T6 gingen auf den gemeinsamen Node.js-Prozess zurück (\autoref{sec:angreifermodell})
 und sind behoben, seit der Runner jedes Skript in einem verworfenen Worker-Thread ausführt. Die Zustandsfreiheit hat der
-Ausgangszustand damit selbst hergestellt. Der Unterschied liegt bei M4: T7 und T9 betreffen den Weg nach außen, T8 die Umgebung.
+Ausgangszustand damit selbst hergestellt. Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem: T7 und T9 betreffen den Weg nach außen, T8 gilt wegen der nicht lesbaren Pfade als bestanden, lässt aber Umgebung und Dateisystem offen.
 
 Dieselben neun Prüffälle liefen am 21.\ Oktober 2026, T7 am 30.\ Oktober erneut, im Agentenprofil des Prototyps auf einem zweiten
 Testmandanten, als Snippets über den Endpunkt der Agentenausführungen, übertragen auf die Mittel des Profils, weil es weder
@@ -387,7 +385,7 @@ keinen Prozess-Namespace, die Sandbox hat keine Volumes, und Identitätssecret u
 Transport eingehängt, ohne Token des Service-Accounts. Das Netz teilen beide Container. Dass der Transport fremde
 Kommandos abweist und NATS ohne Zugangsdaten nichts zulässt, ist nur lokal geprüft.
 
-Ein Skript erreicht das Netz nur über den Proxy (T7).
+Ein Skript erreicht das Netz nur über den Proxy (T7). Ob das auch nach einem Ausbruch aus dem Isolate gilt, ist nicht geprüft.
 
 Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noisy-Neighbour-Test am 2.\ November, je Modell dreimal verschränkt.
 Mandant A ruft mit 40 Aufrufern ein Skript auf, das zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein
@@ -467,8 +465,8 @@ Die Machbarkeitsprüfung an \texttt{tedious} aus \autoref{sec:kompatibilitaetssc
 wiederholt und ist bestanden: Der unveränderte Treiber (20.3.8) verbindet sich in drei Läufen über den Socket-Shim mit einer
 echten Datenbankinstanz, stellt im \ac{TDS}-Datenstrom auf \ac{TLS} um und fragt ab, beide Negativkontrollen schlagen wie in Node fehl.
 Auch der Differenztest mit 757 Fällen und die 440 Tests des Executors bestehen. Gebündelte Pakete laufen ebenfalls
-(\autoref{tab:bundles} im Anhang): Mit den häufigsten, darunter \texttt{axios} und \texttt{@dvelop-sdk/dms}, gelingen alle 250 Aufrufe im
-Prototyp, kalt unter 1,5 Sekunden.
+(\autoref{tab:bundles} im Anhang): Mit den vier häufigsten Paketen des Bestands, darunter \texttt{axios} und \texttt{@dvelop-sdk/dms}, und \enquote{Hello World} gelingen
+alle 525 Aufrufe im Prototyp, kalt in höchstens 1,4 Sekunden.
 
 \subsection{Zusammenführung}
 \label{sec:nutzwert}

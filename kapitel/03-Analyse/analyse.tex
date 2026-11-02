@@ -220,7 +220,7 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 
 Der zweite Weg greift eine Isolationsgrenze an, die innerhalb eines Prozesses verläuft und
 Angriffe unterhalb der Softwareebene nicht abfangen kann. Über einen entfernten Timer ließ sich
-aus einem ko-lokierten Cloudflare Worker ein \ac{JWT}\acused{JSON} mit bis zu zwölf Bit pro Sekunde bei
+aus einem ko-lokierten Cloudflare Worker ein \ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} mit bis zu zwölf Bit pro Sekunde bei
 einer Genauigkeit von rund 99 Prozent auslesen, und zwar auf einer produktiven Plattform, die V8
 Isolates einsetzt \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Denselben Befund hatte zuvor
 die Einführung der Site Isolation in Chrome, wo eine sprachbasierte Trennung zweier Origins im
@@ -338,7 +338,7 @@ Vergleichswert der Faktor, um den der Prototyp besser ist: null Punkte beim Fakt
 drei bei gleichem Wert, fünf ab dem Faktor zwei, dazwischen jeweils linear, sodass ein Wert knapp unter
 dem des Ausgangszustands knapp unter drei Punkte erhält. Gerundet wird erst das Ergebnis je
 Kriterium auf ganze Punkte. S1 geht je zur Hälfte aus S1a und S1b ein, bei S1 zählt das 95.\ Perzentil, bei S2 der Median. S6 und S7 erhalten je angefangene zwanzig Prozent der
-Mandanten, die unverändert laufen beziehungsweise keine Anpassung brauchen, einen Punkt. Die
+Mandanten, die nicht schlechter laufen als im Ausgangszustand beziehungsweise keine Anpassung brauchen, einen Punkt. Die
 Zuordnung der Messwerte zu den Punkten legt \autoref{sec:Evaluation} offen, damit die Bewertung
 nicht von der Darstellung abhängt.
 
