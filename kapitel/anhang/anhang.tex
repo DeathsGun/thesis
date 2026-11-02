@@ -66,7 +66,7 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
     & Token der Zuweisung & RS256, gültig 80\,min, also Zuweisungsdauer plus Grace Period und Reserve \\
     & Grace Period & 900\,s \\
     & Service Mesh & Sidecar-Injection deaktiviert \\
-    & Egress & Worker-Pod: Internet nur TCP 443, Egress-Proxy auf Port 3128, NATS über ein Label der Cluster-Richtlinien, kein
+    & Egress & Worker-Pod: Internet nur über den Egress-Proxy auf Port 3128, NATS über ein Label der Cluster-Richtlinien, kein
       Redis. Proxy-Pod: jeder öffentliche Port, private Bereiche ausgenommen \\
     \hline
   \end{tabularx}
@@ -227,19 +227,154 @@ pub fn for_profile(profile: Profile) -> Self {
   \caption{Stand des Prototyps je Beleg}
   \label{tab:stand}
   \small
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} c c c c@{}}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} >{\RaggedRight\arraybackslash}p{0.27\textwidth}@{}}
     \hline
-    Beleg & Datum & Trennung & Callout & Proxy & Zustellungen \\
+    Beleg & Datum & Stand \\
     \hline
-            S1a (Pool 40), S2, M5 mit Prober, T7 und T9 & 28.\ Oktober & ja & nein & ja & 4 \\
-    S1a (Tabelle), S2 und S3 (Speicher) & 26.\ Oktober & ja & nein & nein & 1 \\
-    S1b (Pool 0), S2 Läufe 28 und 30, S3 Vergleich, Pool-Kosten & bis 15.\ Oktober & nein & nein & nein & 1 \\
-    S4, M3, M5, T1 bis T9, SandboxEval & bis 21.\ Oktober & nein & nein & nein & 1 \\
-        T10 & 28.\ Oktober, lokal & ja & ja & -- & -- \\
+    S1a, S1b, S2, S3, S4, M5, Zustellung 06 bis 08 und Absturz, T1 bis T9, SandboxEval, M1 und M3 & 29.\ und 30.\ Oktober & Endstand: Gateway \texttt{b2aa8e7}, Executor \texttt{5db344b}, Control Plane \texttt{55331df} \\
+    B4, ein Slot je Pod & 30.\ Oktober & wie Endstand, ein Slot je Pod \\
+    B6 Lauf P1 und K1 & 2.\ November, morgens & wie Endstand \\
+    B6 Läufe P2 bis K3, Proxy-Abmeldung im Hintergrund, Mikrobenchmarks, C1, C3 & 2.\ November & Gateway \texttt{e52c21d}, Executor \texttt{5276a03}, Control Plane 256\,MiB \\
+    S1a und S2 vor dem Endstand, M5 mit Prober, T7 und T9 & 26.\ bis 28.\ Oktober & ohne Worker-ID in der Antwort, ab 26.\ Oktober mit Transport und Sandbox, ab 28.\ Oktober Proxy in enforce \\
+    Kaltstartverlauf, S1b und S2 Läufe 28 und 30, Pod-Ressourcen & bis 15.\ Oktober & vor der Trennung in Transport und Sandbox \\
+    T10 & 28.\ Oktober, lokal & mit Auth Callout \\
     \hline
   \end{tabularx}
 \end{table}
 
+\begin{table}[H]
+  \caption{Kaltstart je Mandant, Einzelläufe vom 29.\ Oktober, Reihenfolge P1, K1, P2, K2, P3, K3, dann Pool 0, Fehler (502 \enquote{no route to host}) zählen mit ihrer Dauer und nicht als unter zwei Sekunden}
+  \label{tab:s1-laeufe}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}l r r r r r r@{}}
+    \hline
+    Lauf & Median & P95 & P99 & Maximum & unter 2\,s & Fehler \\
+    \hline
+    \multicolumn{7}{@{}l}{\emph{verteilt, 90 Mandanten, einer je Sekunde}} \\
+    P1 Pool 40 & 281\,ms & 411\,ms & 529\,ms & 555\,ms & 90 & 0 \\
+    P2 Pool 40 & 278\,ms & 527\,ms & 648\,ms & 1,23\,s & 90 & 0 \\
+    P3 Pool 40 & 308\,ms & 519\,ms & 1,27\,s & 1,37\,s & 90 & 0 \\
+    K1 Ausgang & 2,54\,s & 3,18\,s & 3,26\,s & 3,31\,s & 0 & 0 \\
+    K2 Ausgang & 2,76\,s & 3,30\,s & 4,69\,s & 5,03\,s & 0 & 0 \\
+    K3 Ausgang & 2,64\,s & 3,08\,s & 4,82\,s & 5,19\,s & 3 & 0 \\
+    P0-1 Pool 0 & 2,52\,s & 6,62\,s & 7,39\,s & 7,59\,s & 36 & 0 \\
+    P0-2 Pool 0 & 2,54\,s & 7,76\,s & 12,8\,s & 23,5\,s & 34 & 0 \\
+    P0-3 Pool 0 & 2,65\,s & 8,15\,s & 9,62\,s & 9,65\,s & 29 & 0 \\
+    \multicolumn{7}{@{}l}{\emph{Schub, 90 Mandanten zugleich}} \\
+    P1 Pool 40 & 3,53\,s & 7,68\,s & 8,79\,s & 10,8\,s & 39 & 0 \\
+    P2 Pool 40 & 4,25\,s & 8,57\,s & 10,9\,s & 11,0\,s & 40 & 0 \\
+    P3 Pool 40 & 3,42\,s & 7,36\,s & 7,91\,s & 8,72\,s & 40 & 0 \\
+    K1 Ausgang & 8,23\,s & 15,3\,s & 20,2\,s & 20,2\,s & 0 & 0 \\
+    K2 Ausgang & 8,12\,s & 13,9\,s & 21,8\,s & 21,8\,s & 0 & 5 \\
+    K3 Ausgang & 8,64\,s & 16,5\,s & 23,6\,s & 24,3\,s & 0 & 3 \\
+    P0-1 Pool 0 & 6,55\,s & 11,3\,s & 12,5\,s & -- & 0 & 0 \\
+    P0-2 Pool 0 & 7,23\,s & 11,5\,s & 12,6\,s & -- & 0 & 0 \\
+    P0-3 Pool 0 & 7,65\,s & 11,9\,s & 13,1\,s & -- & 0 & 0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Verlauf des Overheads im Lastprofil bis zum 28.\ Oktober in Millisekunden, k6, je Lauf rund 33 Minuten, Fehler mit Status 502 nicht in den Perzentilen}
+  \label{tab:overhead-verlauf}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
+    \hline
+    Lauf & Modell, Modus & Aufrufe & Fehler & P50 & P90 & P95 & P99 & Max \\
+    \hline
+    18 & Ausgangszustand, Profil & 56.976 & 408 & 259 & 1.190 & 2.310 & 4.570 & 50.530 \\
+    20 & Prototyp, Wide & 68.881 & 1 (client) & 131 & 257 & 306 & 373 & 3.960 \\
+    28 & Prototyp, Profil & 57.001 & 0 & 127 & 164 & 180 & 268 & 15.460 \\
+        30 & Prototyp, Profil, mit Reconnect & 57.001 & 8 (7 client) & 127 & 163 & 178 & 276 & 5.580 \\
+    26.10. & Prototyp nach der Trennung in Transport und Sandbox, Profil & 57.001 & 0 & 128 & 165 & 183 & 434 & 3.404 \\
+        26.10. & Prototyp, Control Plane beendet den Leerlauf, Profil & 57.001 & 14 (502) & 138 & 239 & 293 & 405 & 3.443 \\
+    28.10. & Ausgangszustand, Profil, Ingress-Limit angehoben & 56.989 & 6 (502) & 301 & 490 & 746 & 3.410 & 16.500 \\
+    28.10. & Prototyp mit Egress-Proxy, Profil & 57.001 & 0 & 155 & 253 & 296 & 399 & 12.260 \\
+
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Ressourcen unter dem Lastprofil, Spitzen über 33 Minuten, 29.\ Oktober, cAdvisor meldet unter gVisor nur Pods}
+  \label{tab:ressourcen-endstand}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r r@{}}
+    \hline
+     & P1 & P2 & P3 & K1 & K2 & K3 \\
+    \hline
+    Pods der Laufzeit gleichzeitig & 207 & 202 & 202 & 391 & 382 & 376 \\
+    Speicher der Laufzeit-Pods, GiB & 15,0 & 14,4 & 14,6 & 34,1 & 33,8 & 33,0 \\
+    \acs{CPU} der Laufzeit-Pods, Mittel / Spitze, Kerne & 3,44 / 4,06 & 3,35 / 4,03 & 3,33 / 3,94 & 3,28 / 4,10 & 3,08 / 3,94 & 3,22 / 3,82 \\
+    Spitzenspeicher je Pod, Median / P90 / Max, MiB & 70,5 / 81,7 / 103 & & & 82,7 / 103 / 133 & & \\
+    Steuerung und Routing, Spitze, MiB & 267 & & & 2.299 & & \\
+    Pool im Ruhezustand, 40 Worker zu 78,7\,MiB, MiB / Kerne & 3.111 / 1,02 & & & 0 & & \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Noisy Neighbour (B6), Latenz der Mandanten B beim Client, P50 / P95 in Millisekunden, 2.\ November, K3 mit 150 Kaltstarts vor der Last}
+  \label{tab:b6}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r r@{}}
+    \hline
+     & P1 & P2 & P3 & K1 & K2 & K3 \\
+    \hline
+    nur B, vorher & 235 / 324 & 236 / 390 & 217 / 268 & 314 / 494 & 319 / 536 & 352 / 1.723 \\
+    A und B, Knoten ab 90\,\% & 421 / 898 & 327 / 422 & 378 / 469 & 506 / 660 & 488 / 666 & 475 / 620 \\
+    A und B, Knoten 70 bis 90\,\% & 288 / 845 & 293 / 376 & 273 / 356 & 394 / 532 & -- & -- \\
+    A und B, Knoten unter 70\,\% & 242 / 440 & 222 / 366 & 228 / 305 & 341 / 461 & 333 / 442 & 312 / 407 \\
+    nur B, nachher & 227 / 306 & 226 / 369 & 212 / 266 & 324 / 447 & 320 / 485 & 319 / 474 \\
+    Knoten ab 90\,\% & 1 & 2 & 2 & 9 & 7 & 9 \\
+    Pods von A & 10 auf 7 Knoten & 10 auf 7 & 10 auf 7 & etwa 50 auf 12 & etwa 50 auf 12 & etwa 50 auf 12 \\
+    Fehler & 0 & 2 (Client) & 0 & 7 & 5 & 50 (49 $\times$ 500) \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Reale Bundles aus den häufigsten Paketen des Bestands, P50 / P95 in Millisekunden, 2.\ November, je Paket fünf Mandanten mit einem Kaltaufruf und 20 warmen Aufrufen}
+  \label{tab:bundles}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
+    \hline
+    Paket & Prototyp kalt & Prototyp warm & Ausgang kalt & Ausgang warm \\
+    \hline
+    \enquote{Hello World} & 405 / 627 & 168 / 490 & 2.727 / 2.771 & 302 / 654 \\
+    \texttt{@dvelop-sdk/dms} & 464 / 659 & 175 / 253 & 2.758 / 2.833 & 326 / 822 \\
+    \texttt{axios} & 547 / 644 & 243 / 338 & 3.234 / 5.280 & 390 / 665 \\
+    \texttt{pdf-lib} & 579 / 813 & 213 / 327 & 2.766 / 3.161 & 430 / 752 \\
+    \texttt{pdfmake} & 1.077 / 1.409 & 289 / 576 & 3.616 / 5.024 & 649 / 1.286 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Start eines Isolates und eines Node.js-Prozesses, P50 / P95 in Millisekunden}
+  \label{tab:prozessstart}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r@{}}
+    \hline
+    Messung & P50 / P95 \\
+    \hline
+    \multicolumn{2}{@{}l}{\emph{Cluster, Prozess je \texttt{spawnSync}, 40 Läufe, Node v24.22.1}} \\
+    \texttt{node -e 0}, gVisor & 53,1 / 58,7 \\
+    \texttt{node -e 0}, runc & 26,0 / 32,0 \\
+    \texttt{--snapshot-blob}, leerer Snapshot, gVisor / runc & 65,6 / 72,9 und 30,2 / 35,6 \\
+    \texttt{--snapshot-blob} mit \texttt{util}, \texttt{events}, \texttt{url}, gVisor / runc & 67,1 / 77,6 und 27,8 / 33,1 \\
+    Isolat des Webhook-Profils bauen, warm, im Cluster & 18,7 / 77 \\
+    \multicolumn{2}{@{}l}{\emph{Lokal, Mac (arm64), Release-Build des Executors \texttt{5db344b}, 300 Läufe}} \\
+    Isolat bauen, Webhook-Profil / Agentenprofil & 3,30 / 3,61 und 2,64 / 2,96 \\
+    \enquote{Hello World} im frischen Isolat, gesamt & 3,92 / 4,39 \\
+    Prozess \texttt{/usr/bin/true} & 3,68 / 8,94 \\
+    Prozess \texttt{node -e 0}, 50 Läufe & 68,9 / 77,6 \\
+    \hline
+  \end{tabularx}
+\end{table}
 
 \begin{table}[H]
   \caption{Herleitung von S6 aus der Bestandsanalyse und den Prüfungen der Kompatibilitätsschicht}
@@ -309,15 +444,13 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     Messgröße & Quelle & Ausgangszustand \\
     \hline
-    S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Läufe 00 bis 08 und
-      Einmalmodus auf hyper-int-otc, Pool 40 am 26.\ Oktober, Pool 0 am 15.\ Oktober & Einmalmodus auf
-      hyper-int-otc, 15.\ Oktober \\
-    S2 warme Latenz & Overhead im Lastprofil, Läufe 28 und 30 sowie zwei Läufe am 26.\ Oktober, Zerlegung über
-      Traces & Lauf 18 \\
-    S3 Speicher & Containerstatistiken je Worker-Pod, Kaltstartmessung auf hyper-int-otc, 15.\ und 26.\ Oktober &
-      Kaltstartmessung auf hyper-int-otc, 15.\ Oktober \\
-    S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces & ebenso \\
-    Fehlerrate & fehlgeschlagene Aufrufe je Lauf, ohne clientseitige Netzfehler & Lauf 18 \\
+    S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Läufe 00 bis 08, Einmalmodus auf hyper-int-otc, Pool 40 und Pool 0
+      je dreimal am 29.\ Oktober & Einmalmodus, je dreimal am 29.\ Oktober \\
+    S2 warme Latenz & Overhead im Lastprofil, drei Läufe am 29.\ Oktober, Zerlegung über Traces & drei Läufe am 29.\ Oktober \\
+    S3 Speicher & Containerstatistiken je Pod unter dem Lastprofil, Ruhezustand des Pools, 29.\ und 30.\ Oktober &
+      Containerstatistiken je Pod unter dem Lastprofil \\
+    S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces, 30.\ Oktober & ebenso \\
+    Fehlerrate & fehlgeschlagene Aufrufe je Lauf, ohne clientseitige Netzfehler & drei Läufe am 29.\ Oktober \\
     \hline
   \end{tabularx}
 \end{table}
@@ -403,25 +536,6 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Hops einer warmen Anfrage aus Tempo, P50 / P90 in Millisekunden, 6.\ Oktober}
-  \label{tab:anfragepfad}
-  \small
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
-    \hline
-    Hop & 10 \acsp{VU} & 40 \acsp{VU} \\
-    \hline
-    Warten, bis der Skriptdienst das Resolve beginnt & 5,5 / 8,4 & 42,0 / 61,9 \\
-    Resolve im Skriptdienst & 11,4 / 18,1 & 16,4 / 26,6 \\
-    Resolve-Antwort zum Gateway & 5,3 / 7,4 & 13,4 / 25,0 \\
-    Gateway zum Executor & 5,1 / 8,3 & 7,1 / 14,2 \\
-    Ausführung im Worker & 16,6 / 33,3 & 17,2 / 27,2 \\
-    Antwort des Executors zum Gateway & 5,8 / 7,7 & 11,4 / 16,0 \\
-    Gateway gesamt & 56,5 / 72,5 & 119,7 / 141,0 \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-\begin{table}[H]
   \caption{Fehlgeschlagene oder verspätete Aufrufe, ihre Ursache und die Korrektur}
   \label{tab:zustellung}
   \footnotesize
@@ -489,6 +603,7 @@ pub fn for_profile(profile: Profile) -> Self {
     \texttt{seccompProfile} & \texttt{RuntimeDefault} & \texttt{RuntimeDefault} & gleich \\
     \texttt{automountServiceAccountToken} & \texttt{false} & \texttt{false} & gleich \\
     \texttt{hostNetwork}, \texttt{hostPID}, \texttt{hostIPC} & nicht gesetzt & nicht gesetzt & gleich \\
+    \texttt{enableServiceLinks} & \texttt{false} & \texttt{true} & lockerer, Umgebung im Pod, nicht Kernel-Oberfläche \\
     \texttt{readOnlyRootFilesystem} & nicht gesetzt & \texttt{true} & strenger \\
     \texttt{runAsNonRoot} & nicht gesetzt & \texttt{true} & strenger \\
     \hline
@@ -517,6 +632,13 @@ pub fn for_profile(profile: Profile) -> Self {
     8 & 2 & 1,33\,s & 1,12\,s & 1.271\,ms & 0 & -- \\
         \multicolumn{7}{@{}l}{\emph{Ausgangszustand}} \\
     1 & 1 (3 Pods) & 1,9\,s & -- & 3.000\,ms & 0 & 1 von 1 (26,2\,s) \\
+    \multicolumn{7}{@{}l}{\emph{Prototyp, Prober 100\,ms, 29.\ Oktober}} \\
+    P1 bis P3 & je 2 & 0,19 bis 0,25\,s & -- & -- & 0 bis 1 (Client) & 24 von 24 (25,2\,s), 48 von 48 Ausführungen genau einmal \\
+    \multicolumn{7}{@{}l}{\emph{Ausgangszustand, Prober 100\,ms, 29.\ Oktober}} \\
+    K1 bis K3 & je 2 & 2,06 bis 2,68\,s & -- & -- & 0 bis 4 & 24 von 24 (25,3 bis 25,5\,s) \\
+    \multicolumn{7}{@{}l}{\emph{Drain mit 40 Mandanten, 29.\ Oktober, Prober 200\,ms}} \\
+    Prototyp & 6 & $\le$ 0,56\,s & -- & -- & 2 (Client) & 40 von 40, 80 Ausführungen genau einmal \\
+    Knative & 6 & 2,9 bis 5,15\,s & -- & -- & 7 & 39 von 40 \\
     \multicolumn{7}{@{}l}{\emph{Prototyp, Prober 100\,ms, 28.\ Oktober}} \\
     P1 & 3 & 0,22 bis 0,30\,s & -- & -- & 0 & 3 neu ausgeführt (33,4 bis 33,7\,s) \\
     P2 & 4 & 0,24 bis 0,34\,s & -- & -- & 0 & 2 neu ausgeführt (36,5\,s) \\

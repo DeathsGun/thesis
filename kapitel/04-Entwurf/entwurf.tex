@@ -52,7 +52,9 @@ Ein verbreiteter Vergleich stellt Container und sprachbasierte Isolates als Alte
 unterschiedlichen Stellen: Ein Container ist eine äußere, vom Kern durchgesetzte Grenze, ein Isolate eine innere
 Grenze innerhalb eines Prozesses. Eine äußere Grenze existiert in jedem Entwurf. Wie viel die innere beim Start
 spart, zeigen \textcite[S.~645--646]{boucher_putting_2018} für sprachbasierte Isolation in Rust: Kaltstarts im Median
-von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Offen sind daher zwei andere
+von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Für V8 sind die Größenordnungen andere:
+Ein Isolate zu bauen kostet im Executor lokal 3,3\,ms und im Cluster 19\,ms, ein Node.js-Prozess lokal 69 und unter gVisor 53\,ms
+(\autoref{tab:prozessstart}). Offen sind daher zwei andere
 Fragen, ob zusätzlich eine innere Grenze eingezogen wird und wie viele Ausführungseinheiten sich eine Grenze teilen.
 
 Für M1 lässt sich das auflösen. Die Anbieter ziehen die Mandantengrenze durchgehend außen: Chrome trennt Origins seit
@@ -146,7 +148,7 @@ hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweite
 \hline
 Kandidat & M1 & M2 & M3 & M4 & M5 & Ergebnis \\
 \hline
-Ausgangszustand, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja &
+Ausgangszustand bei der Analyse, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja &
   scheidet aus \\
 Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen &
   scheidet aus \\
@@ -166,19 +168,21 @@ Für das gewählte Modell gilt M1 als Entwurfseigenschaft: Mit dem Auth Callout 
 teilen alle Worker-Pods dieselben NATS-Zugangsdaten, und M1 ist dort nicht erfüllt (\autoref{sec:betriebsplanung}).
 Die Wahl stützt sich auf den Entwurf.
 
-Der Ausgangszustand verletzt M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
-teilen, und M4, weil dem Skript die vollständige Node-Schnittstelle offensteht.
+Der Ausgangszustand verletzte bei der Analyse M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
+teilen, und verletzt M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Seit er jedes Skript in einem
+Worker-Thread ausführt, besteht er die Prüffälle zur Zustandsfreiheit (\autoref{sec:pruefung-isolation}).
 
 Ein frischer Node-Prozess je Ausführung stellt Zustandsfreiheit her und
 erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Auch mit Egress-Proxy und Netzwerkrichtlinie
 vermittelte er nur das Netz, Dateisystem, Umgebung und Identität des Hosts blieben dem Skript offen. Der Prozessstart von
-Node.js unter gVisor ist nicht gemessen. Zustandsfreiheit
+Node.js kostet unter gVisor 53\,ms, ein eigener Snapshot hilft nicht (\autoref{tab:prozessstart}). Zustandsfreiheit
 und vermittelter Zugriff sind zwei verschiedene Eigenschaften, und die einfache Änderung liefert nur die
 erste. Für zur Laufzeit erzeugte Skripte ist das nach V2 die Lücke, denn ein über seine Eingaben
 beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin zugreifen darf
 \autocite[S.~82]{greshake_not_2023}. Bei workerd liegt es umgekehrt, der Zugriff ist vermittelt, aber das Isolate
-überdauert die Ausführung. Beide Eigenschaften zugleich erfüllt erst ein Isolate je Ausführung mit vermittelten
-Bindings.
+überdauert die Ausführung. Beide Eigenschaften zugleich erfüllt ein Isolate je Ausführung mit vermittelten
+Bindings. Dass nur dieser Weg es täte, folgt erst aus M4, das den Mechanismus nennt. Ein gehärteter
+Node-Prozess je Ausführung mit Egress allein über den Proxy ist nicht gemessen.
 
 Offen bleibt, auf welcher Ebene die Engine eingebettet wird. Der Binding Layer \texttt{rusty\_v8} stellt Isolate,
 Context, Skript und Scopes bereit, aber weder Event Loop noch Modulauflösung noch einen Mechanismus, über den der Host
@@ -517,7 +521,7 @@ Ausführungsfähigkeit damit M5 einhält, misst \autoref{sec:pruefung-m5}.
 
 Ein Isolate erreicht die Außenwelt nur über diejenigen Bindings, die der Host bei seiner Erzeugung registriert hat. Ohne
 registriertes Binding existiert kein Weg nach außen, auch kein fehlerhaft abgesicherter. Die Menge der Bindings ist
-damit die Grenze selbst und nicht deren Bewachung, womit M4 strukturell erfüllt ist. Dass der Unterschied zwischen
+damit die Grenze selbst und nicht deren Bewachung, womit M4 erfüllt ist. Dass der Unterschied zwischen
 einer Liste des Erlaubten und einer des Verbotenen zählt, zeigt eine Untersuchung von rund 1.700 Denylisten für
 Shell-Kommandos in \ac{KI}-Agenten: Je nach Einstellung blockieren 69 bis 99 Prozent davon nicht vollständig, was sie
 sperren sollen \autocite[S.~1--2]{chen_one_2026}.
@@ -603,8 +607,8 @@ Nicht enthalten ist die Kompatibilitätsschicht von Deno. \texttt{process} ist s
 Umgebungsvariablen des Hosts bleiben leer, die Variablen des Mandanten erreichen das Skript wie im Ausgangszustand
 über \texttt{req.variables()}. Die Globals bringen eine Uhr mit, die nur bei abgeschlossener Ein- und Ausgabe
 fortschreitet, wie bei der Workers-Plattform \autocite{cloudflare_security_2026}. Eine Schleife ohne Ein- und Ausgabe
-sieht keine Zeit vergehen. Das nimmt die feine Zeitmessung, die Seitenkanäle im Prozess voraussetzen, ohne dass die
-Arbeit Seitenkanalfreiheit behauptete (\autoref{sec:randbedingungen}).
+sieht keine Zeit vergehen. Das erschwert die feine Zeitmessung, die Seitenkanäle im Prozess voraussetzen, verhindert sie aber nicht, denn ein
+entfernter Timer umgeht die Uhr \autocite{schwarzl_remote-timer-as--service_2026}. Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
 
 Ob die Schicht trägt, wird auf drei Wegen geprüft, deren Ergebnisse \autoref{sec:Evaluation} berichtet. Ein
 Differenztest führt 757 Fälle, die in einem echten Node derselben Version erzeugt wurden, in einem frischen Isolate
@@ -641,7 +645,7 @@ je zur Hälfte als Heap-Limit und als Limit für Puffer außerhalb des Heaps. Er
 Callback das Isolate und gewährt festen Headroom, ohne den V8 den gesamten Prozess beendete. Der zählende Allokator
 verweigert eine Zuteilung oberhalb des Limits und meldet das als abfangbaren \texttt{RangeError}. Weitere Limits
 gelten für entpackte Bundles, Bodies und das Dateisystem im Speicher. Der Pod erhält ein Speicherlimit, aber kein
-\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
+\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand trug bis zum 17.\ Oktober eines (100\,m, \autoref{tab:ressourcen-vergleich}), eine Fehlkonfiguration, seither zwei Kerne. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
 von S4 eingeht (\autoref{tab:parameter}). Die Mechanismen auf Ebene des Isolates liefern damit die Attribution und
 einen im Skript abfangbaren Fehler, das cgroup die Garantie. Ihre Belastbarkeit prüft \autoref{sec:Evaluation}
 anhand der Prüffälle aus \autoref{tab:prueffaelle}.
@@ -781,9 +785,8 @@ Sicherheitskontext wie der Ausgangszustand nach \autoref{sec:systemkontext}, erg
 schreibgeschütztes Root-Dateisystem und, wo die Plattform sie bereitstellt, die gVisor-Runtime-Klasse. Die Control
 Plane wählt sie nach dem Namen der Infrastruktur. Auf OTC startet sie nicht, wenn ein Worker-Pod im Trockenlauf ohne die
 Klasse ankäme. Auf anderen Infrastrukturen laufen Worker ohne gVisor. Kein Deployment
-kann diese Felder lockern, das Image enthält außer der Binärdatei keine Shell, und eine Netzwerkrichtlinie lässt dem
-Pod ins Internet nur Port 443 zu. Nach einem Ausbruch den Proxy nicht umgehen zu können, setzt voraus, dass der Pod selbst
-nur noch den Proxy erreicht, und das ist nicht umgesetzt. NATS erreicht der Pod über ein Label der Cluster-Richtlinien,
+kann diese Felder lockern, das Image enthält außer der Binärdatei keine Shell, und der Pod erreicht das Internet nur über
+den Proxy. NATS erreicht der Pod über ein Label der Cluster-Richtlinien,
 Redis gar nicht. Für M3 heißt das, dass die dem Gastcode zugängliche Kernel-Oberfläche nicht wächst, den
 Konfigurationsvergleich führt \autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
 Pods neu, sodass ein Release ohne Lücke durch den Pool rollt.
@@ -811,7 +814,7 @@ Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil
 Ausführungen desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben
 Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandantengrenze ist. M2 und
 die Prüffälle betreffen aufeinanderfolgende Ausführungen. Die Uhr aus \autoref{sec:kompatibilitaetsschicht} mildert das.
-Ein Slot je Pod im Agentenprofil beseitigte die Lücke, kostete aber Pods. Die Abwägung gegen S1 und S3 steht aus.
+Ein Slot je Pod im Agentenprofil beseitigte die Lücke, kostete aber Pods. Die Abwägung gegen S1 und S3 ist gemessen: 64\,\% mehr Pods, 52\,\% mehr Speicher, S1a unverändert (\autoref{sec:durchsatz}).
 
 Eine vierte Einschränkung betrifft die Zugangsdaten. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
 NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth Callout aus
@@ -824,13 +827,13 @@ vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Na
 
 
 
-Vier weitere Maßnahmen folgen aus der Umsetzung und sind im Quellcode als solche markiert. Die mandantenweite Pflege
+Weitere Maßnahmen folgen aus der Umsetzung und sind im Quellcode als solche markiert. Die mandantenweite Pflege
 der Regeln fehlt, solange die Skriptverwaltung keine hält, und der Prototyp gibt sie fest vor, im Modus audit, der nur die
 internen Bereiche verwehrt, oder wie am 28.\ Oktober in enforce mit einer Testregel. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
 nicht umgesetzt. Ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist
 nicht erhoben. Die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Für enforce im Betrieb ist das zu erheben, und S6
 und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für
 synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
-erzeugtes Isolate, weil die Isolate-Erzeugung nach \autoref{sec:warm} den größten Teil einer Ausführung ausmacht,
-wahren M2, solange jedes Isolate genau eine Ausführung trägt. Eine fünfte folgt aus der Messung mit leerem Pool
+erzeugtes Isolate wahren M2, solange jedes Isolate genau eine Ausführung trägt. Der Executor baut seit
+\texttt{5db344b} je Profil das nächste Isolate vorab (\autoref{sec:warm}). Eine weitere folgt aus der Messung mit leerem Pool
 (\autoref{sec:kaltstart}): Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der Kaltstarts.

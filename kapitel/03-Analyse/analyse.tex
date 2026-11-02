@@ -39,7 +39,7 @@ obwohl die Ausführung noch läuft. Aufeinanderfolgende
 Ausführungen desselben Mandanten teilen sich damit den Prozessspeicher. Das temporäre Verzeichnis
 wird vor jeder Ausführung zurückgesetzt, Heap und globale Variablen bleiben bestehen. Ein
 Node.js-Prozess je Mandant statt je Ausführung ist der Ausgangspunkt, gegen den sich jedes
-geprüfte Modell messen lassen muss.
+geprüfte Modell messen lassen muss. So war der Stand bei der Analyse. In den letzten Messschritten wurde der Runner umgestellt und führt jedes Skript seither in einem eigenen, verworfenen Worker-Thread aus (\autoref{sec:messaufbau}).
 
 Aus diesem Konzept folgen die Schutzziele. \emph{Vertraulichkeit} und \emph{Integrität}
 verlangen die Mandantenisolation aus \autoref{sec:grundlagen:eigenschaften}, die \emph{Verfügbarkeit}, dass eine
@@ -138,8 +138,8 @@ Die blockierenden Pakete zerfallen in zwei Gruppen mit deutlich verschiedenem Be
 direkt und umgeht ein bereitgestelltes \texttt{fetch}, 14 Pakete bei 629 Mandanten, am häufigsten \texttt{axios} mit
 579. Die andere benötigt einen rohen \ac{TCP}- oder \ac{TLS}-Socket, 8 Pakete bei 63 Mandanten, am häufigsten
 \texttt{mssql} mit 46. 44 Mandanten gehören zu beiden Gruppen, die Vereinigung umfasst 648 der 713 blockierten
-Mandanten, also 90,9\,\%, die an einem Netzwerk-Binding und an nichts anderem scheitern. Die übrigen 65 brauchen
-Dateisystem, Betriebssystemmodule oder Prozesse. Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
+Mandanten, also 90,9\,\%, bei denen nach der Paketanalyse allein ein Netzwerk-Binding fehlt. Die übrigen 65 brauchen
+nach der Paketanalyse Dateisystem, Betriebssystemmodule oder Prozesse (\autoref{sec:pruefung-kompatibilitaet}). Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
 den beiden Gruppen liegt ein Größenunterschied von etwa zehn zu eins.
 
 Die kleinere Gruppe stellt die schwierigere Anforderung. Ihre Vertreter sind überwiegend
@@ -314,7 +314,7 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
     S6 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
          Ausgangszustand & 0,25 \\
     S2 & Warme Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
-    S3 & Speicherbedarf & Bedarf je Pod in der Kaltstartmessung, dazu die Kosten des Pools & 0,10 \\
+    S3 & Speicherbedarf & Bedarf je Pod in der Kaltstartmessung, Pool als Vorbehalt & 0,10 \\
     S7 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,10 \\
     \hline
