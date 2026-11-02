@@ -164,7 +164,7 @@ Mandanten überwiegend aktiv hält, nähert der Overhead die warme Latenz an und
 kleinen Anteil Erstkontakte.
 
 \begin{table}[H]
-  \caption{Overhead im Lastprofil auf hyper-int-otc in Millisekunden, k6, je Lauf rund 33 Minuten, 29.\ Oktober, Reihenfolge P1, K1, P2, K2, K3, P3, Fehler nicht in den Perzentilen}
+  \caption[Overhead im Lastprofil auf hyper-int-otc in Millisekunden, k6, je Lauf rund 33 Minuten, 29.\ Oktober]{Overhead im Lastprofil auf hyper-int-otc in Millisekunden, k6, je Lauf rund 33 Minuten, 29.\ Oktober, Reihenfolge P1, K1, P2, K2, K3, P3, Fehler nicht in den Perzentilen}
   \label{tab:overhead}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
@@ -222,7 +222,7 @@ Der Ausgangszustand lief mit mehreren festen Replikas des Skriptdienstes, weil s
 Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Modell gibt es einen Lauf vom 30.\ Oktober.
 
 \begin{table}[H]
-  \caption{Durchsatz (S4) auf hyper-int-otc, höchste Stufe mit Fehlerrate unter einem Prozent und
+  \caption[Durchsatz (S4) auf hyper-int-otc, 30.\ Oktober]{Durchsatz (S4) auf hyper-int-otc, höchste Stufe mit Fehlerrate unter einem Prozent und
     P95 unter zwei Sekunden, 30.\ Oktober}
   \label{tab:s4}
   \small
@@ -246,7 +246,7 @@ breit und der Wert ist eine untere Schranke.
 
 S3 wird je Pod erhoben, weil der Ausgangszustand je Ausführung ohnehin einen ganzen Pod belegt und ein Worker-Pod
 mehrere Ausführungen zugleich trägt. Verglichen wird die Spitze je Pod in den Läufen mit dem Lastprofil, in denen beide
-Modelle unter gVisor laufen (\autoref{tab:ressourcen-endstand} im Anhang). Ein
+Modelle unter gVisor laufen (\autoref{tab:ressourcen-endstand} und \autoref{tab:ressourcen-pod} im Anhang). Ein
 Runner-Pod belegt im Median 82,7\,MiB, ein Worker-Pod 70,5\,MiB, das 1,2-Fache. In der Kaltstartmessung vom 26.\ Oktober
 waren es noch das Anderthalbfache (90 gegen 59\,MiB, \autoref{tab:ressourcen-trennung}). Im Ruhezustand liegt der Worker bei 78,7\,MiB, vermutlich wegen der warmen Isolates und
 der zwei Container, die cAdvisor unter gVisor nicht einzeln ausweist. Unter Last braucht der Prototyp wegen der geringeren Pod-Zahl (202 bis 207
@@ -308,7 +308,7 @@ zweites Skript desselben Mandanten auf. T7 bis T9 laufen einmal und protokollier
 ausgelesen.
 
 \begin{table}[tbp]
-  \caption{Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp, hyper-int-otc, 30.\ Oktober, Ausgangszustand zusätzlich 19.\ Oktober}
+  \caption[Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp, 30.\ Oktober]{Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp, hyper-int-otc, 30.\ Oktober, Ausgangszustand zusätzlich 19.\ Oktober}
   \label{tab:prueffaelle-ergebnis}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l l l l >{\RaggedRight\arraybackslash}X@{}}
@@ -390,7 +390,7 @@ Ein Skript erreicht das Netz nur über den Proxy (T7). Ob das auch nach einem Au
 Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noisy-Neighbour-Test am 2.\ November, je Modell dreimal verschränkt.
 Mandant A ruft mit 40 Aufrufern ein Skript auf, das zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein
 Skript von rund 150\,ms auf. Gewertet wird die Latenz von B nach der CPU-Last des Knotens, auf dem der Aufruf lief
-(\autoref{tab:b6} im Anhang). Beide Modelle isolieren die CPU nicht. Auf einem von A
+(\autoref{tab:b6} und \autoref{tab:b6-zaehlung} im Anhang). Beide Modelle isolieren die CPU nicht. Auf einem von A
 ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von 217 bis 236 auf 327 bis 421\,ms, das
 95.\ Perzentil von 268 bis 390 auf 422 bis 898\,ms, und die Ausführung im Worker verdoppelt sich. Im Ausgangszustand sind es 314 bis 352 auf 475 bis 506\,ms und
 620 bis 666\,ms im 95.\ Perzentil. Den Unterschied macht die Reichweite: Der Prototyp begrenzt A auf zehn Worker, die auf sieben Knoten liegen und einen
@@ -472,7 +472,7 @@ alle 525 Aufrufe im Prototyp, kalt in höchstens 1,4 Sekunden.
 \label{sec:nutzwert}
 
 \autoref{tab:nutzwert} sammelt die erhobenen Werte entlang der Soll-Kriterien. Die Fehlerrate
-ist kein Kriterium des Katalogs und steht deshalb ohne Gewicht dabei. Die Punkte folgen der
+geht nicht ein, sie liegt bei 3 bis 7 gegen 18 bis 39 von rund 57.000 Aufrufen. S6 ist abgeleitet statt gemessen, bei S7 bleibt der Regelaufwand unbewertet. Die Punkte folgen der
 Regel aus \autoref{sec:kriterienkatalog}. Der Ausgangszustand erhält je bewertetem Kriterium drei
 Punkte, bei S6 und S7 nach derselben absoluten Regel fünf. Die Faktoren stammen aus dem Median der drei Läufe: S1a 6,1 im
 verteilten und 2,0 im Schub (beide fünf Punkte), S1b 0,41 und 1,33 (1,2 und 3,7 Punkte), im Mittel 2,4 und damit mit S1a
@@ -482,21 +482,18 @@ verteilten und 2,0 im Schub (beide fünf Punkte), S1b 0,41 und 1,33 (1,2 und 3,7
   \caption{Stand der Bewertung entlang der Soll-Kriterien}
   \label{tab:nutzwert}
   \footnotesize
-  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.24\textwidth} r@{}}
+  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X r r@{}}
     \hline
-    Nr. & Gewicht & Prototyp & Ausgangszustand & Punkte \\
+    Nr. & Gewicht & Messwert Prototyp & Messwert Ausgangszustand & \multicolumn{2}{c@{}}{Punkte} \\
+     & & & & Prototyp & Ausgang \\
     \hline
-    S1 & 0,30 & S1a, Pool 40: verteilt P95 0,41 bis 0,53\,s, Schub 7,4 bis 8,6\,s. S1b, Pool 0: 6,6 bis 8,2\,s und 11,3 bis 11,9\,s
-      & verteilt P95 3,1 bis 3,3\,s, Schub 13,9 bis 16,5\,s & S1a 5, S1b 2,4, S1 4 \\
-    S6 & 0,25 & bis zu 99,9\,\% der Mandanten nicht schlechter lauffähig, abgeleitet, Regeln nicht erhoben & -- & 5 \\
-        S2 & 0,15 & Overhead P50 / P95 / P99 139 bis 145 / 220 bis 291 / 313 bis 361\,ms
-      & 300 bis 312\,ms / 720 bis 745\,ms / 3,5 bis 3,7\,s & 5 \\
-    S3 & 0,10 & 70,5\,MiB je Worker-Pod unter Last (Median), Pool 3,0\,GiB im Ruhezustand & 82,7\,MiB je
-      Runner-Pod (Median) & 3 \\
-    S7 & 0,10 & keine Skriptänderung bei 64 von 65 Mandanten, 1 nicht gewollt, Regelaufwand nicht bewertet & -- & 5 \\
-    S4 & 0,10 & 400 Aufrufe/s, bei 300 reißt das P95 das Kriterium & 200 Aufrufe/s & 5 \\
-        Nutzwert & 1,00 & 4,5 & 3,7 & \\
-                -- & -- & Fehlerrate 3 bis 7 von rund 57.000 & 18 bis 39 von rund 57.000 & \\
+    S1 & 0,30 & P95 verteilt 0,41 bis 0,53\,s, Schub 7,4 bis 8,6\,s & P95 verteilt 3,1 bis 3,3\,s, Schub 13,9 bis 16,5\,s & 4 & 3 \\
+    S6 & 0,25 & bis zu 99,9\,\% der Mandanten & -- & 5 & 5 \\
+    S2 & 0,15 & P50 139 bis 145\,ms, P95 220 bis 291\,ms, P99 313 bis 361\,ms & P50 300 bis 312\,ms, P95 720 bis 745\,ms, P99 3,5 bis 3,7\,s & 5 & 3 \\
+    S3 & 0,10 & 70,5\,MiB je Pod & 82,7\,MiB je Pod & 3 & 3 \\
+    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & -- & 5 & 5 \\
+    S4 & 0,10 & 400 Aufrufe/s & 200 Aufrufe/s & 5 & 3 \\
+    Nutzwert & 1,00 & & & 4,5 & 3,7 \\
     \hline
   \end{tabularx}
 \end{table}

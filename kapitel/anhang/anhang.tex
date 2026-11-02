@@ -243,7 +243,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Kaltstart je Mandant, Einzelläufe vom 29.\ Oktober, Reihenfolge P1, K1, P2, K2, P3, K3, dann Pool 0, Fehler (502 \enquote{no route to host}) zählen mit ihrer Dauer und nicht als unter zwei Sekunden}
+  \caption[Kaltstart je Mandant, Einzelläufe vom 29.\ Oktober]{Kaltstart je Mandant, Einzelläufe vom 29.\ Oktober, Reihenfolge P1, K1, P2, K2, P3, K3, dann Pool 0, Fehler (502 \enquote{no route to host}) zählen mit ihrer Dauer und nicht als unter zwei Sekunden}
   \label{tab:s1-laeufe}
   \footnotesize
   \setlength{\tabcolsep}{4pt}
@@ -276,7 +276,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Verlauf des Overheads im Lastprofil bis zum 28.\ Oktober in Millisekunden, k6, je Lauf rund 33 Minuten, Fehler mit Status 502 nicht in den Perzentilen}
+  \caption[Verlauf des Overheads im Lastprofil bis zum 28.\ Oktober in Millisekunden]{Verlauf des Overheads im Lastprofil bis zum 28.\ Oktober in Millisekunden, k6, je Lauf rund 33 Minuten, Fehler mit Status 502 nicht in den Perzentilen}
   \label{tab:overhead-verlauf}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
@@ -297,7 +297,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Ressourcen unter dem Lastprofil, Spitzen über 33 Minuten, 29.\ Oktober, cAdvisor meldet unter gVisor nur Pods}
+  \caption{Ressourcen unter dem Lastprofil je Lauf, Spitzen über 33 Minuten, 29.\ Oktober, cAdvisor meldet unter gVisor nur Pods}
   \label{tab:ressourcen-endstand}
   \footnotesize
   \setlength{\tabcolsep}{4pt}
@@ -307,16 +307,31 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     Pods der Laufzeit gleichzeitig & 207 & 202 & 202 & 391 & 382 & 376 \\
     Speicher der Laufzeit-Pods, GiB & 15,0 & 14,4 & 14,6 & 34,1 & 33,8 & 33,0 \\
-    \acs{CPU} der Laufzeit-Pods, Mittel / Spitze, Kerne & 3,44 / 4,06 & 3,35 / 4,03 & 3,33 / 3,94 & 3,28 / 4,10 & 3,08 / 3,94 & 3,22 / 3,82 \\
-    Spitzenspeicher je Pod, Median / P90 / Max, MiB & 70,5 / 81,7 / 103 & & & 82,7 / 103 / 133 & & \\
-    Steuerung und Routing, Spitze, MiB & 267 & & & 2.299 & & \\
-    Pool im Ruhezustand, 40 Worker zu 78,7\,MiB, MiB / Kerne & 3.111 / 1,02 & & & 0 & & \\
+    \acs{CPU} der Laufzeit-Pods, Mittel, Kerne & 3,44 & 3,35 & 3,33 & 3,28 & 3,08 & 3,22 \\
+    \acs{CPU} der Laufzeit-Pods, Spitze, Kerne & 4,06 & 4,03 & 3,94 & 4,10 & 3,94 & 3,82 \\
     \hline
   \end{tabularx}
 \end{table}
 
 \begin{table}[H]
-  \caption{Noisy Neighbour, Latenz der Mandanten B beim Client, P50 / P95 in Millisekunden, 2.\ November, K3 mit 150 Kaltstarts vor der Last}
+  \caption{Ressourcen je Pod, Steuerung und Pool, Lauf P1 und K1, 29.\ Oktober}
+  \label{tab:ressourcen-pod}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
+    \hline
+     & Prototyp (P1) & Ausgangszustand (K1) \\
+    \hline
+    Spitzenspeicher je Pod, Median / P90 / Maximum, MiB & 70,5 / 81,7 / 103 & 82,7 / 103 / 133 \\
+    Steuerung und Routing, Spitze, MiB & 267 & 2.299 \\
+    Pool im Ruhezustand, 40 Worker zu 78,7\,MiB, MiB & 3.111 & 0 \\
+    Pool im Ruhezustand, Kerne & 1,02 & 0 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption[Noisy Neighbour, Latenz der Mandanten B beim Client, P50 / P95 in Millisekunden]{Noisy Neighbour, Latenz der Mandanten B beim Client, P50 / P95 in Millisekunden, 2.\ November, K3 mit 150 Kaltstarts vor der Last.
+    Leer: kein Mandant B in der Gruppe}
   \label{tab:b6}
   \footnotesize
   \setlength{\tabcolsep}{4pt}
@@ -326,18 +341,32 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     nur B, vorher & 235 / 324 & 236 / 390 & 217 / 268 & 314 / 494 & 319 / 536 & 352 / 1.723 \\
     A und B, Knoten ab 90\,\% & 421 / 898 & 327 / 422 & 378 / 469 & 506 / 660 & 488 / 666 & 475 / 620 \\
-    A und B, Knoten 70 bis 90\,\% & 288 / 845 & 293 / 376 & 273 / 356 & 394 / 532 & -- & -- \\
+    A und B, Knoten 70 bis 90\,\% & 288 / 845 & 293 / 376 & 273 / 356 & 394 / 532 & & \\
     A und B, Knoten unter 70\,\% & 242 / 440 & 222 / 366 & 228 / 305 & 341 / 461 & 333 / 442 & 312 / 407 \\
     nur B, nachher & 227 / 306 & 226 / 369 & 212 / 266 & 324 / 447 & 320 / 485 & 319 / 474 \\
-    Knoten ab 90\,\% & 1 & 2 & 2 & 9 & 7 & 9 \\
-    Pods von A & 10 auf 7 Knoten & 10 auf 7 & 10 auf 7 & etwa 50 auf 12 & etwa 50 auf 12 & etwa 50 auf 12 \\
-    Fehler & 0 & 2 (Client) & 0 & 7 & 5 & 50 (49 $\times$ 500) \\
     \hline
   \end{tabularx}
 \end{table}
 
 \begin{table}[H]
-  \caption{Reale Bundles aus den häufigsten Paketen des Bestands, P50 / P95 in Millisekunden, 2.\ November, je Paket fünf Mandanten mit einem Kaltaufruf und 20 warmen Aufrufen}
+  \caption{Noisy Neighbour, Knoten, Pods von A und Fehler je Lauf, 2.\ November. In K3 sind 49 der 50 Fehler Status 500}
+  \label{tab:b6-zaehlung}
+  \footnotesize
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r r@{}}
+    \hline
+     & P1 & P2 & P3 & K1 & K2 & K3 \\
+    \hline
+    Knoten ab 90\,\% & 1 & 2 & 2 & 9 & 7 & 9 \\
+    Pods von A & 10 & 10 & 10 & etwa 50 & etwa 50 & etwa 50 \\
+    Knoten mit Pods von A & 7 & 7 & 7 & 12 & 12 & 12 \\
+    Fehler & 0 & 2 & 0 & 7 & 5 & 50 \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption[Reale Bundles aus den häufigsten Paketen des Bestands, P50 / P95 in Millisekunden]{Reale Bundles aus den häufigsten Paketen des Bestands, P50 / P95 in Millisekunden, 2.\ November, je Paket fünf Mandanten mit einem Kaltaufruf und 20 warmen Aufrufen}
   \label{tab:bundles}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
@@ -353,11 +382,14 @@ pub fn for_profile(profile: Profile) -> Self {
   \end{tabularx}
 \end{table}
 
+Die Messungen zum Agentenprofil liefen am 2.\ November auf dem Endstand des Prototyps, mit k6 vom Laptop über den Edge-Proxy. Warm wurden
+fünf Mandanten mit zusammen 10 Aufrufen je Sekunde über drei Minuten belastet, je 1.801 Aufrufe, Agent und Webhook-Profil (Hello World) direkt
+nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ Oktober keinen Aufruf hatten, mit einem Erstaufruf je Sekunde und
+30 Sekunden später je zehn warmen Aufrufen. Die Gateway-Werte stammen aus Histogrammen in Tempo, ihre oberen Quantile sind grob und können
+über den Client-Werten liegen.
+
 \begin{table}[H]
-  \caption{Agentenprofil auf dem Prototyp, Endstand vom 2.\ November, k6 vom Laptop über den Edge-Proxy. Warm: fünf Mandanten mit zusammen 10 Aufrufen je Sekunde
-    über drei Minuten, je 1.801 Aufrufe, Agent und Webhook-Profil (Hello World) direkt nacheinander, P50 / P95 / P99 in Millisekunden.
-    Kaltstart: 30 Mandanten seit dem 30.\ Oktober ohne Aufruf, ein Erstaufruf je Sekunde, 30 Sekunden später je zehn warme Aufrufe. Die Gateway-Werte stammen aus Histogrammen in Tempo, ihre oberen Quantile sind grob und
-    können über den Client-Werten liegen}
+  \caption{Agentenprofil auf dem Prototyp, warm gegen Webhook-Profil und Kaltstart, Millisekunden}
   \label{tab:agent-latenz}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
@@ -380,7 +412,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Agentenprofil, Größe von Ein- und Ausgabe, ein Mandant, je Größe 20 Aufrufe nacheinander, Client P50 / P95 in Millisekunden. Oberhalb
+  \caption[Agentenprofil, Größe von Ein- und Ausgabe, Client P50 / P95 in Millisekunden]{Agentenprofil, Größe von Ein- und Ausgabe, ein Mandant, je Größe 20 Aufrufe nacheinander, Client P50 / P95 in Millisekunden. Oberhalb
     von 64\,KiB geht der Körper über S3 mit vorsignierten Adressen}
   \label{tab:agent-groesse}
   \footnotesize
@@ -396,7 +428,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Agentenprofil, ausgehende Anfragen an das eigene System über den Proxy in enforce, je Anzahl 30 Läufe nacheinander, Millisekunden}
+  \caption[Agentenprofil, ausgehende Anfragen über den Proxy, Millisekunden]{Agentenprofil, ausgehende Anfragen an das eigene System über den Proxy in enforce, je Anzahl 30 Läufe nacheinander, Millisekunden}
   \label{tab:agent-egress}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}r r r r@{}}
@@ -412,7 +444,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Agentenprofil, Parallelität auf einem Mandanten, geschlossene Schleife, je Stufe 60 Sekunden, Millisekunden. Alle Aufrufe gelangen mit
+  \caption[Agentenprofil, Parallelität auf einem Mandanten, Millisekunden]{Agentenprofil, Parallelität auf einem Mandanten, geschlossene Schleife, je Stufe 60 Sekunden, Millisekunden. Alle Aufrufe gelangen mit
     Status 200 durch}
   \label{tab:agent-parallel}
   \footnotesize
@@ -480,7 +512,7 @@ pub fn for_profile(profile: Profile) -> Self {
 
 
 \begin{table}[H]
-  \caption{Unsicherheit der Kaltstartläufe aus \autoref{tab:kaltstart-vergleich}: konservatives 95-\%-Intervall je Lauf für P95 aus
+  \caption[Unsicherheit der Kaltstartläufe: Intervalle für P95 und Anteil unter 2\,s]{Unsicherheit der Kaltstartläufe aus \autoref{tab:kaltstart-vergleich}: konservatives 95-\%-Intervall je Lauf für P95 aus
     den Ordnungsstatistiken (P90 bis Maximum von je 90 Aufrufen) und Anteil unter 2\,s über die drei Läufe (270 Aufrufe) mit
     95-\%-Intervall nach Clopper-Pearson}
   \label{tab:kaltstart-ki}
@@ -501,7 +533,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{95-\%-Bootstrap-Intervalle des Overheads in Millisekunden je Lauf vom 29.\ Oktober, Blöcke von 1.000
+  \caption[95-\%-Bootstrap-Intervalle des Overheads je Lauf vom 29.\ Oktober, Millisekunden]{95-\%-Bootstrap-Intervalle des Overheads in Millisekunden je Lauf vom 29.\ Oktober, Blöcke von 1.000
     aufeinanderfolgenden Aufrufen, 1.000 Ziehungen}
   \label{tab:konfidenz}
   \small
@@ -659,7 +691,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{SandboxEval, 51 Eigenschaften für JavaScript angepasst, 21.\ Oktober 2026. Eine Antwort heißt
+  \caption[SandboxEval, 51 Eigenschaften für JavaScript angepasst, 21.\ Oktober 2026]{SandboxEval, 51 Eigenschaften für JavaScript angepasst, 21.\ Oktober 2026. Eine Antwort heißt
     nicht, dass der Zugriff auf den echten Host gelang, im Webhook-Profil sind die Werte leer oder nachgebildet}
   \label{tab:sandboxeval}
   \small
@@ -696,7 +728,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-    \caption{Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf, ab
+    \caption[Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf]{Knotenentzug (M5): Lücke ohne Ausführungsfähigkeit und längste kurze Latenz je Lauf, ab
     Beginn der Löschung, am 28.\ Oktober als längster Abstand zweier Antworten des Probers}
   \label{tab:m5}
   \footnotesize
