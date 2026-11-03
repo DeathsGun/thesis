@@ -41,7 +41,7 @@ einzigen Lauf niemand gelesen.
 
 Der Ausgangszustand genügt in zwei Punkten nicht. Der erste ist die Zeit bis zur ersten
 Ausführung. Ein Runner, der auf null skaliert war, braucht mehrere Sekunden, bis er den ersten
-Aufruf bedient, und Mandanten, deren Webhooks selten ausgelöst werden, zahlen diese Zeit bei fast
+Aufruf bedient. Mandanten, deren Webhooks selten ausgelöst werden, zahlen diese Zeit bei fast
 jedem Aufruf. Unter Last kommt hinzu, dass ein Runner Aufrufe nacheinander abarbeitet. Beides
 hat zu Supportfällen und einem internen Störungsfall geführt
 \autocites{intern_supportfaelle_otc_2026}{intern_stoerungsfall_2026} und war der Anlass für diese Arbeit. Der zweite Punkt ist
@@ -67,8 +67,10 @@ Anforderungen des eigenen Betriebs begründet, etwa Amazon Web Services mit Fire
 Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten begründen jeweils die eigene
 Lösung. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
 erzeugter Funktionen konstruiert und anschließend gegen einen produktiven Ausgangszustand
-gemessen wird, ist in den gesichteten Arbeiten dagegen nicht zu finden. Gesucht wurde im Oktober 2026 als gezielte Lückensuche über Websuche, Crossref und arXiv, ohne Fachdatenbanken mit Konto und ohne Anspruch auf Vollständigkeit, nach Modellen, die ein Isolate je Ausführung, einen
-Pool vorgehaltener Pods und eine Messung gegen einen produktiven Ausgangszustand verbinden. Die nächsten Vorarbeiten sind sprachbasierte Isolation je Funktion
+gemessen wird, ist in den gesichteten Arbeiten dagegen nicht zu finden. Gesucht wurde im Oktober 2026 nach Modellen,
+die ein Isolate je Ausführung, einen Pool vorgehaltener Pods und eine Messung gegen einen produktiven Ausgangszustand
+verbinden. Die Suche war eine gezielte Lückensuche über Websuche, Crossref und arXiv, ohne Fachdatenbanken mit Konto
+und ohne Anspruch auf Vollständigkeit. Die nächsten Vorarbeiten sind sprachbasierte Isolation je Funktion
 \autocite[S.~645]{boucher_putting_2018}, WebAssembly-Isolation mit geteiltem Zustand
 \autocite[S.~419]{shillaker_faasm_2020}, das Sandboxing von Funktionen in mandantenfähigen
 Serverless-Umgebungen \autocite[S.~25]{mainas_sandboxing_2024}, die Isolation der Anwendungen
@@ -84,9 +86,9 @@ SAND trennt zweistufig, mit einem Container je Anwendung und einem Prozess je Fu
 Speicherbedarf gegenüber Containern \autocite{bloom_cloud_2018}.
 Das Muster eines frischen Isolates je Ausführung in einem Node.js-Host kennen Produktdokumentationen,
 etwa mit \texttt{isolated-vm} je Code-Schritt \autocite{activepieces_sandboxing_2026} und je Aufruf
-\autocite{tanstack_code_2026}, und Cloudflare nutzt für generierten Code ein Isolate je Ausführung
-\autocite{cloudflare_worker_2026}, alle ohne Kubernetes-Pool und ohne Messung gegen einen
-Ausgangszustand.
+\autocite{tanstack_code_2026}. Cloudflare nutzt für generierten Code ein Isolate je Ausführung
+\autocite{cloudflare_worker_2026}. Keine dieser Quellen beschreibt einen Kubernetes-Pool oder eine Messung gegen
+einen Ausgangszustand.
 Die folgende Oberfrage ist deshalb als
 Gestaltungsfrage im Sinne der \ac{DSR} formuliert \autocite[S.~664--665]{osterle_memorandum_2010}. Sie
 fragt nicht danach, welches der bekannten Modelle am besten abschneidet, sondern danach, wie

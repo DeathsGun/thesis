@@ -9,16 +9,33 @@ gebraucht werden, erklärt die jeweilige Stelle.
 
 Ein \emph{Container} grenzt einen Prozess über Mechanismen des Betriebssystemkerns ab, teilt sich
 diesen Kern aber mit allen anderen Containern desselben Hosts
-\autocite[S.~18]{souppaya_application_2017}. In Kubernetes ist der \emph{Pod} die kleinste Einheit, die sich ausbringen lässt. Er fasst einen
-oder mehrere Container zusammen, die sich Netz und Speicher teilen und gemeinsam auf einen Knoten
-geplant werden \autocite{the_kubernetes_authors_pods_2026}.
+\autocite[S.~18]{souppaya_application_2017}. Namespaces geben dem Prozess eine eigene Sicht auf Dateisystem, Netz und
+Prozessliste, und cgroups begrenzen seinen Anteil an Speicher und Prozessor
+\autocite[S.~6--7]{souppaya_application_2017}. Ein seccomp-Profil legt fest, welche Systemaufrufe der Prozess absetzen
+darf \autocite[S.~25]{souppaya_application_2017}. In Kubernetes ist der \emph{Pod} die kleinste Einheit, die sich
+ausbringen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen und gemeinsam auf
+einen Knoten geplant werden \autocite{the_kubernetes_authors_pods_2026}. Limits für Speicher und Prozessor vergibt
+Kubernetes je Container \autocite{the_kubernetes_authors_resource_2026}. Beim Update eines Knotens nimmt die Plattform
+ihn aus dem Betrieb. Ein \emph{Drain} beendet die Pods des Knotens geordnet, und sie werden auf anderen Knoten neu
+angelegt \autocite{the_kubernetes_authors_safely_2026}.
 
 \emph{gVisor} schiebt zwischen Container und Host-Kernel eine weitere Schicht. Sein Kernstück, der Sentry, fängt die
 Systemaufrufe der Anwendung ab und beantwortet sie selbst, statt sie an den Host-Kernel durchzureichen. Die Laufzeit
 \texttt{runsc} setzt die Spezifikation der Open Container Initiative um und lässt sich als Runtime-Klasse in
 Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}. Weil der Sentry im User Space läuft und nur eine
 verkleinerte Oberfläche des Host-Kernels nutzt \autocite{the_gvisor_authors_security_2026}, gilt gVisor als
-User-Space-Kernel, der Preis sind langsamere Systemaufrufe \autocite[S.~3]{young_true_2019}.
+User-Space-Kernel, der Preis sind langsamere Systemaufrufe \autocite[S.~3]{young_true_2019}. Welche Teile eines
+Systems eine solche Grenze tragen, benennt die \ac{TCB}. Sie ist die Gesamtheit der Schutzmechanismen, deren
+Zusammenwirken eine Sicherheitsrichtlinie durchsetzt \autocite[S.~112]{dod_trusted_1985}. Ein Fehler in einer dieser
+Komponenten bricht die Grenze. In der Fallstudie gehört der Sentry dazu, weil er die Systemaufrufe des Gastcodes
+beantwortet.
+
+Die stärkste der hier betrachteten äußeren Grenzen zieht ein Hypervisor. Eine microVM wie Firecracker gibt jeder Funktion einen eigenen
+Gastkernel und beschränkt die Schnittstelle zum Host auf wenige virtuelle Geräte
+\autocite[S.~420]{agache_firecracker_2020}. Kata Containers startet Kubernetes-Pods in solchen virtuellen Maschinen
+\autocite{the_kata_containers_authors_hypervisors_2026}. Beides setzt \ac{KVM} voraus, die Virtualisierungsschnittstelle
+des Linux-Kerns, die der Host als Gerät \texttt{/dev/kvm} bereitstellt \autocite{the_firecracker_authors_getting_2026}.
+Ob die Zielplattform sie bietet, klärt \autoref{sec:randbedingungen}.
 
 Ein \emph{V8-Isolate} ist eine Instanz der JavaScript-Engine V8 mit eigenem Heap. Innerhalb eines
 Isolates kann ein \emph{Context} voneinander unabhängigen JavaScript-Code in derselben Instanz
@@ -33,6 +50,17 @@ kapselt. Ihre Runtime-Instanz hält ein Isolate und verbindet es mit einer Event
 \autocite{iwanczuk_roll_2022}. \emph{Bindings} heißen in dieser Arbeit die Schnittstellen, über die ein
 Skript die Außenwelt erreicht, etwa \texttt{fetch} oder ein Socket. Ein Binding besteht aus Ops
 und dem JavaScript-Code, der sie dem Skript in der gewohnten Form anbietet.
+
+Eine sprachbasierte Grenze hält, was die Engine prüft, nicht aber, was die Hardware preisgibt. Ein \emph{Seitenkanal}
+verrät Daten über ein Merkmal, das nicht als Ausgabe gedacht ist, etwa über die Dauer eines Speicherzugriffs. Spectre
+nutzt dafür die spekulative Ausführung des Prozessors und liest so Speicher, den die Sprachgrenze schützt
+\autocite[S.~1]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Origins im selben Prozess aufgegeben und
+durch eine Prozessgrenze ersetzt \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Ein
+\emph{verdeckter Kanal} ist ein Übertragungsweg, über den ein Prozess Informationen entgegen der Sicherheitsrichtlinie
+weitergibt \autocite[S.~107]{dod_trusted_1985}, etwa indem ein Sender den Prozessor belastet und ein Empfänger seine
+eigene Laufzeit misst. Beides setzt eine Uhr voraus, die fein genug auflöst. Eine Uhr außerhalb der Sandbox leistet
+das ebenso wie eine im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}. gVisor schützt nach eigener
+Darstellung nicht vor hardwareseitigen Seitenkanälen \autocite{the_gvisor_authors_security_2026}.
 
 \subsection{Bausteine der Ausführung}
 \label{sec:grundlagen:bausteine}

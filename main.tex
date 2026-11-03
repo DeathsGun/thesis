@@ -293,6 +293,12 @@
 % PDF Meta Daten setzen
 %-----------------------------------
 \usepackage[hyperfootnotes=false]{hyperref} %hyperfootnotes=false deaktiviert die Verlinkung der Fußnote. Ansonsten inkompaibel zum Paket "footmisc"
+%-----------------------------------
+% Glossar (nach hyperref laden, damit die Einträge verlinkt werden)
+%-----------------------------------
+\usepackage[toc,nonumberlist,nopostdot]{glossaries}
+\makenoidxglossaries
+\input{abkuerzungen/glossar}
 \AtBeginDocument{\renewcommand{\subsectionautorefname}{Abschnitt}\renewcommand{\subsubsectionautorefname}{Abschnitt}}
 \addto\extrasngerman{\def\subsectionautorefname{Abschnitt}\def\subsubsectionautorefname{Abschnitt}}
 % Behebt die falsche Darstellung der Lesezeichen in PDF-Dateien, welche eine Übersetzung besitzen
@@ -538,6 +544,13 @@
 % Inhaltsverzeicnis anzeigen.
 %\printbibliography[type=online,heading=bibintoc,title={\headingNameInternetSources}]
 \printbibliography[check=webonly,heading=subbibliography,title={\headingNameInternetSources}]
+
+%-----------------------------------
+% Glossar (Nachspann, nach dem Leitfaden hinter dem Literaturverzeichnis)
+%-----------------------------------
+\newpage
+\glsaddall
+\printnoidxglossary[sort=word,title={\langde{Glossar}\langen{Glossary}}]
 
 \end{document}
 

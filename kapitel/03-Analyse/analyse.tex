@@ -25,9 +25,9 @@ Hosts, den generische Containerisierung offenlegt \autocite[S.~17--18]{souppaya_
 dadurch verkleinert, aber nicht beseitigt.
 
 Welches Skript eine Instanz ausführt, entscheidet sich erst beim Aufruf. Das Skript wird je
-Ausführung über eine vorsignierte \ac{URL} aus einem Objektspeicher nachgeladen, weshalb eine Instanz
-nicht an ein Skript gebunden ist, sondern nacheinander beliebige Skripte ihres Mandanten
-ausführt. Sein Eintrag im Module Cache wird dabei vor jeder Ausführung verworfen, sodass
+Ausführung aus einem Objektspeicher nachgeladen, über eine vorsignierte \ac{URL}, die den Abruf für kurze Zeit ohne
+eigene Zugangsdaten erlaubt. Eine Instanz ist deshalb nicht an ein Skript gebunden, sondern führt nacheinander
+beliebige Skripte ihres Mandanten aus. Sein Eintrag im Module Cache wird dabei vor jeder Ausführung verworfen, sodass
 auch das Übersetzen bei jeder Ausführung erneut anfällt.
 
 Die zweite geteilte Ressource liegt innerhalb dieser Sandbox. Jeder Mandant erhält einen eigenen
@@ -115,7 +115,7 @@ verschiebt die Kennzahlen um gut einen Prozentpunkt. Jedes Skript wird anhand se
 härteste Einschränkung zählt, und ein Mandant erhält die Einstufung seines härtesten Skripts. Die Analyse ist
 statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündeltes Kompilat, 27 Versionen bei 24 Mandanten sind
 Parse-Fehler und nicht einstufbar. Ein Import sagt nichts darüber, was ein npm-Paket seinerseits
-benötigt, weshalb für die Pakete mit nennenswertem Mandantengewicht der ausgelieferte Quelltext gelesen wurde, 27 von
+benötigt. Für die Pakete mit nennenswertem Mandantengewicht wurde deshalb der ausgelieferte Quelltext gelesen, 27 von
 203 verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
 
 \subsubsection{Ergebnis}
@@ -137,8 +137,8 @@ pessimistisch als nicht lauffähig gewertet, ergibt sich ein Viabilitätsinterva
 Die blockierenden Pakete zerfallen in zwei Gruppen mit deutlich verschiedenem Bedarf. Die eine benötigt \ac{HTTP}
 direkt und umgeht ein bereitgestelltes \texttt{fetch}, 14 Pakete bei 629 Mandanten, am häufigsten \texttt{axios} mit
 579. Die andere benötigt einen rohen \ac{TCP}- oder \ac{TLS}-Socket, 8 Pakete bei 63 Mandanten, am häufigsten
-\texttt{mssql} mit 46. 44 Mandanten gehören zu beiden Gruppen, die Vereinigung umfasst 648 der 713 blockierten
-Mandanten, also 90,9\,\%, bei denen nach der Paketanalyse allein ein Netzwerk-Binding fehlt. Die übrigen 65 brauchen
+\texttt{mssql} mit 46. 44 Mandanten gehören zu beiden Gruppen. Die Vereinigung umfasst 648 der 713 blockierten
+Mandanten, also 90,9\,\%. Bei ihnen fehlt nach der Paketanalyse allein ein Netzwerk-Binding. Die übrigen 65 brauchen
 nach der Paketanalyse Dateisystem, Betriebssystemmodule oder Prozesse (\autoref{sec:pruefung-kompatibilitaet}). Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
 den beiden Gruppen liegt ein Größenunterschied von etwa zehn zu eins.
 
@@ -150,7 +150,7 @@ umgestellt. Ein bereitgestelltes \texttt{fetch} hilft dieser Gruppe nicht.
 Neben den Paketen erfasst die Auswertung, welche Node-Globals ein Skript ohne Import erreicht,
 etwa \texttt{Buffer} oder \texttt{process.env}. Nach dem jeweils härtesten Merkmal eingeteilt,
 kommen 81,9\,\% der 8.310 verschiedenen Skripte ohne jede Node-spezifische \ac{API} aus und
-50,9\,\% ohne jeden Import, und 15,6\,\% nutzen ein Node-Global und 2,1\,\% ein Node-Kernmodul. Die
+50,9\,\% ohne jeden Import. 15,6\,\% nutzen ein Node-Global und 2,1\,\% ein Node-Kernmodul. Die
 Abhängigkeit von Node-Globals konzentriert sich auf zwei Namen: \texttt{process.env} bei 519
 Mandanten (30,2\,\%) und \texttt{Buffer} bei 396 Mandanten (23,1\,\%). Danach fällt die Verbreitung
 um eine Größenordnung, \texttt{\_\_dirname} erreicht noch 20 Mandanten, jedes weitere Mitglied von
@@ -160,9 +160,10 @@ Kompatibilitätsschicht in \autoref{sec:kompatibilitaetsschicht}, nicht ihre Mac
 Erkennung ist eine Analyse freier Bezeichner und zählt einen Namen nur, wenn das Skript ihn
 nirgends selbst bindet. Sie untertreibt daher eher, als dass sie Abhängigkeiten erfindet.
 
-Ein zweiter Befund betrifft die Größe der gebündelten Artefakte. Von den 14.575 Skriptversionen binden 2.373 npm-Pakete
-ein, und das fertige Bundle liegt im Median bei 69,3\,KB, im 95.\ Perzentil bei 429,0\,KB und im Maximum bei 1,41\,MB,
-typischerweise den Faktor zehn bis dreißig über dem Quelltext. Betroffen sind 1.023 der 1.718 Mandanten, je Mandant
+Ein zweiter Befund betrifft die Größe der gebündelten Artefakte. Ein Bundle ist die eine Datei, in die der Builder der
+Plattform ein Skript samt seiner npm-Pakete zusammenfasst, sodass zur Laufzeit nichts nachgeladen wird. Von den 14.575
+Skriptversionen binden 2.373 npm-Pakete ein. Das fertige Bundle liegt im Median bei 69,3\,KB, im 95.\ Perzentil bei
+429,0\,KB und im Maximum bei 1,41\,MB, typischerweise den Faktor zehn bis dreißig über dem Quelltext. Betroffen sind 1.023 der 1.718 Mandanten, je Mandant
 liegt die Zahl gebündelter Versionen im Median bei zwei, im 95.\ Perzentil bei dreizehn, im Einzelfall bei 151. Für
 die Kompatibilität ist das ohne Belang, für den Entwurf nicht, weil das Bundle nach \autoref{sec:zustellung} bei jeder
 Ausführung zugestellt und ausgewertet werden muss und ohne Cache der Abruf bei jeder Ausführung auf den Anfragepfad
@@ -208,26 +209,22 @@ denn das Zurücksetzen des Dateisystems und das Verwerfen des Module Cache greif
 Modulebene. Da eine Instanz genau einen Mandanten bedient, verläuft dieser Weg innerhalb eines Mandanten, und seine
 Bewertung folgt der Verschiebung der Vertrauenseinheit aus \autoref{sec:systemkontext}. Derselbe geteilte Prozess trägt
 einen zweiten Weg: Eine Ausführung kann Ressourcen so erschöpfen, dass die Instanz für folgende Ausführungen
-unbrauchbar wird, wie es im Betrieb des Ausgangszustands beobachtet wurde: Ein Verfügbarkeitstest im Minutentakt hielt eine Instanz
-dauerhaft aktiv, und ein Speicherleck ließ ihren Verbrauch bis zur Unbrauchbarkeit steigen. Seit April 2026 ersetzt die
+unbrauchbar wird. Im Betrieb des Ausgangszustands ist das beobachtet: Ein Verfügbarkeitstest im Minutentakt hielt eine
+Instanz dauerhaft aktiv, und ein Speicherleck ließ ihren Verbrauch bis zur Unbrauchbarkeit steigen. Seit April 2026 ersetzt die
 Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausgelöste Funktionen nie auf null skalieren
 \autocite{intern_runner_ersatz_2026}.
 
 \subsubsection{A2, Sprachebene: geteilte Laufzeit im selben Prozess}
 
-% GRUNDLAGEN: Mikroarchitekturelle Seitenkanaele und Spectre gehoeren als Begriff
-% nach Kapitel 2. Hier bleibt nur die Folgerung fuer das Bedrohungsmodell.
-
-Der zweite Weg greift eine Isolationsgrenze an, die innerhalb eines Prozesses verläuft und
-Angriffe unterhalb der Softwareebene nicht abfangen kann. Über einen entfernten Timer ließ sich
-aus einem ko-lokierten Cloudflare Worker ein \ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} mit bis zu zwölf Bit pro Sekunde bei
-einer Genauigkeit von rund 99 Prozent auslesen, und zwar auf einer produktiven Plattform, die V8
-Isolates einsetzt \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Denselben Befund hatte zuvor
-die Einführung der Site Isolation in Chrome, wo eine sprachbasierte Trennung zweier Origins im
-gemeinsamen Prozess nach Bekanntwerden von Spectre \autocite[S.~1]{kocher_spectre_2019} nicht mehr trug und durch eine Prozessgrenze
-ersetzt wurde \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Cloudflare benennt die daraus folgenden Restrisiken für
-V8 Isolates ausdrücklich \autocite{cloudflare_security_2026}. Eine sprachbasierte Grenze allein
-bildet damit keine hinreichende Mandantengrenze.
+Der zweite Weg greift die Grenze innerhalb eines Prozesses an, die nach \autoref{sec:grundlagen:isolation} Angriffe
+unterhalb der Softwareebene nicht abfängt. Dass das auf einer produktiven Plattform mit V8 Isolates gelingt, ist
+gezeigt. Über einen entfernten Timer ließ sich aus einem ko-lokierten Cloudflare Worker ein
+\ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
+von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
+demselben Grund die Trennung von Origins im gemeinsamen Prozess aufgegeben
+(\autoref{sec:grundlagen:isolation}), und Cloudflare benennt die Restrisiken für V8 Isolates ausdrücklich
+\autocite{cloudflare_security_2026}. Eine sprachbasierte Grenze allein bildet damit keine hinreichende
+Mandantengrenze.
 
 \subsubsection{A3, Infrastrukturebene: Sandbox-Laufzeit und Host-Kernel}
 
@@ -292,7 +289,7 @@ verletzt, ist keine Lösung.
 M2 ist auf aufeinanderfolgende Ausführungen geschnitten, weil der Ausgangszustand je Prozess eine Ausführung
 vorsieht. Der Zuschnitt folgt nicht aus dem Bedrohungsmodell, sondern ist ein Zugeständnis an die Kosten. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
 Pod (\autoref{sec:betriebsplanung}). M3 ist gegen den Ausgangszustand formuliert, weil dieser mit gVisor bereits einen
-User-Space-Kernel einsetzt, ein Modell, das diese Schicht aufgibt, wäre auf der Infrastrukturebene ein Rückschritt,
+User-Space-Kernel einsetzt. Ein Modell, das diese Schicht aufgibt, wäre auf der Infrastrukturebene ein Rückschritt,
 auch bei besserem Nutzwert. M4 folgt aus V5, denn die Schnittstelle zur Ausführungsumgebung ist der einzige
 Durchsetzungspunkt, den die Plattform kontrolliert, und entspricht dem Prinzip der Complete Mediation
 \autocite[S.~1282]{saltzer_protection_1975}. M5 ist ein Abnahmekriterium am Prototyp und entscheidet die Vorauswahl nicht. Der Zielwert von M5 ist relativ: Die Zeit ohne
@@ -334,9 +331,9 @@ Kompatibilität als stärkste Gegenkraft zu einem Wechsel des Ausführungsmodell
 Wartezeit im gleichen Maß zu prägen wie S1, oder weil sie Restgrößen abdecken, deren Größenordnung
 bereits durch S6 begrenzt ist. Die Bewertung je Kriterium erfolgt auf einer Skala von null bis
 fünf, und der Nutzwert ist die mit den Gewichten gebildete Summe. Maßgeblich ist bei Kriterien mit
-Vergleichswert der Faktor, um den der Prototyp besser ist: null Punkte beim Faktor null,
-drei bei gleichem Wert, fünf ab dem Faktor zwei, dazwischen jeweils linear, sodass ein Wert knapp unter
-dem des Ausgangszustands knapp unter drei Punkte erhält. Gerundet wird erst das Ergebnis je
+Vergleichswert der Faktor, um den der Prototyp besser ist. Null Punkte gibt es beim Faktor null,
+drei bei gleichem Wert und fünf ab dem Faktor zwei, dazwischen jeweils linear. Ein Wert knapp unter dem des
+Ausgangszustands erhält damit knapp unter drei Punkte. Gerundet wird erst das Ergebnis je
 Kriterium auf ganze Punkte. S1 geht je zur Hälfte aus S1a und S1b ein, bei S1 zählt das 95.\ Perzentil, bei S2 der Median. S6 und S7 erhalten je angefangene zwanzig Prozent der
 Mandanten, die nicht schlechter laufen als im Ausgangszustand beziehungsweise keine Anpassung brauchen, einen Punkt. Die
 Zuordnung der Messwerte zu den Punkten legt \autoref{sec:Evaluation} offen, damit die Bewertung
@@ -354,10 +351,10 @@ und S6 wird über Bestandsanalyse und Prüfungen der Kompatibilitätsschicht abg
 M2 und M4 lassen sich nicht durch Architekturbetrachtung allein belegen. Für sie gilt ein Katalog von Prüffällen
 (\autoref{tab:prueffaelle} im Anhang), abgeleitet aus den Angriffswegen A1 bis A3 und gegen den Ausgangszustand und
 das Artefakt ausgeführt, sodass die Gegenüberstellung zugleich belegt, welche Eigenschaften der Ausgangszustand bereits
-erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach, T6 prüft zugleich die Verfügbarkeit innerhalb eines
-Mandanten, für die kein Muss-Kriterium besteht, T4 prüft, ob dessen Reset des temporären
-Verzeichnisses auch im Artefakt greift, und die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die
-noch nicht beobachtet wurden. T1 bis T8 standen fest, bevor der jeweilige Mechanismus umgesetzt war, sodass der
+erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach. T6 prüft zugleich die Verfügbarkeit
+innerhalb eines Mandanten, für die kein Muss-Kriterium besteht. T4 prüft, ob dessen Reset des temporären
+Verzeichnisses auch im Artefakt greift. Die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die noch
+nicht beobachtet wurden. T1 bis T8 standen fest, bevor der jeweilige Mechanismus umgesetzt war, sodass der
 Entwurf sich nicht nach den Prüffällen richten konnte. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M1. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
 Sprachmodellen erzeugten Code ausführen, enthält SandboxEval mit 51 Eigenschaften
 \autocite[S.~1--2]{rabin_sandboxeval_2025}, zugeschnitten auf Python und Linux und in

@@ -6,23 +6,18 @@ Dieses Kapitel beantwortet U2 und beschreibt den Prototyp, an dem \autoref{sec:E
 \subsection{Randbedingungen der Zielplattform}
 \label{sec:randbedingungen}
 
-% GRUNDLAGEN: Kubernetes-Begriffe (Pod, Container, RuntimeClass) und cgroups v2
-% gehoeren als Definition nach Kapitel 2. Hier bleibt nur ihre Folge fuer den Entwurf.
-
 Drei Eigenschaften der bestehenden Umgebung stehen nicht zur Disposition.
 
-Die erste ist das Fehlen eines Hypervisors. Firecracker setzt Zugriff auf \texttt{/dev/kvm} voraus
-\autocite{the_firecracker_authors_getting_2026}, den der Zielcluster nicht bereitstellt, und MicroVM-basierte Ansätze
-scheiden damit aus. Das gilt auch für Kata Containers, das Pods in leichtgewichtigen virtuellen Maschinen startet und
-dafür einen Hypervisor braucht \autocite{the_kata_containers_authors_hypervisors_2026}. Das ist ein Plattformausschluss und kein Sicherheitsurteil, denn die von
-\textcite[S.~420, 424]{agache_firecracker_2020} beschriebene Grenze ist die stärkste der betrachteten.
+Die erste ist das Fehlen eines Hypervisors. Der Zielcluster stellt \texttt{/dev/kvm} nicht bereit. Firecracker und
+Kata Containers (\autoref{sec:grundlagen:isolation}) scheiden damit aus. Das ist ein Plattformausschluss und kein
+Sicherheitsurteil, denn die von \textcite[S.~420, 424]{agache_firecracker_2020} beschriebene Grenze ist die stärkste der
+betrachteten.
 
 Die zweite ist die bereits eingesetzte Sandbox-Laufzeit. M3 untersagt, die dem Gastcode zugängliche Oberfläche des
 Host-Kernels gegenüber dem Ausgangszustand zu vergrößern. Die äußere Grenze ist damit keine Entwurfsvariable mehr. Ihr
 Aufwand ist in die Entscheidung des Ausgangszustands bereits eingegangen \autocite[S.~3]{young_true_2019}. Ein
 Ausbruch aus der V8-Sandbox endet damit in einer gVisor-Sandbox und nicht auf dem Host-Kernel. Hardwareseitige
-Seitenkanäle deckt gVisor nach eigener Darstellung nicht ab \autocite{the_gvisor_authors_security_2026}, und der
-Sentry gehört nach \autoref{sec:angreifermodell} selbst zur \ac{TCB}.
+Seitenkanäle bleiben offen, und der Sentry gehört selbst zur \ac{TCB} (\autoref{sec:grundlagen:isolation}).
 
 Die dritte betrifft die Granularität der Ressourcenlimits. Kubernetes vergibt sie je Container
 \autocite{the_kubernetes_authors_resource_2026} und kennt keine Schnittstelle für getrennte Limits innerhalb eines
@@ -46,21 +41,18 @@ als eine Einzelmessung.
 \subsubsection{Äußere und innere Isolationsgrenze}
 \label{sec:zwei-grenzen}
 
-% GRUNDLAGEN: Die Begriffe Isolate und Context sowie ihr Verhaeltnis zum Heap gehoeren
-% als Definition nach Kapitel 2.
-
 Ein verbreiteter Vergleich stellt Container und sprachbasierte Isolates als Alternativen gegenüber, sie wirken aber an
 unterschiedlichen Stellen: Ein Container ist eine äußere, vom Kern durchgesetzte Grenze, ein Isolate eine innere
 Grenze innerhalb eines Prozesses. Eine äußere Grenze existiert in jedem Entwurf. Wie viel die innere beim Start
 spart, zeigen \textcite[S.~645--646]{boucher_putting_2018} für sprachbasierte Isolation in Rust: Kaltstarts im Median
-von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Für V8 sind die Größenordnungen andere:
-Ein Isolate zu bauen kostet im Executor lokal auf einem Mac 3,3\,ms und im Cluster 19\,ms, ein Node.js-Prozess dort 69 und unter gVisor 53\,ms
-(\autoref{tab:prozessstart}). Offen sind daher zwei andere
+von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Für V8 sind die Größenordnungen
+andere. Ein Isolate zu bauen kostet im Executor lokal auf einem Mac 3,3\,ms und im Cluster 19\,ms. Ein
+Node.js-Prozess kostet dort 69 und unter gVisor 53\,ms (\autoref{tab:prozessstart}). Offen sind daher zwei andere
 Fragen, ob zusätzlich eine innere Grenze eingezogen wird und wie viele Ausführungseinheiten sich eine Grenze teilen.
 
-Für M1 lässt sich das auflösen. Die Anbieter ziehen die Mandantengrenze durchgehend außen: Chrome trennt Origins seit
-Spectre durch Prozesse (\autoref{sec:angreifermodell}), \textcite{cloudflare_security_2026} ergänzt die eigene
-Isolate-Plattform um eine Prozesssandbox mit Namespaces und \texttt{seccomp}, und
+Für M1 lässt sich das auflösen. Die Anbieter ziehen die Mandantengrenze durchgehend außen. Chrome trennt Origins seit
+Spectre durch Prozesse (\autoref{sec:grundlagen:isolation}). \textcite{cloudflare_security_2026} ergänzt die eigene
+Isolate-Plattform um eine Prozesssandbox mit Namespaces und \texttt{seccomp}.
 \textcite{deno_land_inc_how_2026} beschreibt für die eigene Plattform einen Prozess je Deployment, Namespaces,
 seccomp, cgroups und einen Watchdog. Kein Kandidat erfüllt M1 über die innere Grenze. Da die Fallstudie jedem
 Mandanten bereits einen eigenen Execution Service gibt, erfüllt sie M1 im Ausgangszustand, und das Kriterium scheidet
@@ -180,8 +172,8 @@ Worker-Thread ausführt, im Kern ein V8-Isolate im selben Prozess, besteht er di
 der Bauart mit einem Isolate je Ausführung in einem Node.js-Host. Bei M4 bleibt der Unterschied: Das Skript sieht Umgebung, Netz und das echte Dateisystem des Containers (T7 und T9 schlagen fehl).
 
 Ein frischer Node-Prozess je Ausführung stellt Zustandsfreiheit her und
-erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Auch mit Egress-Proxy und Netzwerkrichtlinie
-vermittelte er nur das Netz, Dateisystem, Umgebung und Identität des Hosts blieben dem Skript offen. Der Prozessstart von
+erfüllt M2, scheitert aber aus den in \autoref{sec:ausschluesse} genannten Gründen weiterhin an M4. Auch mit Egress-Proxy, dem Dienst, über den jede ausgehende Verbindung läuft, und Netzwerkrichtlinie
+vermittelte er nur das Netz. Dateisystem, Umgebung und Identität des Hosts blieben dem Skript offen. Der Prozessstart von
 Node.js kostet unter gVisor 53\,ms, ein eigener Snapshot hilft nicht (\autoref{tab:prozessstart}). Zustandsfreiheit
 und vermittelter Zugriff sind zwei verschiedene Eigenschaften, und die einfache Änderung liefert nur die
 erste. Für zur Laufzeit erzeugte Skripte ist das nach V2 die Lücke, denn ein über seine Eingaben
@@ -192,8 +184,8 @@ Bindings. Dass nur dieser Weg es täte, folgt erst aus M4, das den Mechanismus n
 Node-Prozess je Ausführung mit Egress allein über den Proxy ist nicht gemessen.
 
 Offen bleibt, auf welcher Ebene die Engine eingebettet wird. Der Binding Layer \texttt{rusty\_v8} stellt Isolate,
-Context, Skript und Scopes bereit, aber weder Event Loop noch Modulauflösung noch einen Mechanismus, über den der Host
-Funktionen in das Isolate reicht. \texttt{deno\_core} liefert genau diese Schicht
+Context, Skript und Scopes bereit. Event Loop, Modulauflösung und ein Mechanismus, über den der Host Funktionen in das
+Isolate reicht, fehlen dort. \texttt{deno\_core} liefert genau diese Schicht
 (\autoref{sec:grundlagen:isolation}) und verkleinert für M4 die selbst zu schreibende und abzusichernde Fläche. Der
 Entwurf bindet die Engine deshalb über \texttt{deno\_core} ein, das Wartungsrisiko behandelt
 \autoref{sec:betriebsplanung}.
@@ -293,8 +285,8 @@ Callback-\ac{URL} zu, die das Gateway auf einen Pfad unterhalb der Basisadresse 
 bricht nach einer längeren Frist ab. Beide Fristen entsprechen denen des Ausgangszustands
 (\autoref{tab:parameter}).
 
-Daneben verläuft der Steuerpfad. Dass ein Worker bereit ist, entnimmt die Control Plane dem Informer der
-Kubernetes-\ac{API}, Zuweisung und Entzug schickt sie als \ac{HTTP}-Kommando an den Transport des Pods. Die
+Daneben verläuft der Steuerpfad. Dass ein Worker bereit ist, entnimmt die Control Plane dem Informer, ihrem
+Spiegel der Pod-Objekte, den die Kubernetes-\ac{API} bei jeder Änderung nachführt. Zuweisung und Entzug schickt sie als \ac{HTTP}-Kommando an den Transport des Pods. Die
 Netzwerkrichtlinie lässt diesen Port nur von der Control Plane zu. Der Transport lehnt Kommandos aus dem eigenen
 Pod ab, damit Code, der die Sandbox verlässt, sich keinen Mandanten zuweisen kann (\autoref{lst:eigener-pod}). Die
 Zuweisung trägt das Token, mit dem der Transport sich erst jetzt mit NATS verbindet. Drei Vertrauensgrenzen liegen auf
@@ -314,7 +306,8 @@ entfernt er Header, mit denen ein Skript die Richtlinien der Plattform-Origin sc
 Das Modell trennt auf vier Ebenen, die von außen nach innen kurzlebiger und billiger werden. Nur
 zwei davon trennen Mandanten oder Ausführungen. Eine zweistufige Trennung kennt bereits SAND, mit einem Container je
 Anwendung und einem Prozess je Funktion \autocite[S.~923]{akkus_sand_2018}. Hier ist die äußere Einheit der Mandant und
-die innere die einzelne Ausführung.
+die innere die einzelne Ausführung. \autoref{tab:ebenen} ordnet jeder Ebene ihren Zuschnitt, ihre Aufgabe und das
+Kriterium zu, das sie trägt.
 
 \begin{table}[H]
 \centering
@@ -347,10 +340,6 @@ die innere die einzelne Ausführung.
 \end{table}
 
 
-
-% GRUNDLAGEN: Kaltstartverdeckung durch vorgehaltene Instanzen in serverlosen
-% Plattformen gehoert als Verfahren nach Kapitel 2.
-
 Der vorgehaltene Pool folgt dem Vorgehen von \textcite[S.~1]{lin_mitigating_2019}, Kaltstarts durch vorgehaltene
 Instanzen zu verdecken. Das Nachziehen des Pools folgt einer Vorratspolitik und liegt nie auf dem
 Anfragepfad, sonst trägt eine Anfrage wieder die volle Startzeit eines Pods. Das Skalieren auf null des
@@ -367,8 +356,8 @@ Containergrenze erreicht den Transport. Hinter dieser schwächeren Hürde begren
 Consumer des eigenen Mandanten und die Laufzeit des Tokens.
 
 Die Zuordnung eines Pods zu einem Mandanten ist endgültig. Ein einmal zugewiesener Pod endet durch eine von drei
-Ursachen: Die Control Plane entzieht ihn nach einer Stunde Zuweisungsdauer oder zieht ihn zurück, wenn sein Mandant
-eine Minute lang keinen Auftrag geschickt hat, oder er wird beim Entzug eines Knotens abgeräumt. Zurückziehen heißt,
+Ursachen. Die Control Plane entzieht ihn nach einer Stunde Zuweisungsdauer. Sie zieht ihn zurück, wenn sein Mandant
+eine Minute lang keinen Auftrag geschickt hat. Oder er wird beim Entzug eines Knotens abgeräumt. Zurückziehen heißt,
 dass sie den Mandanten zuerst aus der Zuteilung nimmt und dem Worker dann ein \emph{retire} schickt, das seinen
 Consumer leert und den Prozess beendet. Beendete der Worker sich allein, bliebe der Mandant bis zur Meldung des
 Informers zugewiesen. Ein Auftrag in dieser Lücke wartete 0,5 bis 3,2 Sekunden. Das eigene Leerlauf-Ende des
@@ -438,7 +427,7 @@ die eine Neuzustellung dem Aufrufer als Fehlschlag meldet statt sie zu wiederhol
 Ausführung auf dem Anfragepfad. Sie ist nicht umgesetzt (\autoref{sec:diffusion:ausblick}).
 
 Ein Worker wartet nach dem Binden eines frisch angelegten Consumers auf dessen Leader, zieht je Nachricht genau einen
-Pull und beendet sich nur zwischen zwei Pulls: Eine in einen verworfenen Pull zugestellte Nachricht war bis zum
+Pull und beendet sich nur zwischen zwei Pulls. Eine in einen verworfenen Pull zugestellte Nachricht war bis zum
 26.\ Oktober, mit einer einzigen Zustellung, verloren (\autoref{sec:zuverlaessigkeit}). Der Name des Consumers hängt nur
 vom Mandanten ab, sodass der nächste Pod, der den Mandanten übernimmt, an der letzten Bestätigung fortsetzt.
 
@@ -499,9 +488,9 @@ Den Rückbau übernimmt die Control Plane: Sie merkt sich, wie viele Pods jede L
 ab, damit ein Neustart sie nicht vergisst.
 
 Auch die Zielgröße des Pools muss nicht fest sein. Die Control Plane zählt die Zuweisungen je Minute in Redis.
-Daraus sagt sie die Größe für die nächsten Minuten vorher, aus dem gleichen Zeitfenster an den gleichen Wochentagen der letzten
-vier Wochen und den letzten sieben Tagen, mit Sicherheitsfaktor 1,3, nach unten begrenzt von der statischen Zielgröße,
-nach oben von einer Kostengrenze. Der Grund ist die Uhr, denn geplante Skripte machen die vollen Stunden zu den
+Daraus sagt sie die Größe für die nächsten Minuten vorher. Grundlage sind das gleiche Zeitfenster an den gleichen
+Wochentagen der letzten vier Wochen und die letzten sieben Tage, mit Sicherheitsfaktor 1,3. Nach unten begrenzt die
+statische Zielgröße den Wert, nach oben eine Kostengrenze. Der Grund ist die Uhr, denn geplante Skripte machen die vollen Stunden zu den
 geschäftigsten Minuten. Die Vorhersage ist für den Betrieb umgesetzt, die Messungen liefen mit der festen Zielgröße
 vierzig.
 
@@ -532,7 +521,7 @@ Ein Isolate erreicht die Außenwelt nur über diejenigen Bindings, die der Host 
 registriertes Binding existiert kein Weg nach außen, auch kein fehlerhaft abgesicherter. Die Menge der Bindings ist
 damit die Grenze selbst und nicht deren Bewachung, womit M4 erfüllt ist. Dass der Unterschied zwischen
 einer Liste des Erlaubten und einer des Verbotenen zählt, zeigt eine Untersuchung von rund 1.700 Denylisten für
-Shell-Kommandos in \ac{KI}-Agenten: Je nach Einstellung blockieren 69 bis 99 Prozent davon nicht vollständig, was sie
+Shell-Kommandos in \ac{KI}-Agenten. Je nach Einstellung blockieren 69 bis 99 Prozent davon nicht vollständig, was sie
 sperren sollen \autocite[S.~1--2]{chen_one_2026}.
 
 Der Mandantenkontext, also Kennung und Profil, liegt in \texttt{OpState}, dem Zustandsobjekt, das der
@@ -630,9 +619,9 @@ Differenztest führt 757 Fälle, die in einem echten Node derselben Version erze
 erneut aus und verlangt dasselbe Ergebnis, wobei eine Liste bekannter Abweichungen fehlschlägt, sobald eine
 Abweichung verschwindet. Integrationstests sprechen über \texttt{http}, \texttt{fetch}, \texttt{net} und \ac{TLS} über
 einem rohen Socket mit echten Gegenstellen und prüfen Backpressure, Redirects, Abbrüche und die Allowlist. Der dritte
-Weg prüft den Bestand gegen die Schicht: Ein Scanner bündelt jede gespeicherte Skriptversion mit esbuild wie der
-Builder der Plattform und prüft jeden Import und jeden freien Bezeichner gegen eine Liste dessen, was ein laufendes
-Isolate des Prototyps bereitstellt. Ein früher Lauf war die Arbeitsliste für die zweite Schicht. Da der Scanner auch
+Weg prüft den Bestand gegen die Schicht. Ein Scanner bündelt jede gespeicherte Skriptversion mit esbuild wie der
+Builder der Plattform. Dann prüft er jeden Import und jeden freien Bezeichner gegen eine Liste dessen, was ein
+laufendes Isolate des Prototyps bereitstellt. Ein früher Lauf war die Arbeitsliste für die zweite Schicht. Da der Scanner auch
 Bezeichner in Zweigen zählt, die unter Node nie laufen, sind seine Urteile eine Obergrenze der Blocker. Gegen den
 heutigen Stand der Schicht wird er nicht wiederholt. \autoref{sec:pruefung-kompatibilitaet} leitet S6 stattdessen aus
 der Bestandsanalyse ab.
@@ -851,8 +840,8 @@ vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Na
 
 
 Weitere Maßnahmen folgen aus der Umsetzung und sind im Quellcode als solche markiert. Die mandantenweite Pflege
-der Regeln fehlt, solange die Skriptverwaltung keine hält, und der Prototyp gibt sie fest vor, im Modus audit, der nur die
-internen Bereiche verwehrt, oder wie am 28.\ Oktober in enforce mit einer Testregel. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
+der Regeln fehlt, solange die Skriptverwaltung keine hält. Der Prototyp gibt sie deshalb fest vor, im Modus audit, der
+nur die internen Bereiche verwehrt, oder wie am 28.\ Oktober in enforce mit einer Testregel. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
 nicht umgesetzt. Ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist
 nicht erhoben, denn die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Für enforce im Betrieb ist das zu erheben, und S6
 und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für

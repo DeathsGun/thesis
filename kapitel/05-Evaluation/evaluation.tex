@@ -38,17 +38,21 @@ synchroner Antwort. Das Agentenprofil hat keinen Vergleichswert, weil es im Ausg
 Profilen.
 
 Die Messungen des Endstands, also S1 bis S4, M5, die Zustellung, T1 bis T9, SandboxEval und M3, liefen am 29.\ und
-30.\ Oktober mit der Trennung in Transport und Sandbox aus \autoref{sec:bausteine}, dem Egress-Proxy aus
-\autoref{sec:faehigkeitsmodell} in enforce für beide Profile, bis zu vier Zustellungen (\autoref{sec:zuteilung}), warmen
-Isolates, einer Pool-Zielgröße von vierzig und ohne Auth Callout, der auf der Plattform noch nicht eingerichtet ist.
+30.\ Oktober. Der Stand enthielt die Trennung in Transport und Sandbox aus \autoref{sec:bausteine}, den Egress-Proxy aus
+\autoref{sec:faehigkeitsmodell} in enforce für beide Profile, bis zu vier Zustellungen (\autoref{sec:zuteilung}), warme
+Isolates und eine Pool-Zielgröße von vierzig. Der Auth Callout fehlte, weil er auf der Plattform noch nicht eingerichtet
+ist.
 Am 2.\ November kamen die Proxy-Abmeldung im Hintergrund, eine Korrektur der Wartezeit auf den Consumer-Leader und ein
-größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. \autoref{tab:stand} im Anhang ordnet
+größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. Die virtuelle Uhr
+(\autoref{sec:kompatibilitaetsschicht}) und die Schnittmenge der Regeln (\autoref{sec:faehigkeitsmodell}) kamen nach
+allen Messungen hinzu. Nur der zweite Lauf zum verdeckten Kanal in \autoref{sec:pruefung-isolation} lief mit der neuen Uhr.
+Für die Schnittmenge gibt es keinen Lauf. \autoref{tab:stand} im Anhang ordnet
 die Belege den Ständen und Commits zu, die früheren Läufe vom 6.\ bis 28.\ Oktober stehen dort ebenfalls.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Der Runner führt jedes Skript
-seither in einem eigenen, verworfenen Worker-Thread aus, trägt seit dem 17.\ Oktober statt 100\,m ein
-\ac{CPU}-Limit von zwei Kernen, und der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster von 6 und
-60 Sekunden Scale-Down-Delay. Alle Läufe ab dem 28.\ Oktober messen diesen Stand, die Prüffälle vom 19.\ Oktober, Lauf 18 und
+seither in einem eigenen, verworfenen Worker-Thread aus und trägt seit dem 17.\ Oktober statt 100\,m ein
+\ac{CPU}-Limit von zwei Kernen. Der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster
+von 6 und 60 Sekunden Scale-Down-Delay. Alle Läufe ab dem 28.\ Oktober messen diesen Stand, die Prüffälle vom 19.\ Oktober, Lauf 18 und
 die Pod-Ressourcen vom 15.\ Oktober den früheren.
 
 Lastgenerator ist k6 \autocite{grafana_labs_k6_2026} auf einem Arbeitsplatzrechner, dessen Aufrufe wie echte
@@ -131,7 +135,7 @@ Pool-Zielgröße vierzig und mit Pool null, damit der nackte Startmechanismus be
 \end{table}
 
 Im verteilten Lauf liegt der Prototyp mit Pool im Median bei 278 bis 308\,ms gegen 2,54 bis 2,76 Sekunden, ein Faktor von
-gut neun, und bedient in allen drei Läufen 90 von 90 Mandanten innerhalb von zwei Sekunden, der Ausgangszustand höchstens
+gut neun. Er bedient in allen drei Läufen 90 von 90 Mandanten innerhalb von zwei Sekunden, der Ausgangszustand höchstens
 3. Die Spannweiten überlappen nicht. Nach den Traces in Tempo beginnt die Ausführung im Prototyp im Median 131 bis 139\,ms
 nach dem Eingang im Gateway, davon 91 bis 100\,ms für die Zuweisung eines Workers. Der Rest bis zum Median beim Client ist der
 Weg über Edge-Proxy und Internet. Im Ausgangszustand besteht die Zeit bis zum Ende des Skripts mit 2,4 bis 2,6 Sekunden
@@ -143,10 +147,12 @@ dass Knative frische Pods anspricht, bevor ihr Netz erreichbar ist, belegt ist d
 Läufen des Prototyps enthalten, einen Lauf ohne ihn gibt es nicht.
 
 Die Läufe mit Pool null ordnen den Vorsprung ein. Ohne vorgehaltene Pods liegt der Prototyp im verteilten Lauf im Median
-mit 2,52 bis 2,65 Sekunden so hoch wie der Ausgangszustand, im Schub mit 6,6 bis 7,7 gegen 8,1 bis 8,6 Sekunden etwas darunter. Der Vorsprung
+mit 2,52 bis 2,65 Sekunden so hoch wie der Ausgangszustand. Im Schub liegt er mit 6,6 bis 7,7 gegen 8,1 bis 8,6 Sekunden
+etwas darunter. Der Vorsprung
 stammt damit aus dem Pool und nicht aus einem schnelleren Startmechanismus. Ohne Pool bleibt die Zuverlässigkeit: Alle 540
-Aufrufe gelingen. Dass der Tail im verteilten Lauf mit 6,6 bis 8,2 Sekunden im 95.\ Perzentil länger ist als bei Knative,
-liegt nach den Logs der Control Plane daran, dass ein wartender Mandant den nächsten bereiten Pod nimmt, nicht den für ihn angelegten.
+Aufrufe gelingen. Der Tail im verteilten Lauf ist mit 6,6 bis 8,2 Sekunden im 95.\ Perzentil länger als bei Knative.
+Nach den Logs der Control Plane liegt das daran, dass ein wartender Mandant den nächsten bereiten Pod nimmt, nicht den für
+ihn angelegten.
 Die Vergabe an den am längsten wartenden Mandanten steht in \autoref{sec:betriebsplanung} als offene Maßnahme.
 
 Für das Agentenprofil gibt es keinen Ausgangswert, weil Knative keinen Endpunkt dafür hat. Verglichen wird es mit dem Webhook-Profil
@@ -191,9 +197,10 @@ kleinen Anteil Erstkontakte.
 \end{figure}
 
 Auf demselben Cluster und unter demselben Profil liegt der Prototyp im Median bei 139 bis 145\,ms gegen 300 bis 312\,ms des
-Ausgangszustands, im 95.\ Perzentil bei 220 bis 291 gegen 720 bis 745\,ms und im 99.\ bei 313 bis 361\,ms gegen 3,5 bis
-3,7 Sekunden. Gemessen an den mittleren Läufen ist das das 2,1-, 2,4-, 2,9- und 10-Fache im 50., 90., 95.\ und 99.\ Perzentil, und
-weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
+Ausgangszustands. Im 95.\ Perzentil sind es 220 bis 291 gegen 720 bis 745\,ms, im 99.\ Perzentil 313 bis 361\,ms gegen 3,5
+bis 3,7 Sekunden. Gemessen an den mittleren Läufen ist das das 2,1-, 2,4-, 2,9- und 10-Fache im 50., 90., 95.\ und 99.\
+Perzentil. Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
+sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
 zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht. Der frühere Lauf 18 (13.\ Oktober) litt unter einem Ingress-Neustart und wurde ersetzt.
@@ -204,8 +211,8 @@ Der Egress-Proxy kostet je Aufruf rund 17\,ms, je 8,2\,ms für Anmeldung und Abm
 22\,ms). Das sind 30\,\% des serverseitigen Overheads von 51 bis 52\,ms (Gateway-Zeit abzüglich \texttt{run\_script}) und rund ein Achtel des Overheads
 beim Client. Seit dem 2.\ November läuft die Abmeldung im Hintergrund und spart rund 7\,ms je Aufruf. Reale Bundles
 (\autoref{tab:bundles} im Anhang) verlängern den Kaltstart im Prototyp um 60 bis 670\,ms gegenüber \enquote{Hello World},
-am meisten \texttt{pdfmake} mit seinen Schriften, und bleiben mit einem 95.\ Perzentil unter 1,5 Sekunden unter dem Kaltstart des
-Ausgangszustands. Im Median sind warme Aufrufe 1,6- bis 2,2-mal schneller als dort, je Paket nach fünf Kaltstarts und 20 warmen Aufrufen.
+am meisten \texttt{pdfmake} mit seinen Schriften. Mit einem 95.\ Perzentil unter 1,5 Sekunden bleiben sie unter dem
+Kaltstart des Ausgangszustands. Im Median sind warme Aufrufe 1,6- bis 2,2-mal schneller als dort, je Paket nach fünf Kaltstarts und 20 warmen Aufrufen.
 
 Die Erzeugung eines Isolates kostet im Cluster im Median 18,7\,ms (95.\ Perzentil 77\,ms) und liegt seit dem Executor-Stand vom 29.\ Oktober als warmes Isolate vor dem Aufruf, nicht mehr im Anfragepfad. Das ist der Preis der Isolate-Grenze aus
 \autoref{sec:ebenen}. Ein frischer Node.js-Prozess je Ausführung kostet unter gVisor im Median 53\,ms, doppelt so viel wie unter runc, und ein eigener
@@ -252,12 +259,12 @@ mehrere Ausführungen zugleich trägt. Verglichen wird die Spitze je Pod in den 
 Modelle unter gVisor laufen (\autoref{tab:ressourcen-endstand} und \autoref{tab:ressourcen-pod} im Anhang). Ein
 Runner-Pod belegt im Median 82,7\,MiB, ein Worker-Pod 70,5\,MiB, das 1,2-Fache. In der Kaltstartmessung vom 26.\ Oktober
 waren es noch das Anderthalbfache (90 gegen 59\,MiB, \autoref{tab:ressourcen-trennung}). Im Ruhezustand liegt der Worker bei 78,7\,MiB, vermutlich wegen der warmen Isolates und
-der zwei Container, die cAdvisor unter gVisor nicht einzeln ausweist. Unter Last braucht der Prototyp wegen der geringeren Pod-Zahl (202 bis 207
-gegen 376 bis 391) mit 14,4 bis 15,0\,GiB weniger als die Hälfte der 33,0 bis 34,1\,GiB, die \ac{CPU} unterscheidet sich kaum. Die
-Steuerungsschicht fällt stärker auseinander: Knative Serving mit Kourier und dem Controller, der die Runner anlegt, hält unter Last 2,3\,GiB, Control Plane,
-Gateway und Egress-Proxy des Prototyps 267\,MiB. Der Pool kostet im Ruhezustand 3,0\,GiB und 1,02 Kerne (40 Worker zu
-je 78,7\,MiB), gemessen und nicht mehr hochgerechnet, der Ausgangszustand dort nichts außer Knative Serving
-mit 1,9\,GiB im Ruhezustand. Der Pool kauft die Kaltstarts. Unter Last spart der Prototyp damit mehr Speicher, als der Pool
+der zwei Container, die cAdvisor unter gVisor nicht einzeln ausweist. Unter Last braucht der Prototyp wegen der geringeren
+Pod-Zahl (202 bis 207 gegen 376 bis 391) mit 14,4 bis 15,0\,GiB weniger als die Hälfte der 33,0 bis 34,1\,GiB. Die
+\ac{CPU} unterscheidet sich kaum. Die Steuerungsschicht fällt stärker auseinander. Knative Serving mit Kourier und dem
+Controller, der die Runner anlegt, hält unter Last 2,3\,GiB. Control Plane, Gateway und Egress-Proxy des Prototyps halten
+267\,MiB. Der Pool kostet im Ruhezustand 3,0\,GiB und 1,02 Kerne (40 Worker zu je 78,7\,MiB), gemessen und nicht mehr
+hochgerechnet. Der Ausgangszustand kostet dort nichts außer Knative Serving mit 1,9\,GiB im Ruhezustand. Der Pool kauft die Kaltstarts. Unter Last spart der Prototyp damit mehr Speicher, als der Pool
 im Ruhezustand kostet. NATS ist dem Prototyp nicht zugerechnet.
 
 \subsection{Zuverlässigkeit der Zustellung}
@@ -343,12 +350,13 @@ Die Fehlschläge bei T1 bis T3, T5 und T6 gingen auf den gemeinsamen Node.js-Pro
 und sind behoben, seit der Runner jedes Skript in einem verworfenen Worker-Thread ausführt. Die Zustandsfreiheit hat der
 Ausgangszustand damit selbst hergestellt. Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem: T7 und T9 betreffen den Weg nach außen, T8 gilt wegen der nicht lesbaren Pfade als bestanden, lässt aber Umgebung und Dateisystem offen.
 
-Dieselben neun Prüffälle liefen am 21.\ Oktober 2026, T7 am 30.\ Oktober erneut, im Agentenprofil des Prototyps auf einem zweiten
-Testmandanten, als Snippets über den Endpunkt der Agentenausführungen, übertragen auf die Mittel des Profils, weil es weder
-\texttt{require} noch \texttt{process} noch eine Konsole bereitstellt. Der Ausgangszustand hat dafür kein Gegenstück. T1 bis T3 liefen
+Dieselben neun Prüffälle liefen am 21.\ Oktober 2026 auch im Agentenprofil des Prototyps, auf einem zweiten Testmandanten
+und als Snippets über den Endpunkt der Agentenausführungen, T7 am 30.\ Oktober erneut. Die Fälle sind auf die Mittel des
+Profils übertragen, weil es weder \texttt{require} noch \texttt{process} noch eine Konsole bereitstellt. Der Ausgangszustand hat dafür kein Gegenstück. T1 bis T3 liefen
 zusätzlich mit zwei gleichzeitigen Ausführungen. Der Prototyp besteht alle neun Fälle. Zustand erreicht keine andere Ausführung, auch
-keine gleichzeitige, über gemeinsamen Zustand. Module, Dateisystem und Betriebssystem lassen sich nicht laden, \texttt{fetch} scheitert zu jedem
-Ziel, und die Speicherbombe endet nach 0,3 Sekunden mit \texttt{scriptExecutionOutOfMemory}, die fünf folgenden Ausführungen liefern 200.
+keine gleichzeitige, über gemeinsamen Zustand. Module, Dateisystem und Betriebssystem lassen sich nicht laden, und
+\texttt{fetch} scheitert zu jedem Ziel. Die Speicherbombe endet nach 0,3 Sekunden mit
+\texttt{scriptExecutionOutOfMemory}, die fünf folgenden Ausführungen liefern 200.
 
 Ob gleichzeitige Ausführungen über die Zeit Daten austauschen, prüfte am 2.\ November ein verdeckter Kanal im Agentenprofil
 auf hyper-int-otc. Ein Sender kennt 64 Zufallsbits und rechnet in einem Fenster von 40\,ms für eine 1 und wartet für eine 0.
@@ -360,16 +368,18 @@ selben Pod in fünf Läufen bei 0,30 bis 0,39, zwischen den Pods bei 0,38 bis 0,
 Collector treibt, lag sie in beiden Fällen bei 0,25 bis 0,44, und ein Pod je Ausführung schlösse diesen Weg nicht. Mit dem
 Executor-Stand vom selben Tag, dessen Uhr bei Timern virtuell läuft (\autoref{sec:kompatibilitaetsschicht}), erreichte
 kein Lauf mehr seine Fenster. Eine externe Zeitquelle über eine Regel aus dem Aufruf, wie sie der Stand ohne Schnittmenge
-zuließ (\autoref{sec:faehigkeitsmodell}), öffnete den Kanal im selben Pod wieder, unzuverlässig mit 0,08 bis 0,50 in sieben
-Läufen bei 16 Bits und 500-ms-Fenstern, ohne Wahl der Polarität gegen 0,5 für Raten. Zwischen den Pods lag er bis auf einen
+zuließ (\autoref{sec:faehigkeitsmodell}), öffnete den Kanal im selben Pod wieder. Er war unzuverlässig, mit 0,08 bis 0,50
+in sieben Läufen bei 16 Bits und 500-ms-Fenstern, ohne Wahl der Polarität gegen 0,5 für Raten. Zwischen den Pods lag er bis auf einen
 Lauf (0,31) auf Zufallsniveau. Die Läufe sind wenige, die Richtung bei \ac{CPU}-Last ist einheitlich, die Größe nicht belastbar.
 
 T7 und T9 wurden am 28.\ und 30.\ Oktober gegen den Egress-Proxy mit beiden Profilen in enforce wiederholt, mit der Testregel
 example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen der eigene Mandant und die
 Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, TCP zu 1.1.1.1:53, die Testregel auf Port 80,
-\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil mit einer Regel aus dem Aufruf
-(example.net, GET), die der damalige Stand ohne Schnittmenge übernahm (\autoref{sec:faehigkeitsmodell}), gehen der eigene Mandant, diese Regel mit GET und die Testregel durch, abgewiesen werden dieselbe Regel
-mit POST, example.com, ein fremder Mandant, 1.1.1.1 und die internen Ziele, und das Anfrageprotokoll führt alle Versuche.
+\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil
+kam eine Regel aus dem Aufruf hinzu (example.net, GET), die der damalige Stand ohne Schnittmenge übernahm
+(\autoref{sec:faehigkeitsmodell}). Der eigene Mandant, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
+dieselbe Regel mit POST, example.com, ein fremder Mandant, 1.1.1.1 und die internen Ziele. Das Anfrageprotokoll führt alle
+Versuche.
 Beide Profile bestehen, die Politik wirkt also, nicht nur der Durchsetzungspunkt. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
 
 Ergänzend wurden die 51 Eigenschaften von SandboxEval \autocite[S.~1--2]{rabin_sandboxeval_2025} für JavaScript
@@ -392,9 +402,9 @@ M3 betrifft allein den Host-Kernel. Was der Prototyp innerhalb des Pods hinzufü
 die Loopback-Verbindung zur Sandbox, gehört zu M1 und ist in \autoref{sec:ebenen} und über T10 bewertet. Die Aussage stützt sich auf die
 Konfiguration und sagt nichts über Lücken in gVisor selbst. M1 ist im Entwurf mit Auth Callout erfüllt (T10), im gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
 NATS-Zugangsdaten. Der Callout ist auf der Plattform noch nicht eingerichtet
-(\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster, am 29.\ Oktober erneut geprüft, zeigt: Die Container teilen
-keinen Prozess-Namespace, die Sandbox hat keine Volumes, und Identitätssecret und NATS-Zugangsdaten sind nur im
-Transport eingehängt, ohne Token des Service-Accounts. Das Netz teilen beide Container. Dass der Transport fremde
+(\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster, am 29.\ Oktober erneut geprüft, zeigt drei Dinge. Die
+Container teilen keinen Prozess-Namespace. Die Sandbox hat keine Volumes. Identitätssecret und NATS-Zugangsdaten sind nur
+im Transport eingehängt, ohne Token des Service-Accounts. Das Netz teilen beide Container. Dass der Transport fremde
 Kommandos abweist und NATS ohne Zugangsdaten nichts zulässt, ist nur lokal geprüft.
 
 Ein Skript erreicht das Netz nur über den Proxy (T7). Ob das auch nach einem Ausbruch aus dem Isolate gilt, ist nicht geprüft.
@@ -403,8 +413,8 @@ Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noi
 Mandant A ruft mit 40 Aufrufern ein Skript auf, das zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein
 Skript von rund 150\,ms auf. Gewertet wird die Latenz von B nach der CPU-Last des Knotens, auf dem der Aufruf lief
 (\autoref{tab:b6} und \autoref{tab:b6-zaehlung} im Anhang). Beide Modelle isolieren die CPU nicht. Auf einem von A
-ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von 217 bis 236 auf 327 bis 421\,ms, das
-95.\ Perzentil von 268 bis 390 auf 422 bis 898\,ms, und die Ausführung im Worker verdoppelt sich. Im Ausgangszustand sind es 314 bis 352 auf 475 bis 506\,ms und
+ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von 217 bis 236 auf 327 bis 421\,ms und das
+95.\ Perzentil von 268 bis 390 auf 422 bis 898\,ms. Die Ausführung im Worker verdoppelt sich. Im Ausgangszustand sind es 314 bis 352 auf 475 bis 506\,ms und
 620 bis 666\,ms im 95.\ Perzentil. Den Unterschied macht die Reichweite: Der Prototyp begrenzt A auf zehn Worker, die auf sieben Knoten liegen und einen
 bis zwei voll auslasten. Knative skaliert A auf rund fünfzig Pods und lastet sieben bis neun von zwölf Knoten aus, sodass fast
 jeder Mandant B auf einem belasteten Knoten liegt. Im Prototyp steigt das 95.\ Perzentil auch auf Knoten ohne Worker von A (305 bis
@@ -434,9 +444,9 @@ gelöschten Runner beenden ihre Anfrage noch, danach zahlen neue Aufrufe den Kal
 die Läufe vom 28.\ Oktober (0,21 bis 0,42 gegen 2,10 bis 2,69 Sekunden). Alle 24 langen Aufrufe über die Löschung enden im Prototyp
 mit 200 nach 25,2 Sekunden. Von den 48 laufenden Ausführungs-IDs hat jede genau eine Ausführung im Trace, keine ging verloren und
 keine lief doppelt. Der Ausgangszustand verliert ebenfalls keine, seine Aufrufe enden nach 25,3 bis 25,5 Sekunden.
-Der relative Zielwert aus \autoref{sec:kriterienkatalog} ist erreicht. Mit vierzig Mandanten unter Last
-und sechs getroffenen Mandanten, einem kleinen Drain, bleibt die Lücke im Prototyp unter 0,56 Sekunden, bei einem Prober im 200-ms-Takt, gegen bis
-zu 5,15 Sekunden bei Knative, wo sechs Runner zugleich kalt starten. Ein echtes Drain auf allen Knoten ist auf dem
+Der relative Zielwert aus \autoref{sec:kriterienkatalog} ist erreicht. Mit vierzig Mandanten unter Last und sechs
+getroffenen Mandanten, einem kleinen Drain, bleibt die Lücke im Prototyp unter 0,56 Sekunden. Gemessen ist das mit einem
+Prober im 200-ms-Takt. Bei Knative sind es bis zu 5,15 Sekunden, dort starten sechs Runner zugleich kalt. Ein echtes Drain auf allen Knoten ist auf dem
 Integrationscluster nicht messbar.
 
 Die Reihe vom 28.\ Oktober hatte einen Fehler im Executor aufgedeckt: Die Verbindung zur Sandbox steckte in einem
@@ -474,8 +484,9 @@ S7, der Aufwand für den Rest, ist für 64 der 65 Mandanten null, weil keine Anp
 ist, und für den letzten nicht gewollt. Der Aufwand für Regeln steht darin nicht, er fällt erst unter enforce an.
 
 Die Machbarkeitsprüfung an \texttt{tedious} aus \autoref{sec:kompatibilitaetsschicht} wurde am 2.\ November am Endstand
-wiederholt und ist bestanden: Der unveränderte Treiber (20.3.8) verbindet sich in drei Läufen über den Socket-Shim mit einer
-echten Datenbankinstanz, stellt im \ac{TDS}-Datenstrom auf \ac{TLS} um und fragt ab, beide Negativkontrollen schlagen wie in Node fehl.
+wiederholt und ist bestanden. Der unveränderte Treiber (20.3.8) verbindet sich in drei Läufen über den Socket-Shim mit einer
+echten Datenbankinstanz, stellt im \ac{TDS}-Datenstrom auf \ac{TLS} um und fragt ab. Beide Negativkontrollen schlagen wie
+in Node fehl.
 Auch der Differenztest mit 757 Fällen und die 440 Tests des Executors bestehen. Gebündelte Pakete laufen ebenfalls
 (\autoref{tab:bundles} im Anhang): Mit den vier häufigsten Paketen des Bestands, darunter \texttt{axios} und \texttt{@dvelop-sdk/dms}, und \enquote{Hello World} gelingen
 alle 525 Aufrufe im Prototyp, kalt in höchstens 1,4 Sekunden.
@@ -486,9 +497,10 @@ alle 525 Aufrufe im Prototyp, kalt in höchstens 1,4 Sekunden.
 \autoref{tab:nutzwert} sammelt die erhobenen Werte entlang der Soll-Kriterien. Die Fehlerrate
 geht nicht ein, sie liegt bei 3 bis 7 gegen 18 bis 39 von rund 57.000 Aufrufen. S6 ist abgeleitet statt gemessen, bei S7 bleibt der Regelaufwand unbewertet. Die Punkte folgen der
 Regel aus \autoref{sec:kriterienkatalog}. Der Ausgangszustand erhält je bewertetem Kriterium drei
-Punkte, bei S6 und S7 nach derselben absoluten Regel fünf. Die Faktoren stammen aus dem Median der drei Läufe: S1a 6,1 im
-verteilten und 2,0 im Schub (beide fünf Punkte), S1b 0,41 und 1,33 (1,2 und 3,7 Punkte), im Mittel 2,4 und damit mit S1a
-3,7, gerundet vier. S2 liegt im Median bei 2,1, S3 bei 1,17 (3,3 Punkte, gerundet drei) und S4 bei 2,0.
+Punkte, bei S6 und S7 nach derselben absoluten Regel fünf. Die Faktoren stammen aus dem Median der drei Läufe. S1a
+erreicht 6,1 im verteilten Lauf und 2,0 im Schub, beides fünf Punkte. S1b erreicht 0,41 und 1,33, also 1,2 und 3,7 Punkte,
+im Mittel 2,4. Zusammen mit S1a ergibt das 3,7, gerundet vier. S2 liegt im Median bei 2,1, S3 bei 1,17 (3,3 Punkte,
+gerundet drei) und S4 bei 2,0.
 
 \begin{table}[tbp]
   \caption[Stand der Bewertung entlang der Soll-Kriterien]{Stand der Bewertung entlang der Soll-Kriterien. Die

@@ -1,0 +1,188 @@
+% Glossar der Arbeit. Einträge in alphabetischer Reihenfolge, sort-Schlüssel ohne Umlaute.
+% Begriffe des eigenen Modells verweisen auf den Abschnitt, der sie einführt, allgemeine Begriffe auf ihre Quelle.
+
+\newglossaryentry{ackwait}{name={Ack-Wait},sort={Ack-Wait},
+  description={Zeitspanne, die der JetStream-Server nach der Zustellung einer Nachricht auf ihre Bestätigung wartet. Bleibt sie aus, stellt er die Nachricht erneut zu \autocite{the_nats_authors_consumers_2026}.}}
+
+\newglossaryentry{agentenprofil}{name={Agentenprofil},sort={Agentenprofil},
+  description={Profil des Ausführungsmodells für Skripte, die ein KI-Agent zur Laufzeit erzeugt und sofort ausführen lässt. Es erhält nur \texttt{fetch} und Web-Globals, keinen Modul-Loader (\autoref{sec:faehigkeitsmodell}).}}
+
+\newglossaryentry{allowlist}{name={Allowlist},sort={Allowlist},
+  description={Liste des Erlaubten. Alles, was nicht aufgeführt ist, bleibt verwehrt. Gegenstück ist die Denylist, deren Lücken \textcite[S.~1--2]{chen_one_2026} an Shell-Kommandos in KI-Agenten zeigen.}}
+
+\newglossaryentry{authcallout}{name={Auth Callout},sort={Auth Callout},
+  description={Erweiterung von NATS, bei der der Server jede neue Verbindung von einem externen Dienst prüfen und mit Rechten versehen lässt \autocite{the_nats_authors_auth_callout_2026}. Im Modell erhält so jeder Worker nur die Subjects seines Mandanten (\autoref{sec:bausteine}).}}
+
+\newglossaryentry{ausgangszustand}{name={Ausgangszustand},sort={Ausgangszustand},
+  description={Die Knative-Variante der Scripting-Engine auf der DDP mit einem Node.js-Runner je Mandant, gegen die der Prototyp gemessen wird (\autoref{sec:systemkontext}).}}
+
+\newglossaryentry{binding}{name={Binding},sort={Binding},
+  description={Schnittstelle, über die ein Skript die Außenwelt erreicht, etwa \texttt{fetch} oder ein Socket. Ein Binding besteht aus Ops und dem JavaScript-Code, der sie dem Skript anbietet (\autoref{sec:grundlagen:isolation}).}}
+
+\newglossaryentry{bundle}{name={Bundle},sort={Bundle},
+  description={Eine Datei, in die ein Bundler wie esbuild ein Skript samt seiner Importe zusammenfasst, sodass zur Laufzeit nichts nachgeladen wird \autocite{wallace_esbuild_2026}.}}
+
+\newglossaryentry{cadvisor}{name={cAdvisor},sort={cAdvisor},
+  description={Werkzeug, das Ressourcenverbrauch und Leistungsdaten laufender Container erfasst \autocite{googlecadvisor_contributors_cadvisor_2026}. Prometheus sammelt seine Werte (\autoref{sec:messaufbau}).}}
+
+\newglossaryentry{cgroup}{name={cgroup},sort={cgroup},
+  description={Mechanismus des Linux-Kerns, der Prozesse zu Gruppen zusammenfasst und ihren Verbrauch an Speicher, Prozessor und Ein- und Ausgabe begrenzt \autocite{the_kernel_development_community_control_2026}.}}
+
+\newglossaryentry{consumer}{name={Consumer},sort={Consumer},
+  description={Serverseitige Sicht auf einen JetStream-Stream, die festhält, wie weit ein Client ihn gelesen hat \autocite{the_nats_authors_consumers_2026}. Siehe auch Pull-Consumer.}}
+
+\newglossaryentry{container}{name={Container},sort={Container},
+  description={Prozess, den der Betriebssystemkern über Namespaces, cgroups und seccomp abgrenzt, der sich den Kern aber mit allen anderen Containern des Hosts teilt \autocite[S.~6--7, 18]{souppaya_application_2017}.}}
+
+\newglossaryentry{contenthash}{name={Content-Hash},sort={Content-Hash},
+  description={SHA-256 über die komprimierten Bytes eines Bundles. Er kommt mit dem Aufruf, dient als Schlüssel des Caches im Worker und als Prüfwert beim Laden (\autoref{sec:zustellung}).}}
+
+\newglossaryentry{controlplane}{name={Control Plane},sort={Control Plane},
+  description={Eigener Dienst des Modells, der Worker-Pods anlegt, den Pool nachfüllt und Pods Mandanten zuweist (\autoref{sec:bausteine}). Nicht zu verwechseln mit der Steuerungsebene von Kubernetes.}}
+
+\newglossaryentry{drain}{name={Drain},sort={Drain},
+  description={Geordnetes Beenden aller Pods eines Knotens, bevor er gewartet oder entfernt wird. Die Pods werden auf anderen Knoten neu angelegt \autocite{the_kubernetes_authors_safely_2026}.}}
+
+\newglossaryentry{egressproxy}{name={Egress-Proxy},sort={Egress-Proxy},
+  description={Dienst des Modells, über den jede ausgehende Verbindung eines Skripts läuft. Er prüft Ziel, Port und Methode gegen die Regeln des Mandanten und verwirft interne Adressen stets (\autoref{sec:faehigkeitsmodell}).}}
+
+\newglossaryentry{eventloop}{name={Event Loop},sort={Event Loop},
+  description={Schleife einer JavaScript-Laufzeit, die anstehende Aufgaben wie abgelaufene Timer und abgeschlossene Ein- und Ausgabe nacheinander abarbeitet. In \texttt{deno\_core} verbindet sie das Isolate mit den Ops \autocite{iwanczuk_roll_2022}.}}
+
+\newglossaryentry{faehigkeitsmodell}{name={Fähigkeitsmodell},sort={Faehigkeitsmodell},
+  description={Festlegung, welche Bindings ein Skript je Profil erhält und wohin es damit sprechen darf. Die Menge der Bindings ist die Grenze selbst, der Egress-Proxy legt die Ziele fest (\autoref{sec:faehigkeitsmodell}).}}
+
+\newglossaryentry{garbagecollector}{name={Garbage Collector},sort={Garbage Collector},
+  description={Speicherbereinigung der Engine, die nicht mehr erreichbare Objekte freigibt. In V8 ist das der Sammler Orinoco \autocite{marshall_trash_2019}.}}
+
+\newglossaryentry{gvisor}{name={gVisor},sort={gVisor},
+  description={Sandbox-Laufzeit, die zwischen Container und Host-Kernel eine weitere Schicht schiebt. Der Sentry beantwortet die Systemaufrufe der Anwendung im User Space, die Laufzeit \texttt{runsc} lässt sich als Runtime-Klasse in Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}.}}
+
+\newglossaryentry{hardfloor}{name={Hard Floor},sort={Hard Floor},
+  description={Die 713 Mandanten des Bestands, deren Skripte eine Schnittstelle brauchen, die eine sprachbasierte Laufzeit ohne vermitteltes Binding nicht bietet (\autoref{sec:bestandsanalyse}).}}
+
+\newglossaryentry{heap}{name={Heap},sort={Heap},
+  description={Speicherbereich, in dem V8 die Objekte eines Isolates hält. Jedes Isolate hat einen eigenen \autocite{the_v8_authors_getting_2026}.}}
+
+\newglossaryentry{hypervisor}{name={Hypervisor},sort={Hypervisor},
+  description={Software, die mehrere virtuelle Maschinen mit je eigenem Gastkernel auf einem Host betreibt. Eine microVM wie Firecracker beschränkt die Schnittstelle zum Host dabei auf wenige virtuelle Geräte \autocite[S.~420]{agache_firecracker_2020}.}}
+
+\newglossaryentry{informer}{name={Informer},sort={Informer},
+  description={Baustein der Kubernetes-Client-Bibliothek client-go, der Objekte über die Watch-Schnittstelle beobachtet und einen lokalen Spiegel mit Änderungsmeldungen bereithält \autocite{the_kubernetes_authors_cache_2026}.}}
+
+\newglossaryentry{isolate}{name={Isolate},sort={Isolate},
+  description={Instanz der JavaScript-Engine V8 mit eigenem Heap. Ein Context führt darin voneinander unabhängigen Code aus \autocite{the_v8_authors_getting_2026}. Die Grenze zwischen Isolates verläuft innerhalb eines Prozesses.}}
+
+\newglossaryentry{jetstream}{name={JetStream},sort={JetStream},
+  description={Persistenzschicht des Messaging-Systems NATS. Ein Stream speichert Nachrichten serverseitig für ein oder mehrere Subjects \autocite{the_nats_authors_jetstream_2026}.}}
+
+\newglossaryentry{kaltstart}{name={Kaltstart},sort={Kaltstart},
+  description={Verzögerung einer Anfrage, wenn keine laufende Instanz sie bedienen kann und die Plattform erst eine bereitstellen muss \autocite[S.~1]{lin_mitigating_2019}. Eine Anfrage auf eine laufende Instanz gilt als warm.}}
+
+\newglossaryentry{knative}{name={Knative Serving},sort={Knative Serving},
+  description={Erweiterung von Kubernetes für Dienste, die auf Anfragen reagieren. Revisionen werden nach eingehendem Verkehr skaliert, bis hinunter auf null Pods \autocites{the_knative_authors_overview_2026}{the_knative_authors_configuring_2026}.}}
+
+\newglossaryentry{ksix}{name={k6},sort={k6},
+  description={Lastgenerator von Grafana, der Aufrufe über virtuelle Nutzer erzeugt und Latenzen je Aufruf aufzeichnet \autocite{grafana_labs_k6_2026}.}}
+
+\newglossaryentry{lastprofil}{name={Lastprofil},sort={Lastprofil},
+  description={Nachgespielter Tagesverlauf des Produktivbetriebs, aus den Aufrufprotokollen einer Woche abgeleitet und auf je drei Minuten je Stunde gestaucht (\autoref{sec:messaufbau}).}}
+
+\newglossaryentry{leader}{name={Leader},sort={Leader},
+  description={Der Server eines JetStream-Clusters, der einen Consumer führt. Erst nach seiner Wahl kann der Consumer zustellen \autocite{the_nats_authors_clustering_2026}.}}
+
+\newglossaryentry{mandant}{name={Mandant},sort={Mandant},
+  description={Kunde, dessen Nutzer sich eine Installation des DMS teilen. Nach \textcite[S.~427]{krebs_architectural_2012} eine Gruppe von Nutzern mit derselben Sicht auf eine Anwendung.}}
+
+\newglossaryentry{mandantenisolation}{name={Mandantenisolation},sort={Mandantenisolation},
+  description={Eigenschaft, dass eine Ausführung Daten, Code und Verarbeitung anderer Mandanten weder einsehen noch verändern noch stören kann (\autoref{sec:grundlagen:eigenschaften}).}}
+
+\newglossaryentry{namespacelinux}{name={Namespace (Linux)},sort={Namespace Linux},
+  description={Mechanismus des Linux-Kerns, der einem Prozess eine eigene Sicht auf Dateisystem, Netz und Prozessliste gibt \autocite[S.~6]{souppaya_application_2017}.}}
+
+\newglossaryentry{namespacek8s}{name={Namespace (Kubernetes)},sort={Namespace Kubernetes},
+  description={Logischer Bereich, der die Objekte eines Clusters in Gruppen teilt, etwa je Team oder Umgebung \autocite{the_kubernetes_authors_namespaces_2026}.}}
+
+\newglossaryentry{noisyneighbour}{name={Noisy Neighbour},sort={Noisy Neighbour},
+  description={Mandant, dessen Last die Latenz anderer Mandanten auf demselben Knoten erhöht. \autoref{sec:pruefung-isolation} prüft das mit einem rechnenden Mandanten A gegen zwölf Mandanten B.}}
+
+\newglossaryentry{nutzwertanalyse}{name={Nutzwertanalyse},sort={Nutzwertanalyse},
+  description={Bewertungsverfahren, das Alternativen über gewichtete Kriterien zu einer Punktsumme verdichtet. Die bekannten Schwächen nach \textcite{keeney_decisions_1993} behandelt \autoref{sec:kriterienkatalog}.}}
+
+\newglossaryentry{objektspeicher}{name={Objektspeicher},sort={Objektspeicher},
+  description={Speicher, der Dateien als Objekte unter einem Schlüssel ablegt und über HTTP ausgibt. Eine vorsignierte URL erlaubt den Zugriff auf ein Objekt für eine begrenzte Zeit ohne eigene Zugangsdaten \autocite{amazon_web_services_sharing_2026}.}}
+
+\newglossaryentry{overhead}{name={Overhead},sort={Overhead},
+  description={Messgröße der Evaluation: Antwortzeit abzüglich der vom Skript selbst angeforderten Laufzeit. Er umfasst Edge, Gateway, Auflösung, Warten, Kaltstart, Worker und Netz (\autoref{sec:messaufbau}).}}
+
+\newglossaryentry{perzentil}{name={Perzentil},sort={Perzentil},
+  description={Wert, unter dem ein gegebener Anteil aller Messwerte liegt. P95 unterschreiten 95 Prozent der Aufrufe. Latenzen sollen über Perzentile und nicht allein über Mittelwerte berichtet werden \autocite[S.~6]{hoefler_scientific_2015}.}}
+
+\newglossaryentry{pod}{name={Pod},sort={Pod},
+  description={Kleinste Einheit, die sich in Kubernetes ausbringen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen \autocite{the_kubernetes_authors_pods_2026}.}}
+
+\newglossaryentry{pool}{name={Pool},sort={Pool},
+  description={Vorrat frischer Worker-Pods, den die Control Plane außerhalb des Anfragepfads nachfüllt, damit ein Mandant beim Erstkontakt keinen Pod-Start abwartet (\autoref{sec:zuteilung}). Das Vorgehen folgt \textcite[S.~1]{lin_mitigating_2019}.}}
+
+\newglossaryentry{prometheus}{name={Prometheus},sort={Prometheus},
+  description={Metriksystem, das Messwerte als Zeitreihen sammelt und abfragbar hält \autocite{prometheus_authors_overview_2026}.}}
+
+\newglossaryentry{prueffall}{name={Prüffall},sort={Prueffall},
+  description={Ausführbarer Test T1 bis T10, der aus den Angriffswegen des Bedrohungsmodells abgeleitet ist und gegen Ausgangszustand und Prototyp läuft (\autoref{sec:kriterienkatalog}).}}
+
+\newglossaryentry{pullconsumer}{name={Pull-Consumer},sort={Pull-Consumer},
+  description={Consumer, der nur liefert, wenn der Client Nachrichten anfordert, sodass der Client bestimmt, wie viele er gleichzeitig annimmt \autocite{the_nats_authors_consumers_2026}.}}
+
+\newglossaryentry{redis}{name={Redis},sort={Redis},
+  description={Datenstrukturspeicher im Arbeitsspeicher, der als Schlüssel-Wert-Speicher dient \autocite{redis_docs_2026}. Zustandsspeicher der Control Plane (\autoref{sec:bausteine}).}}
+
+\newglossaryentry{runtimeklasse}{name={Runtime-Klasse},sort={Runtime-Klasse},
+  description={Kubernetes-Objekt, das je Pod die Container-Laufzeit auswählt, etwa \texttt{runsc} für gVisor \autocite{the_kubernetes_authors_runtime_2026}.}}
+
+\newglossaryentry{sandbox}{name={Sandbox (Container)},sort={Sandbox},
+  description={Der Container des Worker-Pods, der den Gastcode ausführt. Er hält keine Zugangsdaten und erreicht NATS nur über den Transport (\autoref{sec:bausteine}).}}
+
+\newglossaryentry{seccomp}{name={seccomp},sort={seccomp},
+  description={Mechanismus des Linux-Kerns, der über ein Profil festlegt, welche Systemaufrufe ein Prozess absetzen darf \autocite[S.~25]{souppaya_application_2017}.}}
+
+\newglossaryentry{seitenkanal}{name={Seitenkanal},sort={Seitenkanal},
+  description={Weg, über den Daten durch ein Merkmal abfließen, das nicht als Ausgabe gedacht ist, etwa die Dauer eines Speicherzugriffs. Spectre nutzt dafür die spekulative Ausführung des Prozessors \autocite[S.~1]{kocher_spectre_2019}.}}
+
+\newglossaryentry{serviceaccount}{name={Service Account},sort={Service Account},
+  description={Identität, die Kubernetes einem Pod gegenüber seiner API gibt. Das zugehörige Token liegt als Datei im Container, sofern es eingebunden wird \autocite{the_kubernetes_authors_service_2026}.}}
+
+\newglossaryentry{shim}{name={Shim},sort={Shim},
+  description={Nachbildung einer Schnittstelle, die Aufrufe auf eine andere Umsetzung abbildet. Die Kompatibilitätsschicht bildet so \texttt{http}, \texttt{net} und \texttt{tls} auf vermittelte Bindings ab (\autoref{sec:kompatibilitaetsschicht}).}}
+
+\newglossaryentry{slot}{name={Slot},sort={Slot},
+  description={Platz für eine gleichzeitige Ausführung in einem Worker-Pod. Ein Pod hält bis zu vier, jeder Slot treibt genau ein Isolate (\autoref{sec:ebenen}).}}
+
+\newglossaryentry{snapshot}{name={Snapshot},sort={Snapshot},
+  description={Abbild einer initialisierten Laufzeitumgebung, aus dem eine neue Instanz schneller entsteht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}. Die Isolates des Modells entstehen aus einem solchen Abbild.}}
+
+\newglossaryentry{tempo}{name={Tempo},sort={Tempo},
+  description={Speicher für Traces von Grafana \autocite{grafana_labs_tempo_2026}. Gateway, Control Plane und Worker senden ihre Traces dorthin (\autoref{sec:messaufbau}).}}
+
+\newglossaryentry{trace}{name={Trace},sort={Trace},
+  description={Aufzeichnung des Wegs einer Anfrage durch mehrere Dienste, zusammengesetzt aus Spans, die je einen Arbeitsschritt mit Beginn und Dauer festhalten \autocite{opentelemetry_authors_traces_2026}.}}
+
+\newglossaryentry{transport}{name={Transport},sort={Transport},
+  description={Der Container des Worker-Pods, der die NATS-Verbindung hält, Kommandos der Control Plane annimmt und Aufträge an die Sandbox weiterreicht (\autoref{sec:bausteine}).}}
+
+\newglossaryentry{verdeckterkanal}{name={Verdeckter Kanal},sort={Verdeckter Kanal},
+  description={Übertragungsweg, über den ein Prozess Informationen entgegen der Sicherheitsrichtlinie weitergibt \autocite[S.~107]{dod_trusted_1985}, etwa indem ein Sender den Prozessor belastet und ein Empfänger seine eigene Laufzeit misst.}}
+
+\newglossaryentry{virtuelleuhr}{name={Virtuelle Uhr},sort={Virtuelle Uhr},
+  description={Uhr der Sandbox, die während synchroner Ausführung steht und bei einem Timer nur um dessen Verzögerung vorrückt. Die echte Zeit zeigt sie beim Start und nach abgeschlossener Ein- und Ausgabe, auf 100 ms abgerundet (\autoref{sec:kompatibilitaetsschicht}).}}
+
+\newglossaryentry{watcher}{name={Watcher},sort={Watcher},
+  description={Teil der Control Plane, der jeden Auftrag im Stream mitliest, beim Erstkontakt eines Mandanten die Zuweisung anstößt und danach dessen Last prüft (\autoref{sec:zuteilung}).}}
+
+\newglossaryentry{webhookprofil}{name={Webhook-Profil},sort={Webhook-Profil},
+  description={Profil des Ausführungsmodells für die vom Mandanten hinterlegten Skripte, die Ereignisse im DMS auslösen. Es trägt den Bestand und erhält die Bindings der Kompatibilitätsschicht (\autoref{sec:faehigkeitsmodell}).}}
+
+\newglossaryentry{worker}{name={Worker-Pod},sort={Worker-Pod},
+  description={Pod des Modells aus den Containern Transport und Sandbox. Er wird aus dem Pool genau einem Mandanten zugewiesen, führt dessen Skripte in Isolates aus und wird danach nie wiederverwendet (\autoref{sec:ebenen}).}}
+
+\newglossaryentry{zustandsfreiheit}{name={Zustandsfreiheit},sort={Zustandsfreiheit},
+  description={Eigenschaft einer Ausführung, dass nichts von ihr einer späteren zugänglich ist, weder im Speicher noch in Timern, Verbindungen oder im Dateisystem (\autoref{sec:grundlagen:eigenschaften}).}}
