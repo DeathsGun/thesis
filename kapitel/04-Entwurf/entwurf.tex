@@ -281,7 +281,7 @@ großen Response-Body über eine vorsignierte \ac{URL} hoch und antwortet mit ei
 und Größe trägt. Das Gateway liest den Body und antwortet dem Aufrufer. Es wartet begrenzt, und der Worker bricht
 etwas früher ab, damit jede Antwort den Aufrufer erreicht. Eine Hintergrundausführung unterscheidet sich am Ende des
 Weges: Das Gateway antwortet sofort mit dem Status 202. Der Worker stellt das Ergebnis per POST an eine
-Callback-\ac{URL} zu, die das Gateway auf einen Pfad unterhalb der Basisadresse des Mandanten beschränkt hat, und
+Callback-\ac{URL} zu, die das Gateway auf einen Pfad unterhalb der Basisadresse des Mandanten, seiner SystemBaseUri, beschränkt hat, und
 bricht nach einer längeren Frist ab. Beide Fristen entsprechen denen des Ausgangszustands
 (\autoref{tab:parameter}).
 
@@ -487,12 +487,9 @@ Den Rückbau übernimmt die Control Plane: Sie merkt sich, wie viele Pods jede L
 ältesten Pods über dem Maximum der letzten Minute zurück. Die letzten Nachrichtenzeiten je Mandant legt sie in Redis
 ab, damit ein Neustart sie nicht vergisst.
 
-Auch die Zielgröße des Pools muss nicht fest sein. Die Control Plane zählt die Zuweisungen je Minute in Redis.
-Daraus sagt sie die Größe für die nächsten Minuten vorher. Grundlage sind das gleiche Zeitfenster an den gleichen
-Wochentagen der letzten vier Wochen und die letzten sieben Tage, mit Sicherheitsfaktor 1,3. Nach unten begrenzt die
-statische Zielgröße den Wert, nach oben eine Kostengrenze. Der Grund ist die Uhr, denn geplante Skripte machen die vollen Stunden zu den
-geschäftigsten Minuten. Die Vorhersage ist für den Betrieb umgesetzt, die Messungen liefen mit der festen Zielgröße
-vierzig.
+Die Control Plane kann die Zielgröße des Pools aus den Zuweisungen der vergangenen Wochen vorhersagen (Parameter in
+\autoref{tab:parameter}), denn geplante Skripte machen die vollen Stunden zu den geschäftigsten Minuten. Alle Messungen
+liefen mit der festen Zielgröße vierzig, und die Vorhersage ist Gegenstand des Ausblicks (\autoref{sec:diffusion:ausblick}).
 
 Der Zustand der Zuteilung liegt in Redis ohne Ablaufzeiten, sodass die Control Plane ihn nach einem Neustart
 zurückliest und offene Zuweisungen wiederholt. Es gibt eine Replik und keine Leader Election. Eine Schleife hält den
@@ -555,7 +552,8 @@ Beide Profile schicken \texttt{fetch} als \ac{HTTP}-Anfrage und Sockets als \tex
 Redirect-Kette einzeln. Die Registrierung des Gateways nennt Mandant, Profil, Grenzen und Regeln. Eine Regel nennt einen
 Host, exakt, als \ac{IP}-Adresse oder als Wildcard, und optional Port, Pfadpräfix und Methoden. Ein Tunnel passt nur auf eine Regel mit
 Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Sie stammen
-aus der Konfiguration des Mandanten, die die Skriptverwaltung mandantenweit pflegen soll. Ein Aufruf kann Regeln mitgeben,
+aus der Konfiguration des Mandanten, die die Skriptverwaltung mandantenweit pflegen soll. Das eigene System des Mandanten
+unter seiner SystemBaseUri ist ohne Regel erreichbar, jedes weitere Ziel braucht eine. Ein Aufruf kann Regeln mitgeben,
 sie aber nur einschränken: Das Gateway registriert die Schnittmenge aus den Regeln des Aufrufs und denen des Mandanten. Das
 betrifft vor allem Agentenläufe, deren Aufrufer nach V2 beeinflussbar ist und sonst jedes Ziel freigeben könnte, auch eine
 Zeitquelle für den Kanal aus \autoref{sec:pruefung-isolation}. Unabhängig von den Regeln verwirft der Proxy private, Loopback-,
@@ -805,7 +803,8 @@ Der Entwurf begrenzt das Risiko: Übernommen ist nur die Kernschicht, auf eine e
 Kompatibilitätsschicht von Deno (\autoref{sec:kompatibilitaetsschicht}). Der übernommene Node-Code ist auf einen
 Commit festgelegt, den der Differenztest bei jeder Anhebung mit neuen Fällen prüft. Wird \texttt{deno\_core} nicht
 weitergeführt, bleibt \texttt{rusty\_v8} als Grundlage. Zu ersetzen wäre die Einbettungsschicht, die der Prototyp in rund
-30 Quelldateien berührt, ein benennbarer, aber kein kleiner Eingriff, dessen Aufwand nicht geschätzt ist.
+30 Quelldateien berührt, ein benennbarer, aber kein kleiner Eingriff. Die Prüfung dieses Aufwands ist Teil des
+Ausblicks (\autoref{sec:diffusion:ausblick}).
 
 Eine zweite offene Maßnahme betrifft die Härtung der Engine. Die Speichersandbox von V8 erfordert einen vollständigen
 Build der Engine. Der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Die vollständige Sandbox
@@ -820,9 +819,10 @@ Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandante
 die Prüffälle betreffen aufeinanderfolgende Ausführungen. Auf hyper-int-otc trug zwischen ihnen ein verdeckter Kanal über die
 \ac{CPU}, den getrennte Pods auf demselben Knoten nicht zeigten (\autoref{sec:pruefung-isolation}). Seit die Uhr aus
 \autoref{sec:kompatibilitaetsschicht} bei Timern virtuell läuft, braucht er eine externe Zeitquelle, und die erreicht ein
-Skript nur über die Regeln aus \autoref{sec:faehigkeitsmodell}. Ausschließen lässt sie sich damit nicht: Jedes Ziel, das
+Skript nur über die Regeln aus \autoref{sec:faehigkeitsmodell}. Ausschließen lässt sie sich damit nicht. Jedes Ziel, das
 der Mandant freigibt, kann Zeitstempel liefern, mindestens das eigene System mit seinem \texttt{Date}-Header auf die
-Sekunde. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite eines solchen Kanals deckelte, ist nicht vorgesehen.
+Sekunde. Das Restrisiko wird bewusst akzeptiert, denn ohne Freischaltung durch den Mandanten erreicht ein Agentenlauf
+nur dessen SystemBaseUri, und jede feinere Zeitquelle setzt eine ausdrückliche Freigabe voraus. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite eines solchen Kanals deckelte, ist nicht vorgesehen.
 Ungeprüft bleibt der gemeinsame Adressraum: Ohne die Speichersandbox von V8 erreicht ein Speicherfehler in der Engine die
 Heaps der gleichzeitigen Isolates desselben Prozesses. Der Entwurf behält trotzdem mehrere Slots je Pod. Das Restrisiko
 bleibt innerhalb eines Mandanten, und ein Pod je Ausführung schlösse den Kanal über den Garbage Collector nicht, der auch
@@ -848,5 +848,3 @@ und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibil
 synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
 erzeugtes Isolate (\autoref{sec:warm}) wahren M2, solange jedes Isolate genau eine Ausführung trägt. Eine weitere folgt aus der Messung mit leerem Pool
 (\autoref{sec:kaltstart}): Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der Kaltstarts.
-Die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}) ist umgesetzt, aber nicht evaluiert, weil alle Läufe mit der
-festen Zielgröße vierzig liefen.

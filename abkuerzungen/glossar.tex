@@ -160,6 +160,9 @@
 \newglossaryentry{snapshot}{name={Snapshot},sort={Snapshot},
   description={Abbild einer initialisierten Laufzeitumgebung, aus dem eine neue Instanz schneller entsteht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}. Die Isolates des Modells entstehen aus einem solchen Abbild.}}
 
+\newglossaryentry{systembaseuri}{name={SystemBaseUri},sort={SystemBaseUri},
+  description={Basisadresse, unter der das System eines Mandanten auf der d.velop-Plattform erreichbar ist. Der Approuter gibt sie jeder Anfrage im Header \texttt{x-dv-baseuri} mit, und Aufrufe an andere Apps desselben Mandanten gehen an diese Adresse \autocite{dvelop_ag_basics_2026}. Im Modell liegt die Callback-URL einer Hintergrundausführung unterhalb dieser Adresse, und der Egress-Proxy lässt sie ohne eigene Regel zu (\autoref{sec:faehigkeitsmodell}).}}
+
 \newglossaryentry{tempo}{name={Tempo},sort={Tempo},
   description={Speicher für Traces von Grafana \autocite{grafana_labs_tempo_2026}. Gateway, Control Plane und Worker senden ihre Traces dorthin (\autoref{sec:messaufbau}).}}
 

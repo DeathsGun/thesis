@@ -290,7 +290,7 @@ neu zu. Es gab keinen Fehler, die längste Lücke des Probers beträgt 0,30 Seku
 Mandanten dauerten 44,2 und 44,3 statt 25,2 Sekunden, weil die Nachricht nach fünf Sekunden Ack-Wait neu zugestellt und
 auf einem anderen Worker zu Ende geführt wurde. Je Ausführungs-ID gibt es genau eine abgeschlossene Ausführung, der abgebrochene erste Versuch
 hinterlässt keinen Span. Ein Absturz führt damit zu einer zweiten Ausführung derselben Nachricht, wie der Entwurf es vorsieht, und der
-Aufrufer erhält 200 mit Verzögerung. Für nicht idempotente Skripte bleibt das die offene Frage aus \autoref{sec:diffusion:ausblick}.
+Aufrufer erhält 200 mit Verzögerung. Wie mit nicht idempotenten Skripten umzugehen ist, behandelt \autoref{sec:diffusion:ausblick}.
 
 \subsection{Isolation und Zustandsfreiheit (M1 bis M4)}
 \label{sec:pruefung-isolation}

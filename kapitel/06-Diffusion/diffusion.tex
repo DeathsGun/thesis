@@ -130,21 +130,42 @@ dem bisherigen Betrieb. Vor der ersten Stufe sind die
 offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands, der Standardwert der
 Socket-Freischaltung und enforce für das Agentenprofil, das keinen Bestand hat, den Regeln brechen könnten. Hinzu kommen
 die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, denn M3
-gilt nur dort. Festzulegen ist außerdem das Zustellversprechen gegenüber den Mandanten: Der Ausgangszustand stellt
-höchstens einmal zu, der Prototyp führt ein Skript nach einem Absturz ein zweites Mal aus. Eine Startmarke je Nachricht
-(\autoref{sec:zuteilung}) erhielte das bisherige Versprechen.
+gilt nur dort. Festzulegen ist außerdem, welches Zustellversprechen als Standard gilt
+(\autoref{sec:diffusion:ausblick}).
 
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
 
-Drei Fragen hat die Arbeit geöffnet, ohne sie zu schließen. Die erste betrifft die Engine: Eine nach WebAssembly
-kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ließe sich später einsetzen, ohne Grenze und Zuteilung zu ändern,
-und der Wechsel des Deno-Teams zu Cloudflare macht \texttt{deno\_core} zu einer Abhängigkeit mit absehbarem Ende
-(\autoref{sec:betriebsplanung}). Die zweite betrifft die Zustellung. Ob eine zweite Ausführung nach einem Absturz für nicht idempotente Skripte
-hinnehmbar ist oder eine Startmarke je Nachricht (\autoref{sec:zuteilung}), sie als Fehlschlag melden soll, ist mit den
-Mandanten zu klären und zu messen. Die dritte betrifft gleichzeitige Agentenläufe: Teilten sich nur Ausführungen derselben
-Person einen Pod statt aller eines Mandanten, entfiele der Kanal aus \autoref{sec:pruefung-isolation} zwischen Personen,
-ohne einen Pod je Ausführung. Ob das nötig ist, zeigt sich erst, wenn Agenten Skripte erzeugen.
+Offen für spätere Arbeiten sind vier Punkte, hinzu kommt ein akzeptiertes Restrisiko.
+
+Der erste betrifft die Engine. Eine nach WebAssembly kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ist nicht
+dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf ist
+gegen ein eingebettetes Isolate nicht gemessen und wäre in einer eigenen Evaluation unter demselben Lastprofil zu prüfen.
+
+Der zweite betrifft die Einbettung. Zu prüfen ist der Aufwand, die Einbettung von \texttt{deno\_core} direkt auf das
+\texttt{v8}-Paket (\texttt{rusty\_v8}) umzustellen. Nach dem Wechsel des Deno-Teams zu Cloudflare wird
+\texttt{rusty\_v8} weitergepflegt, \texttt{deno\_core} gilt dagegen als auslaufend (\autoref{sec:betriebsplanung}).
+Der Prototyp berührt die Einbettungsschicht in rund 30 Quelldateien. Event Loop, Modulauflösung und die Ops, über die
+der Host Funktionen in das Isolate reicht, müssten dann selbst entstehen und für M4 abgesichert werden.
+
+Der dritte betrifft das Zustellversprechen. Der Ausgangszustand stellt höchstens einmal zu, der Prototyp führt ein
+Skript nach dem Absturz von Worker oder Sandbox ein zweites Mal aus (\autoref{sec:zuteilung}). Beide Verhalten lassen
+sich nebeneinander anbieten, als Einstellung je Mandant oder je Skript. Idempotente Skripte erhielten die erneute
+Zustellung, alle übrigen eine Startmarke je Nachricht, die eine Neuzustellung als Fehlschlag meldet. Welcher Standard
+gilt und ob die Startmarke den zusätzlichen Redis-Zugriff auf dem Anfragepfad rechtfertigt, ist mit Produkt und
+Mandanten zu entscheiden und danach zu messen.
+
+Der vierte betrifft die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}). Sie ist umgesetzt, alle Läufe nutzten
+aber die feste Zielgröße vierzig. Ob sie die Kosten des Pools im Ruhezustand senkt, ohne die Kaltstarts zur vollen
+Stunde zu verlängern, zeigt erst ein Lauf über mehrere Wochen mit dem Lastprofil des Betriebs.
+
+Als Restrisiko akzeptiert ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen desselben Mandanten
+(\autoref{sec:pruefung-isolation}). Seit die Uhr bei Timern virtuell läuft, braucht er eine Zeitquelle außerhalb der
+Sandbox. Ohne Freischaltung erreicht ein Agentenlauf nur das eigene System des Mandanten unter dessen SystemBaseUri,
+und dieses liefert über seinen \texttt{Date}-Header lediglich eine sekundengenaue Uhr. Jedes weitere Ziel muss der
+Mandant ausdrücklich freigeben, und eine Regel aus dem Aufruf kann diese Freigabe nur einschränken
+(\autoref{sec:faehigkeitsmodell}). Die Entscheidung, eine feinere Zeitquelle zu öffnen, liegt damit beim Mandanten. Ob
+eine Trennung nach Person statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
 
 Für die Fallstudie selbst stehen zwei Schritte an. Der erste ist die Einführung auf der \ac{DDP}. Sie betrifft die
 Kunden der \ac{OTC}, bei denen der Ausgangszustand heute läuft, und folgt dem Pfad aus
