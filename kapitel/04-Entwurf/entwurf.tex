@@ -46,8 +46,8 @@ unterschiedlichen Stellen: Ein Container ist eine äußere, vom Kern durchgesetz
 Grenze innerhalb eines Prozesses. Eine äußere Grenze existiert in jedem Entwurf. Wie viel die innere beim Start
 spart, zeigen \textcite[S.~645--646]{boucher_putting_2018} für sprachbasierte Isolation in Rust: Kaltstarts im Median
 von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Für V8 sind die Größenordnungen
-andere. Ein Isolate zu bauen kostet im Executor lokal auf einem Mac 3,3\,ms und im Cluster 19\,ms. Ein
-Node.js-Prozess kostet dort 69 und unter gVisor 53\,ms (\autoref{tab:prozessstart}). Offen sind daher zwei andere
+andere. Ein Isolate zu bauen kostet im Executor lokal auf einem Mac 3,3\,ms und im Cluster 18,7\,ms. Ein
+Node.js-Prozess kostet lokal 69\,ms und im Cluster unter gVisor 53\,ms, unter runc 26\,ms (\autoref{tab:prozessstart}). Offen sind daher zwei andere
 Fragen, ob zusätzlich eine innere Grenze eingezogen wird und wie viele Ausführungseinheiten sich eine Grenze teilen.
 
 Für M1 lässt sich das auflösen. Die Anbieter ziehen die Mandantengrenze durchgehend außen. Chrome trennt Origins seit
@@ -374,8 +374,7 @@ Aus demselben Grund unterscheidet das Modell die beiden Lastprofile nicht in der
 allein in der Menge ihrer Bindings (\autoref{sec:faehigkeitsmodell}). Ein Schnitt nach Profil brächte nur, was unterhalb
 dieser Grenze liegt: Ein Abbruch des Prozesses träfe nicht alle laufenden Ausführungen, und nach einem Ausbruch aus
 der Engine teilten die Profile nicht den Adressraum. Beides betrifft nur Ausführungen desselben Mandanten. Dass bis
-zu vier gleichzeitige Ausführungen einen Prozess teilen, benennt \autoref{sec:betriebsplanung}, das auch den Schnitt
-als offene Maßnahme führt.
+zu vier gleichzeitige Ausführungen einen Prozess teilen, benennt \autoref{sec:betriebsplanung}.
 
 Die Bindung eines Isolates an einen Thread ist eine Eigenschaft von \texttt{deno\_core}. Der Prototyp startet deshalb je
 Ausführung einen eigenen Betriebssystem-Thread mit eigener Event Loop, begrenzt durch eine Semaphore im Consumer des Mandanten.
@@ -384,8 +383,8 @@ ein Thread außerhalb des Isolates die Terminierung auslösen kann. Der Thread t
 Prozesses teilen Adressraum und cgroup. Beide Profile schöpfen aus demselben Vorrat an Slots, lange Hintergrundläufe
 können synchrone verdrängen (\autoref{sec:betriebsplanung}).
 
-Die Isolate-Grenze je Ausführung erfüllt M2 und kostet nach \autoref{sec:warm} im Median rund 16\,ms, den größten Teil
-einer Ausführung von etwa 19\,ms. Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
+Die Isolate-Grenze je Ausführung erfüllt M2 und kostet nach \autoref{sec:warm} im Median 18,7\,ms und liegt seit dem
+29.\ Oktober als warmes Isolate vor dem Aufruf. Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
 aber nicht her, weil Contexts denselben Heap verwenden. Ein Zurücksetzen des Prozesses auf einen Snapshot zwischen
 zwei Ausführungen, wie \textcite[S.~1]{alzayat_groundhog_2023} es für Container beschreiben, setzt voraus, dass ein
 Container höchstens eine Ausführung zur Zeit trägt. Das passt nicht zu bis zu vier gleichzeitigen Ausführungen je Pod.
@@ -824,7 +823,7 @@ der Mandant freigibt, kann Zeitstempel liefern, mindestens das eigene System mit
 Sekunde. Das Restrisiko wird bewusst akzeptiert, denn ohne Freischaltung durch den Mandanten erreicht ein Agentenlauf
 nur dessen SystemBaseUri, und jede feinere Zeitquelle setzt eine ausdrückliche Freigabe voraus. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite eines solchen Kanals deckelte, ist nicht vorgesehen.
 Ungeprüft bleibt der gemeinsame Adressraum: Ohne die Speichersandbox von V8 erreicht ein Speicherfehler in der Engine die
-Heaps der gleichzeitigen Isolates desselben Prozesses. Der Entwurf behält trotzdem mehrere Slots je Pod. Das Restrisiko
+Heaps der gleichzeitigen Isolates desselben Prozesses. Der Entwurf behält trotzdem mehrere Slots je Pod. Auch dieses Risiko
 bleibt innerhalb eines Mandanten, und ein Pod je Ausführung schlösse den Kanal über den Garbage Collector nicht, der auch
 zwischen Pods auf demselben Knoten trug (\autoref{sec:pruefung-isolation}).
 

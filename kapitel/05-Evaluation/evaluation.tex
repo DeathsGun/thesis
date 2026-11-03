@@ -22,7 +22,7 @@ Produktivbetrieb der AWS-nativen Variante und ist nur Quelle des Lastprofils.
   \small
   \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X@{}}
     \hline
-    Knoten & 9 $\times$ s9.xlarge.4, zuletzt 8 \\
+    Knoten & 9 $\times$ s9.xlarge.4, zeitweise 8, am 2.\ November 12 \\
     Allokierbar & rund 71 Kerne, 243\,GiB \\
     NATS & 5 $\times$ NATS 2.14.0 \\
     Gemessen & Prototyp und Ausgangszustand \\
@@ -32,7 +32,7 @@ Produktivbetrieb der AWS-nativen Variante und ist nur Quelle des Lastprofils.
 \end{table}
 
 Der Prototyp lief in der Konfiguration aus \autoref{tab:parameter}, mit einer Pool-Zielgröße von vierzig und einer
-Skalierungsschwelle von drei Vierteln, beide aus den ersten Läufen. Alle Läufe nutzen das Webhook-Profil mit
+Skalierungsschwelle von drei Vierteln, beide aus den ersten Läufen. Alle Lastläufe nutzen das Webhook-Profil mit
 synchroner Antwort. Das Agentenprofil hat keinen Vergleichswert, weil es im Ausgangszustand nicht existiert.
 \autoref{sec:kaltstart} nennt Messwerte gegen das Webhook-Profil. Die Prüffälle aus \autoref{sec:pruefung-isolation} laufen in beiden
 Profilen.
@@ -43,10 +43,9 @@ Die Messungen des Endstands, also S1 bis S4, M5, die Zustellung, T1 bis T9, Sand
 Isolates und eine Pool-Zielgröße von vierzig. Der Auth Callout fehlte, weil er auf der Plattform noch nicht eingerichtet
 ist.
 Am 2.\ November kamen die Proxy-Abmeldung im Hintergrund, eine Korrektur der Wartezeit auf den Consumer-Leader und ein
-größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. Die virtuelle Uhr
-(\autoref{sec:kompatibilitaetsschicht}) und die Schnittmenge der Regeln (\autoref{sec:faehigkeitsmodell}) kamen nach
-allen Messungen hinzu. Nur der zweite Lauf zum verdeckten Kanal in \autoref{sec:pruefung-isolation} lief mit der neuen Uhr.
-Für die Schnittmenge gibt es keinen Lauf. \autoref{tab:stand} im Anhang ordnet
+größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. Die virtuelle Uhr (\autoref{sec:kompatibilitaetsschicht}), die Schnittmenge der Regeln und die Standardregel für das
+eigene System (beide \autoref{sec:faehigkeitsmodell}) kamen nach allen Messungen hinzu. Nur der zweite Lauf zum verdeckten Kanal in \autoref{sec:pruefung-isolation} lief mit der neuen Uhr.
+Für die Schnittmenge und die Standardregel gibt es keinen Lauf. \autoref{tab:stand} im Anhang ordnet
 die Belege den Ständen und Commits zu, die früheren Läufe vom 6.\ bis 28.\ Oktober stehen dort ebenfalls.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Der Runner führt jedes Skript
@@ -335,11 +334,11 @@ ausgelesen.
          Aufrufe 200. \\
     T7 & nicht best. & nicht best. & bestanden & Ausgangszustand: \texttt{fetch} ins Internet liefert 200, \acs{TCP} zur
          Kubernetes-\acs{API} und zum Loopback wird aufgebaut, \texttt{worker\_threads} ist verfügbar. Prototyp, enforce: nur
-         der eigene Mandant und die Testregel, \texttt{Deno.core.ops} nicht erreichbar. \\
+         das eigene System und die Testregel, \texttt{Deno.core.ops} nicht erreichbar. \\
     T8 & bestanden & bestanden & bestanden & Alle: \texttt{/etc}, \texttt{/proc} und das Token des Service-Accounts sind nicht lesbar.
          Ausgangszustand: echtes Dateisystem des Containers, 23 Umgebungsvariablen sichtbar. Prototyp: nur ein Dateisystem im Speicher, keine Umgebungsvariablen. \\
-    T9 & nicht best. & nicht best. & bestanden & Alle: Überschreibungen gelingen im Skript. Ausgangszustand: Der Host eines anderen Mandanten
-         ist erreichbar, es gibt keine Identitätsbindung. Prototyp: eigener Host 200, fremder abgewiesen. \\
+    T9 & nicht best. & nicht best. & bestanden & Alle: Überschreibungen gelingen im Skript. Ausgangszustand: Das System eines anderen Mandanten
+         ist erreichbar, es gibt keine Identitätsbindung. Prototyp: eigenes System 200, fremdes abgewiesen. \\
     \hline
   \end{tabularx}
 \end{table}
@@ -355,7 +354,7 @@ und als Snippets über den Endpunkt der Agentenausführungen, T7 am 30.\ Oktober
 Profils übertragen, weil es weder \texttt{require} noch \texttt{process} noch eine Konsole bereitstellt. Der Ausgangszustand hat dafür kein Gegenstück. T1 bis T3 liefen
 zusätzlich mit zwei gleichzeitigen Ausführungen. Der Prototyp besteht alle neun Fälle. Zustand erreicht keine andere Ausführung, auch
 keine gleichzeitige, über gemeinsamen Zustand. Module, Dateisystem und Betriebssystem lassen sich nicht laden, und
-\texttt{fetch} scheitert zu jedem Ziel. Die Speicherbombe endet nach 0,3 Sekunden mit
+\texttt{fetch} scheitert auf dem Stand vom 21.\ Oktober zu jedem Ziel. Die Speicherbombe endet nach 0,3 Sekunden mit
 \texttt{scriptExecutionOutOfMemory}, die fünf folgenden Ausführungen liefern 200.
 
 Ob gleichzeitige Ausführungen über die Zeit Daten austauschen, prüfte am 2.\ November ein verdeckter Kanal im Agentenprofil
@@ -373,12 +372,12 @@ in sieben Läufen bei 16 Bits und 500-ms-Fenstern, ohne Wahl der Polarität gege
 Lauf (0,31) auf Zufallsniveau. Die Läufe sind wenige, die Richtung bei \ac{CPU}-Last ist einheitlich, die Größe nicht belastbar.
 
 T7 und T9 wurden am 28.\ und 30.\ Oktober gegen den Egress-Proxy mit beiden Profilen in enforce wiederholt, mit der Testregel
-example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen der eigene Mandant und die
+example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen das eigene System und die
 Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, TCP zu 1.1.1.1:53, die Testregel auf Port 80,
 \texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil
 kam eine Regel aus dem Aufruf hinzu (example.net, GET), die der damalige Stand ohne Schnittmenge übernahm
-(\autoref{sec:faehigkeitsmodell}). Der eigene Mandant, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
-dieselbe Regel mit POST, example.com, ein fremder Mandant, 1.1.1.1 und die internen Ziele. Das Anfrageprotokoll führt alle
+(\autoref{sec:faehigkeitsmodell}). Das eigene System, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
+dieselbe Regel mit POST, example.com, das System eines fremden Mandanten, 1.1.1.1 und die internen Ziele. Das Anfrageprotokoll führt alle
 Versuche.
 Beide Profile bestehen, die Politik wirkt also, nicht nur der Durchsetzungspunkt. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
 
@@ -419,7 +418,7 @@ ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von
 bis zwei voll auslasten. Knative skaliert A auf rund fünfzig Pods und lastet sieben bis neun von zwölf Knoten aus, sodass fast
 jeder Mandant B auf einem belasteten Knoten liegt. Im Prototyp steigt das 95.\ Perzentil auch auf Knoten ohne Worker von A (305 bis
 440\,ms gegen 268 bis 390), weil Gateway und Egress-Proxy auf Knoten von A lagen. Die Ressourcenbegrenzung auf zwei
-Ebenen (\autoref{sec:diffusion:prinzipien}) reicht damit nur bis zum Speicher: Die Garantie liefert das cgroup, die CPU ist in keinem der Modelle je Mandant begrenzt.
+Ebenen (\autoref{sec:ressourcenbegrenzung}) reicht damit nur bis zum Speicher: Die Garantie liefert das cgroup, die CPU ist in keinem der Modelle je Mandant begrenzt.
 Der erhöhte Client-Anteil im ersten Lauf des Prototyps (95.\ Perzentil bis 898\,ms) kehrte nicht wieder und ist nicht erklärt.
 
 \subsection{Verfügbarkeit beim Knotenentzug (M5)}
@@ -476,7 +475,7 @@ Ausgangszustand. Das ist eine Obergrenze unter zwei Annahmen: Die
 Schicht hält für die übrigen Pakete, was Differenztest und Treiber-Prüfung für einen Treiber zeigen, und die Ziele der
 Skripte sind erreichbar. Das hängt am Egress-Proxy
 (\autoref{sec:faehigkeitsmodell}). Im Modus audit lässt er jede öffentliche Adresse und jeden Port durch, in enforce, wie
-seit dem 28.\ Oktober auf hyper-int-otc, nur den eigenen Mandanten und die Ziele der Regeln (T7). Ein Skript mit
+seit dem 28.\ Oktober auf hyper-int-otc, nur das eigene System und die Ziele der Regeln (T7). Ein Skript mit
 externen Zielen läuft dann erst mit einer Regel, und wie viele Mandanten das betrifft, ist nicht erhoben. Der Scanner-Lauf
 vom 25.\ September 2026 gegen einen frühen Stand der Schicht wird nicht wiederholt, weil er
 Bezeichner in nie ausgeführten Zweigen mitzählt und damit nur eine Obergrenze der Blocker liefert.
