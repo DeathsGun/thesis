@@ -162,9 +162,8 @@ V8-Isolate je Ausführung mit vermittelten Bindings & bedingt & ja & ja & ja & j
 \end{tabularx}
 \end{table}
 
-Für das gewählte Modell gilt M1 als Entwurfseigenschaft: Mit dem Auth Callout ist M1 erfüllt, lokal erprobt (T10, \autoref{sec:pruefung-isolation}). Im Plattformstand ohne Callout, der der Messung zugrunde liegt,
-teilen alle Worker-Pods dieselben NATS-Zugangsdaten, und M1 ist dort nicht erfüllt (\autoref{sec:betriebsplanung}).
-Die Wahl stützt sich auf den Entwurf.
+Für das gewählte Modell gilt M1 als Entwurfseigenschaft: erfüllt mit dem Auth Callout, lokal erprobt (T10,
+\autoref{sec:pruefung-isolation}), auf der Plattform noch nicht eingerichtet (\autoref{sec:betriebsplanung}).
 
 Der Ausgangszustand verletzte bei der Analyse M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
 teilen, und verletzt M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Seit er jedes Skript in einem
@@ -540,8 +539,7 @@ Ableitung der Bindings aus dem Code, etwa aus dem Abhängigkeitsgraphen des Bund
 Agentenprofil schreibt derjenige die Importe, dessen Beeinflussbarkeit das Bedrohungsmodell beschreibt (V2). Außerdem
 lassen sich zwei feste Mengen mit einer Freischaltung prüfen, eine abgeleitete nicht. Dass auch das Webhook-Profil nur
 erhält, was der Bestand braucht, folgt aus M4 und V5. In der Umsetzung ist die Zuordnung eine einzige Funktion vom
-Profil auf die Extensions (\autoref{lst:bindings}). Der Prototyp registriert das Socket-Binding im Webhook-Profil noch immer, die
-Freischaltung je Mandant ist nicht umgesetzt.
+Profil auf die Extensions (\autoref{lst:bindings}).
 
 Fehlende Kompatibilität zeigt sich in beiden Profilen erst zur Laufzeit als Fehler beim Laden eines Moduls, das die
 Schicht aus \autoref{sec:kompatibilitaetsschicht} nicht bereitstellt.

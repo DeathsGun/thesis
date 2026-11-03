@@ -400,8 +400,7 @@ Umgebungsvariablen im Pod betrifft, die das Skript nicht sieht (T8). M3 ist dami
 M3 betrifft allein den Host-Kernel. Was der Prototyp innerhalb des Pods hinzufügt, den Transport mit seinem Kommando-Port und
 die Loopback-Verbindung zur Sandbox, gehört zu M1 und ist in \autoref{sec:ebenen} und über T10 bewertet. Die Aussage stützt sich auf die
 Konfiguration und sagt nichts über Lücken in gVisor selbst. M1 ist im Entwurf mit Auth Callout erfüllt (T10), im gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
-NATS-Zugangsdaten. Der Callout ist auf der Plattform noch nicht eingerichtet
-(\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster, am 29.\ Oktober erneut geprüft, zeigt drei Dinge. Die
+NATS-Zugangsdaten (\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster, am 29.\ Oktober erneut geprüft, zeigt drei Dinge. Die
 Container teilen keinen Prozess-Namespace. Die Sandbox hat keine Volumes. Identitätssecret und NATS-Zugangsdaten sind nur
 im Transport eingehängt, ohne Token des Service-Accounts. Das Netz teilen beide Container. Dass der Transport fremde
 Kommandos abweist und NATS ohne Zugangsdaten nichts zulässt, ist nur lokal geprüft.

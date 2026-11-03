@@ -37,7 +37,7 @@ Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle. 
 T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). T7 und T9 bestehen im Prototyp gegen den Proxy in enforce, mit einer festen Testregel. Zustand überdauert keine Ausführung, ein erschöpfter Heap
 trifft nur die verursachende, und Netz, Dateisystem und Identität sind nur über Bindings und Proxy erreichbar. M3 gilt auf Clustern mit gVisor als erfüllt, weil
 der Pod in keinem Feld der Kernel-Oberfläche lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M5, der gemessene Prototyp
-M2 bis M5: M1 ist lokal belegt (T10) und hängt auf der Plattform an der Einrichtung des Callouts.
+M2 bis M5.
 
 U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben Cluster startet der Prototyp mit Pool
 im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden. Er bedient in drei Läufen alle 90 Mandanten innerhalb von zwei
@@ -161,18 +161,13 @@ Stunde zu verlängern, zeigt erst ein Lauf über mehrere Wochen mit dem Lastprof
 
 Als Restrisiko akzeptiert ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen desselben Mandanten
 (\autoref{sec:pruefung-isolation}). Seit die Uhr bei Timern virtuell läuft, braucht er eine Zeitquelle außerhalb der
-Sandbox. Ohne Freischaltung erreicht ein Agentenlauf nur das eigene System des Mandanten unter dessen SystemBaseUri,
-und dieses liefert über seinen \texttt{Date}-Header lediglich eine sekundengenaue Uhr. Jedes weitere Ziel muss der
-Mandant ausdrücklich freigeben, und eine Regel aus dem Aufruf kann diese Freigabe nur einschränken
-(\autoref{sec:faehigkeitsmodell}). Die Entscheidung, eine feinere Zeitquelle zu öffnen, liegt damit beim Mandanten. Ob
+Sandbox, und die öffnet allein der Mandant durch eine Freigabe (\autoref{sec:betriebsplanung}). Ob
 eine Trennung nach Person statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
 
-Für die Fallstudie selbst stehen zwei Schritte an. Der erste ist die Einführung auf der \ac{DDP}. Sie betrifft die
-Kunden der \ac{OTC}, bei denen der Ausgangszustand heute läuft, und folgt dem Pfad aus
-\autoref{sec:diffusion:prinzipien}. Ein Feature-Flag legt fest, welcher Anteil der Mandanten den neuen Runner nutzt.
-Dieser Anteil wächst in Stufen. Eine Stufe gilt als gehalten, wenn die Fehlerrate unter der des Prototyps im Lastprofil
-bleibt. Solange das nicht feststeht, bleibt der Knative-Service des Mandanten bestehen, und die Umschaltung lässt sich
-zurücknehmen.
+Für die Fallstudie selbst stehen zwei Schritte an. Der erste ist die stufenweise Einführung auf der \ac{DDP} für die
+Kunden der \ac{OTC}, bei denen der Ausgangszustand heute läuft, nach dem Pfad aus \autoref{sec:diffusion:prinzipien}.
+Solange eine Stufe nicht gehalten hat, bleibt der Knative-Service des Mandanten bestehen, und die Umschaltung lässt
+sich zurücknehmen.
 
 Der zweite Schritt ist der Wechsel der Kunden der AWS-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen
 Knative-Service, auf den sich zurückfallen ließe. Der Wechsel umfasst zwei Dinge. Das eine sind die Daten des
