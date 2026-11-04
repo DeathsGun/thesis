@@ -22,26 +22,26 @@ Ausgangszustand einer Fallstudie.
 
 Serverlose Plattformen führen Code aus, den nicht ihr Betreiber geschrieben hat. Der Betreiber
 stellt die Laufzeitumgebung, der Kunde liefert die Funktion, und die Grenze zwischen beiden muss
-die Plattform selbst durchsetzen \autocite[S.~419]{agache_firecracker_2020}. Die Fallstudie dieser
-Arbeit ist die Scripting-Engine des Dokumentenmanagementsystems der d.velop AG, ein mandantenfähiger Dienst,
-der von Kunden hinterlegte JavaScript-Funktionen ausführt, sobald Ereignisse im \ac{DMS} sie
-auslösen \autocite{dvelop_ag_dvelop_2026}. Die Engine läuft auf mehreren Plattformen. Die älteste läuft nativ auf \ac{AWS} und trägt die meisten Kunden.
-Auf der internen Kubernetes-Plattform \ac{DDP} der Fallstudie läuft sie ebenfalls
+die Plattform selbst durchsetzen \autocite[S.~419]{agache_firecracker_2020}. Bisher ließ sich dabei annehmen, dass
+der Kunde seinen Code kennt, weil er ihn geschrieben hat. Diese Annahme fällt, sobald ein KI-Agent kurze Skripte zur
+Laufzeit erzeugt und sofort ausführen lässt \autocite[S.~50208]{wang_executable_2024}. Ein solches Skript hat vor
+seinem einzigen Lauf niemand gelesen. Die Plattform muss dann jede Ausführung für sich isolieren, ohne dass der Start
+spürbar langsamer wird. Läuft sie auf einem Kubernetes-Cluster, dessen Knoten keine Hardwarevirtualisierung freigeben
+(\autoref{sec:randbedingungen}), scheiden MicroVMs aus, und es bleiben Container, Sandbox-Laufzeiten und sprachbasierte
+Grenzen.
+
+Die Fallstudie dieser Arbeit ist die Scripting-Engine des Dokumentenmanagementsystems der d.velop AG, ein
+mandantenfähiger Dienst, der von Kunden hinterlegte JavaScript-Funktionen ausführt, sobald Ereignisse im \ac{DMS} sie
+auslösen \autocite{dvelop_ag_dvelop_2026}. Die Engine läuft auf mehreren Plattformen. Die älteste läuft nativ auf
+\ac{AWS} und trägt die meisten Kunden. Auf der internen Kubernetes-Plattform \ac{DDP} der Fallstudie läuft sie ebenfalls
 produktiv, derzeit für die Kunden der \ac{OTC}, mit je Mandant einem Node.js-Runner auf
 Knative, der ohne Last auf null skaliert und beim nächsten Aufruf neu startet
 \autocite{the_knative_authors_configuring_2026}. Diese Knative-Variante ist der Ausgangszustand der
-Arbeit. Die Kunden der AWS-nativen Variante sollen auf die DDP wechseln und bringen ihre Last mit. Dieselbe Engine soll künftig als
-Werkzeug eines KI-Agenten dienen, der kurze Skripte zur Laufzeit erzeugt und sofort ausführen
-lässt \autocite[S.~50208]{wang_executable_2024}. Damit ändert sich, wer den Code verantwortet. Im
-Webhook-Fall ist es der Mandant, der ihn geschrieben hat. Im Agentenfall hat ihn vor seinem
-einzigen Lauf niemand gelesen.
-
-Die Lage ist nicht auf die Fallstudie beschränkt. Jeder Betreiber, der Kundencode mandantenfähig ausführt und diese
-Ausführung einem Agenten öffnet, verliert dieselbe Annahme, dass jemand den Code vor dem Lauf kennt. Läuft die
-Plattform wie hier auf einem Kubernetes-Cluster, dessen Knoten keine Hardwarevirtualisierung freigeben
-(\autoref{sec:randbedingungen}), scheiden MicroVMs aus, und es bleiben Container, Sandbox-Laufzeiten und sprachbasierte
-Grenzen. Für solche Betreiber beschreibt die Arbeit einen Entwurf, die Voraussetzungen, unter denen er übertragbar ist
-(\autoref{sec:diffusion:prinzipien}), und was er gegen einen produktiven Betrieb gemessen leistet.
+Arbeit. Die Kunden der AWS-nativen Variante sollen auf die DDP wechseln und bringen ihre Last mit. Dieselbe Engine soll
+künftig als Werkzeug eines KI-Agenten dienen. Neben die Webhooks, deren Code der Mandant geschrieben hat, treten damit
+Skripte, die vor ihrem Lauf niemand gelesen hat. Über die Fallstudie hinaus beschreibt die Arbeit für Betreiber in
+derselben Lage einen Entwurf, die Voraussetzungen, unter denen er übertragbar ist (\autoref{sec:diffusion:prinzipien}),
+und was er gegen einen produktiven Betrieb gemessen leistet.
 
 \subsection{Problemstellung}
 \label{sec:einleitung:problemstellung}
