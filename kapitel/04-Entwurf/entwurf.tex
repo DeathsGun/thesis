@@ -33,7 +33,7 @@ durchgesetztes Speicherlimit und eine Isolationseinheit existieren.
 \label{sec:vorauswahl}
 
 Dieser Abschnitt legt fest, welche JavaScript-Engine das Modell ausführt. Entschieden wird über die Muss-Kriterien
-M1 bis M5 und, wo mehrere Kandidaten sie erfüllen, über eine begründete Auswahl entlang der Soll-Kriterien ohne
+M1 bis M6 und, wo mehrere Kandidaten sie erfüllen, über eine begründete Auswahl entlang der Soll-Kriterien ohne
 Gewichtung und Messung. Für Aussagen darüber, was eine Laufzeitumgebung zusichert, wird deren normative
 Herstellerdokumentation herangezogen, denn für einen Ausschluss ist die dokumentierte Zusicherung aussagekräftiger
 als eine Einzelmessung.
@@ -136,34 +136,36 @@ hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweite
 \begin{table}[H]
 \centering
 \caption[Anwendung der Muss-Kriterien auf die Kandidaten und Ergebnis der Auswahl]{Anwendung der Muss-Kriterien auf
-  die Kandidaten und Ergebnis der Auswahl. M5 entscheidet die Vorauswahl nicht und ist nur am Prototyp geprüft, daher
-  \enquote{offen} für die übrigen Kandidaten. \enquote{Bedingt} bei M1 heißt: erfüllt mit Auth Callout}
+  die Kandidaten und Ergebnis der Auswahl. M5 und M6 entscheiden die Vorauswahl nicht und sind nur am Prototyp geprüft,
+  daher \enquote{offen} für die übrigen Kandidaten. \enquote{Entwurf} bei M6 heißt: erfüllt mit Auth Callout, im
+  gemessenen Stand nicht}
 \label{tab:kandidaten}
 \small
-\begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X *{5}{>{\centering\arraybackslash}p{0.065\textwidth}} >{\RaggedRight\arraybackslash}p{0.17\textwidth}@{}}
+\begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X *{6}{>{\centering\arraybackslash}p{0.058\textwidth}} >{\RaggedRight\arraybackslash}p{0.15\textwidth}@{}}
 \hline
-Kandidat & M1 & M2 & M3 & M4 & M5 & Ergebnis \\
+Kandidat & M1 & M2 & M3 & M4 & M5 & M6 & Ergebnis \\
 \hline
-Ausgangszustand bei der Analyse, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja &
+Ausgangszustand bei der Analyse, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja & offen &
   scheidet aus \\
-Ausgangszustand am 30.\ Oktober, Worker-Thread je Ausführung & ja & ja & ja & nein & ja &
+Ausgangszustand am 30.\ Oktober, Worker-Thread je Ausführung & ja & ja & ja & nein & ja & offen &
   scheidet aus \\
-Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen &
+Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen & offen &
   scheidet aus \\
-workerd, Isolate je Worker über Anfragen hinweg & ja & nein & ja & ja & offen &
+workerd, Isolate je Worker über Anfragen hinweg & ja & nein & ja & ja & offen & offen &
   scheidet aus \\
-JavaScript in WebAssembly je Ausführung & ja & ja & ja & ja & offen &
+JavaScript in WebAssembly je Ausführung & ja & ja & ja & ja & offen & offen &
   zurückgestellt \\
-Node.js-Host mit \texttt{isolated-vm}, Isolate je Ausführung & ja & ja & ja & ja & offen &
+Node.js-Host mit \texttt{isolated-vm}, Isolate je Ausführung & ja & ja & ja & ja & offen & offen &
   nicht gewählt \\
-V8-Isolate je Ausführung mit vermittelten Bindings & bedingt & ja & ja & ja & ja &
+V8-Isolate je Ausführung mit vermittelten Bindings & ja & ja & ja & ja & ja & Entwurf &
   \textbf{gewählt} \\
 \hline
 \end{tabularx}
 \end{table}
 
-Für das gewählte Modell gilt M1 als Entwurfseigenschaft: erfüllt mit dem Auth Callout, lokal erprobt (T10,
-\autoref{sec:pruefung-isolation}), auf der Plattform noch nicht eingerichtet (\autoref{sec:betriebsplanung}).
+Die Prozessgrenze je Mandant (M1) übernimmt das gewählte Modell vom Ausgangszustand. M6 ist eine Entwurfseigenschaft:
+erfüllt mit dem Auth Callout, lokal erprobt (T10, \autoref{sec:pruefung-isolation}), auf der Plattform noch nicht
+eingerichtet (\autoref{sec:betriebsplanung}).
 
 Der Ausgangszustand verletzte bei der Analyse M2, weil aufeinanderfolgende Ausführungen sich den Prozessspeicher
 teilen, und verletzt M4, weil dem Skript die vollständige Node-Schnittstelle offensteht. Seit er jedes Skript in einem
@@ -562,6 +564,18 @@ enforce, mit einer Testregel und dem eigenen System je Lauf (T7, \autoref{sec:pr
 im Protokoll, und verwehrt bleiben stets die internen Bereiche. Den Token der Person setzt der Proxy bei Agentenläufen selbst
 ein, er gelangt nie in die Sandbox. Lauschende Ports sind in beiden Profilen verwehrt.
 
+Damit wird der Proxy selbst zum Angriffsziel, denn er ist mandantenübergreifend geteilt und hält während eines
+Agentenlaufs den Token der Person. Gegen Anfragen auf interne Ziele löst er jeden Host selbst auf, verwirft ihn, wenn
+eine Adresse in einem gesperrten Bereich liegt, und verbindet sich nur mit den geprüften Adressen. Eine DNS-Antwort,
+die sich zwischen Prüfung und Verbindung ändert, erreicht den Cluster deshalb nicht, und unmittelbar vor dem
+Verbindungsaufbau prüft er die Adresse ein zweites Mal. Den Token setzt er nur in Anfragen an die SystemBaseUri über
+\ac{HTTPS} ein, sodass ein Skript ihn auf kein anderes Ziel lenken kann. Gegenüber dem Proxy weist sich eine Anfrage mit
+der Kennung ihrer Ausführung aus, einer nicht ratbaren \ac{UUID}, die nur so lange gilt wie die Registrierung.
+Registrierung, Token und Protokoll der Anfragen liegen in Redis und verfallen mit der Registrierung, spätestens nach
+24 Stunden. Wer auf dieses Redis und die Protokolle zugreifen darf, regelt die Plattform, und das ist vor einem Betrieb
+festzulegen. \autoref{tab:tcb} im Anhang stellt die vertrauenswürdigen Dienste des Modells mit ihren Geheimnissen denen
+des Ausgangszustands gegenüber.
+
 \subsubsection{Kompatibilitätsschicht}
 \label{sec:kompatibilitaetsschicht}
 
@@ -643,7 +657,17 @@ Downward \ac{API}, nicht aus den cgroup-Dateien, die gVisor nur emuliert
 je zur Hälfte als Heap-Limit und als Limit für Puffer außerhalb des Heaps. Erreicht der Heap die Grenze, beendet der
 Callback das Isolate und gewährt festen Headroom, ohne den V8 den gesamten Prozess beendete. Der zählende Allokator
 verweigert eine Zuteilung oberhalb des Limits und meldet das als abfangbaren \texttt{RangeError}. Weitere Limits
-gelten für entpackte Bundles, Bodies und das Dateisystem im Speicher. Der Pod erhält ein Speicherlimit, aber kein
+gelten für entpackte Bundles, Bodies und das Dateisystem im Speicher.
+
+Die Limits sind überbucht. Bei 512\,MiB Pod-Limit und vier Slots erhält jede Ausführung 64\,MB Heap und 64\,MB für
+Puffer, zusammen schon das ganze Pod-Limit. Hinzu kommen 32\,MB Headroom je Isolate, 128\,MB Bundle-Cache und der
+Grundbedarf des Prozesses von rund 70\,MiB (\autoref{sec:durchsatz}), in der Summe 4 $\times$ (64 + 64 + 32) + 128 = 768\,MB
+ohne Grundbedarf. Unter das Pod-Limit gebracht, blieben bei vier Slots je Ausführung rund 23\,MB für Heap und Puffer,
+weniger als das Minimum von 64\,MB. Der Entwurf wählt deshalb die Dichte. Unter dem Lastprofil kam kein Pod über
+103\,MiB, weil die Skripte wenig Speicher brauchen. Schöpfen aber mehrere gleichzeitige Ausführungen ihre Limits aus,
+greift vor den Mechanismen des Isolates das cgroup und beendet die Sandbox mit allen laufenden Ausführungen. Deren
+Nachrichten stellt der Consumer nach der Ack-Wait neu zu, und sie laufen ein zweites Mal (\autoref{sec:zuverlaessigkeit}).
+T6 prüft eine einzelne Ausführung, die den Speicher erschöpft, nicht eine neben drei laufenden. Der Pod erhält ein Speicherlimit, aber kein
 \ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand trug bis zum 17.\ Oktober eines (100\,m, \autoref{tab:ressourcen-vergleich}), eine Fehlkonfiguration, seither zwei Kerne. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
 von S4 eingeht (\autoref{tab:parameter}). Die Mechanismen auf Ebene des Isolates liefern damit die Attribution und
 einen im Skript abfangbaren Fehler, das cgroup die Garantie. Ihre Belastbarkeit prüft \autoref{sec:Evaluation}
@@ -704,7 +728,7 @@ Agentenaufrufe beliebig viele einmalige Skripte einlagern und die Bundles seines
 Erschöpfung einer geteilten Ressource aus A1. Und die Grenze ist ein Budget in Byte, denn einzelne Mandanten halten
 bis zu 151 gebündelte Versionen. Das Budget liegt neben den Heap-Limits unter demselben Speicherlimit des Pods
 (\autoref{sec:ressourcenbegrenzung}), wird dort aber nicht abgezogen, sodass Heap-Limits, Headroom und Cache zusammen
-das Pod-Limit übersteigen können. Verdrängt wird der am längsten nicht genutzte Eintrag.
+das Pod-Limit übersteigen (\autoref{sec:ressourcenbegrenzung}). Verdrängt wird der am längsten nicht genutzte Eintrag.
 
 Der Cache nimmt dem zweiten Aufruf den Abruf ab, dem ersten nicht. Ein Vorladen der zuletzt aufgerufenen Bundles bei
 der Zuweisung folgte derselben Regel wie der Pool, ist aber nicht umgesetzt (\autoref{sec:betriebsplanung}). Ein
@@ -805,7 +829,7 @@ Ausblicks (\autoref{sec:diffusion:ausblick}).
 
 Eine zweite offene Maßnahme betrifft die Härtung der Engine. Die Speichersandbox von V8 erfordert einen vollständigen
 Build der Engine. Der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Die vollständige Sandbox
-ist für M1 bis M5 nicht erforderlich, weil die Mandantentrennung über die Pod-Grenze läuft. Würde die Sandbox
+ist für M1 bis M6 nicht erforderlich, weil die Mandantentrennung über die Pod-Grenze läuft. Würde die Sandbox
 tragfähig, verlöre die Regel aus \autoref{sec:ebenen}, einen
 Pod nie einem zweiten Mandanten zu geben, ihren Charakter als Sicherheitsmechanismus und würde zur
 Kostenentscheidung.
@@ -813,19 +837,31 @@ Kostenentscheidung.
 Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich
 Ausführungen desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben
 Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandantengrenze ist. M2 und
-die Prüffälle betreffen aufeinanderfolgende Ausführungen. Auf hyper-int-otc trug zwischen ihnen ein verdeckter Kanal über die
-\ac{CPU}, den getrennte Pods auf demselben Knoten nicht zeigten (\autoref{sec:pruefung-isolation}). Seit die Uhr aus
-\autoref{sec:kompatibilitaetsschicht} bei Timern virtuell läuft, braucht er eine externe Zeitquelle, und die erreicht ein
-Skript nur über die Regeln aus \autoref{sec:faehigkeitsmodell}. Ausschließen lässt sie sich damit nicht. Jedes Ziel, das
-der Mandant freigibt, kann Zeitstempel liefern, mindestens das eigene System mit seinem \texttt{Date}-Header auf die
-Sekunde. Das Restrisiko wird bewusst akzeptiert, denn ohne Freischaltung durch den Mandanten erreicht ein Agentenlauf
-nur dessen SystemBaseUri, und jede feinere Zeitquelle setzt eine ausdrückliche Freigabe voraus. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite eines solchen Kanals deckelte, ist nicht vorgesehen.
-Ungeprüft bleibt der gemeinsame Adressraum: Ohne die Speichersandbox von V8 erreicht ein Speicherfehler in der Engine die
-Heaps der gleichzeitigen Isolates desselben Prozesses. Der Entwurf behält trotzdem mehrere Slots je Pod. Auch dieses Risiko
-bleibt innerhalb eines Mandanten, und ein Pod je Ausführung schlösse den Kanal über den Garbage Collector nicht, der auch
-zwischen Pods auf demselben Knoten trug (\autoref{sec:pruefung-isolation}).
+die Prüffälle betreffen aufeinanderfolgende Ausführungen. Drei Klassen von Wegen sind zu trennen. Ein
+\emph{verdeckter Kanal} braucht einen Sender, der mitwirkt: Eine Ausführung, die über ihre Eingaben beeinflusst ist
+und Daten einer Person verarbeitet, aber kein freigegebenes Ziel erreicht, moduliert die \ac{CPU}, und eine
+gleichzeitige Ausführung mit freigegebenem Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne
+Mitwirkung des Opfers aus und nutzt Eigenschaften der Hardware (A2). Ein \emph{Speicherfehler} in der Engine
+erreicht ohne die Speichersandbox von V8 die Heaps der gleichzeitigen Isolates desselben Prozesses. Gemessen ist nur
+der erste Weg. Auf dem Messcluster trug er vor der virtuellen Uhr im selben Pod über die \ac{CPU} und unter
+Allocation-Last auch zwischen Pods verschiedener Mandanten auf demselben Knoten (\autoref{sec:pruefung-isolation}). Er
+betrifft damit auch die Mandantengrenze, mit virtueller Uhr und externer Zeitquelle lag er zwischen Pods bis auf einen
+Lauf auf Zufallsniveau. Seit die Uhr aus \autoref{sec:kompatibilitaetsschicht} bei Timern virtuell läuft, braucht er eine
+externe Zeitquelle, und die erreicht ein Skript nur über die Regeln aus \autoref{sec:faehigkeitsmodell}. Ausschließen
+lässt sie sich damit nicht. Jedes Ziel, das der Mandant freigibt, kann Zeitstempel liefern, mindestens das eigene
+System mit seinem \texttt{Date}-Header auf die Sekunde. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite
+eines solchen Kanals deckelte, ist nicht vorgesehen.
 
-Eine vierte Einschränkung betrifft die Zugangsdaten. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
+Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber den über den Garbage
+Collector zwischen Pods. Ein Lauf mit einem Slot je Pod unter dem Lastprofil vom 29.\ Oktober, je einmal am
+30.\ Oktober, beziffert den Preis: 64\,\% mehr gleichzeitige Worker-Pods (340 statt 207), 52\,\% mehr Speicher
+(22,8 statt 15,0\,GiB) und 28\,\% mehr \ac{CPU}. Der Pool deckt dann 40 statt 160 gleichzeitige Ausführungen, und die
+Control Plane brauchte ein höheres Speicherlimit. Weil die Einstellung beide Profile traf, ist das die Obergrenze der
+Kosten für das Agentenprofil. Der Entwurf behält mehrere Slots je Pod. Ob ein Slot im Agentenprofil diesen Preis
+wert ist, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor, ebenso eine Begrenzung
+der Anfragen je Zeit.
+
+Eine vierte Einschränkung betrifft die Zugangsdaten und damit M6. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
 NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth Callout aus
 \autoref{sec:bausteine} und hat die Kette lokal erprobt. Auf der Plattform setzt der Callout Anpassungen des
 DDP-Teams voraus. Bis sie vorliegen, gelten dort die gemeinsamen Zugangsdaten, und die Messungen in

@@ -43,8 +43,14 @@
 \newglossaryentry{drain}{name={Drain},sort={Drain},
   description={Geordnetes Beenden aller Pods eines Knotens, bevor er gewartet oder entfernt wird. Die Pods werden auf anderen Knoten neu angelegt \autocite{the_kubernetes_authors_safely_2026}.}}
 
+\newglossaryentry{edgeproxy}{name={Edge-Proxy},sort={Edge-Proxy},
+  description={Einstiegspunkt der Plattform der Fallstudie, der Webhooks aus dem Internet annimmt und an die App weiterleitet (\autoref{tab:komponenten}).}}
+
 \newglossaryentry{egressproxy}{name={Egress-Proxy},sort={Egress-Proxy},
   description={Dienst des Modells, über den jede ausgehende Verbindung eines Skripts läuft. Er prüft Ziel, Port und Methode gegen die Regeln des Mandanten und verwirft interne Adressen stets (\autoref{sec:faehigkeitsmodell}).}}
+
+\newglossaryentry{executionservice}{name={Execution Service},sort={Execution Service},
+  description={Knative-Service je Mandant im Ausgangszustand, der die Runner-Pods anlegt und ohne Last auf null skaliert (\autoref{sec:systemkontext}).}}
 
 \newglossaryentry{eventloop}{name={Event Loop},sort={Event Loop},
   description={Schleife einer JavaScript-Laufzeit, die anstehende Aufgaben wie abgelaufene Timer und abgeschlossene Ein- und Ausgabe nacheinander abarbeitet. In \texttt{deno\_core} verbindet sie das Isolate mit den Ops \autocite{iwanczuk_roll_2022}.}}
@@ -124,6 +130,9 @@
 \newglossaryentry{pool}{name={Pool},sort={Pool},
   description={Vorrat frischer Worker-Pods, den die Control Plane außerhalb des Anfragepfads nachfüllt, damit ein Mandant beim Erstkontakt keinen Pod-Start abwartet (\autoref{sec:zuteilung}). Das Vorgehen folgt \textcite[S.~1]{lin_mitigating_2019}.}}
 
+\newglossaryentry{prober}{name={Prober},sort={Prober},
+  description={Messskript, das einen Mandanten in kurzen Abständen aufruft und den längsten Abstand zweier erfolgreicher Antworten festhält. Es misst bei M5 die Zeit ohne Ausführungsfähigkeit (\autoref{sec:pruefung-m5}).}}
+
 \newglossaryentry{prometheus}{name={Prometheus},sort={Prometheus},
   description={Metriksystem, das Messwerte als Zeitreihen sammelt und abfragbar hält \autocite{prometheus_authors_overview_2026}.}}
 
@@ -153,6 +162,9 @@
 
 \newglossaryentry{shim}{name={Shim},sort={Shim},
   description={Nachbildung einer Schnittstelle, die Aufrufe auf eine andere Umsetzung abbildet. Die Kompatibilitätsschicht bildet so \texttt{http}, \texttt{net} und \texttt{tls} auf vermittelte Bindings ab (\autoref{sec:kompatibilitaetsschicht}).}}
+
+\newglossaryentry{skriptdienst}{name={Skriptdienst},sort={Skriptdienst},
+  description={Bestehender Dienst der Fallstudie, der die hinterlegten Skripte verwaltet und eine Skriptkennung in Bundle, Variablen und Log-Ziel auflöst. Das Modell nutzt ihn unverändert mit (\autoref{sec:bausteine}).}}
 
 \newglossaryentry{slot}{name={Slot},sort={Slot},
   description={Platz für eine gleichzeitige Ausführung in einem Worker-Pod. Ein Pod hält bis zu vier, jeder Slot treibt genau ein Isolate (\autoref{sec:ebenen}).}}
@@ -186,6 +198,9 @@
 
 \newglossaryentry{worker}{name={Worker-Pod},sort={Worker-Pod},
   description={Pod des Modells aus den Containern Transport und Sandbox. Er wird aus dem Pool genau einem Mandanten zugewiesen, führt dessen Skripte in Isolates aus und wird danach nie wiederverwendet (\autoref{sec:ebenen}).}}
+
+\newglossaryentry{zustellsemantik}{name={Zustellsemantik},sort={Zustellsemantik},
+  description={Zusage, wie oft eine Nachricht verarbeitet wird. Höchstens einmal (at-most-once) verliert eine Nachricht beim Absturz, mindestens einmal (at-least-once) stellt sie neu zu und kann eine Ausführung wiederholen. Der Ausgangszustand stellt höchstens einmal zu, das Modell mindestens einmal (\autoref{sec:zuverlaessigkeit}).}}
 
 \newglossaryentry{zustandsfreiheit}{name={Zustandsfreiheit},sort={Zustandsfreiheit},
   description={Eigenschaft einer Ausführung, dass nichts von ihr einer späteren zugänglich ist, weder im Speicher noch in Timern, Verbindungen oder im Dateisystem (\autoref{sec:grundlagen:eigenschaften}).}}

@@ -2,7 +2,7 @@
 \section{Evaluation} \label{sec:Evaluation}
 
 Dieses Kapitel prüft das Artefakt aus \autoref{sec:Entwurf} gegen den Kriterienkatalog aus
-\autoref{sec:kriterienkatalog}. U4 erhebt die Messgrößen S1 bis S4 und M5, U3 prüft M1 bis M4 über den
+\autoref{sec:kriterienkatalog}. U4 erhebt die Messgrößen S1 bis S4 und M5, U3 prüft M1 bis M4 und M6 über den
 Prüffallkatalog und die Architekturprüfung. Grundlage sind Messläufe vom 6.\ Oktober bis zum 2.\ November 2026. Den
 Vergleich mit dem Ausgangszustand tragen allein die Läufe auf hyper-int-otc, die frühen Läufe dienten der Wahl der
 Entwurfsparameter. Sie haben sechs Fehler in der Zustellung aufgedeckt, die \autoref{sec:zuverlaessigkeit} festhält.
@@ -11,7 +11,8 @@ Einzelne Detailtabellen stehen im \ref{sec:messdaten}.
 \subsection{Messaufbau und Vorgehen}
 \label{sec:messaufbau}
 
-Gemessen wird auf dem Kubernetes-Cluster hyper-int-otc der Integrationsstufe (\autoref{tab:cluster}). Dort läuft
+Gemessen wird auf hyper-int-otc, dem Kubernetes-Cluster der Integrationsstufe der \ac{DDP} auf der \ac{OTC}
+(\autoref{tab:cluster}). Dort läuft
 neben dem Prototyp der Ausgangszustand aus \autoref{sec:systemkontext}, je Mandant ein Knative-Service mit einem
 Node.js-Runner, sodass beide Modelle auf demselben Cluster verglichen werden. Die Last stammt aus dem
 Produktivbetrieb der AWS-nativen Variante und ist nur Quelle des Lastprofils.
@@ -87,7 +88,8 @@ seine Kosten sind in keinem Wert enthalten. Extern wurde auf einem Cluster der I
 Rechner über das Internet. Konstruktbedingt nähert der Overhead die warme Latenz an, und die Pod-Löschung ersetzt bei M5 ein Drain.
 
 Für S1, S2 und M5 liefen je Modell drei Läufe in verschränkter Reihenfolge (Prototyp, Ausgangszustand, Prototyp ...), je
-Lauf mit vorher geprüfter Route. Angegeben ist die Spannweite der drei Läufe. Sie ersetzt kein Konfidenzintervall
+Lauf mit vorher geprüfter Route. Sie heißen P1 bis P3 für den Prototyp und K1 bis K3 für den Ausgangszustand auf
+Knative. Frühere Läufe tragen eine fortlaufende Nummer, etwa Lauf 18. Angegeben ist die Spannweite der drei Läufe. Sie ersetzt kein Konfidenzintervall
 \autocite[S.~4]{hoefler_scientific_2015}, zeigt aber, ob ein Unterschied größer ist als die Streuung. Die Perzentile
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
 berichten \autocites[S.~6]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}.
@@ -292,11 +294,11 @@ auf einem anderen Worker zu Ende geführt wurde. Je Ausführungs-ID gibt es gena
 hinterlässt keinen Span. Ein Absturz führt damit zu einer zweiten Ausführung derselben Nachricht, wie der Entwurf es vorsieht, und der
 Aufrufer erhält 200 mit Verzögerung. Wie mit nicht idempotenten Skripten umzugehen ist, behandelt \autoref{sec:diffusion:ausblick}.
 
-\subsection{Isolation und Zustandsfreiheit (M1 bis M4)}
+\subsection{Isolation und Zustandsfreiheit (M1 bis M4, M6)}
 \label{sec:pruefung-isolation}
 
 M1 und M3 werden durch Architektur- und Konfigurationsvergleich geprüft, M1 über die Ebenen der Trennung aus
-\autoref{sec:ebenen} und den Prüffall T10, M3 über den Vergleich der Pod-Spezifikation des Workers mit der des Ausgangszustands. M2 und M4
+\autoref{sec:ebenen}, M6 über den Prüffall T10, M3 über den Vergleich der Pod-Spezifikation des Workers mit der des Ausgangszustands. M2 und M4
 werden über die Prüffälle T1 bis T9 aus \autoref{tab:prueffaelle} geprüft, als Skripte gegen den Ausgangszustand und
 den Prototyp. Ein Prüffall gilt als bestanden, wenn der Zugriff scheitert oder der Zustand die nächste Ausführung
 nicht erreicht. Beide Varianten wurden am 30.\ Oktober auf hyper-int-otc mit demselben Mandanten geprüft, der für den
@@ -399,8 +401,9 @@ gleich, zwei sind zusätzlich gesetzt. Sie beschränken, was der Prozess im Cont
 Systemaufrufe, die gVisor annimmt. Nur \texttt{enableServiceLinks} ist im Worker-Pod gesetzt und im Runner nicht, was
 Umgebungsvariablen im Pod betrifft, die das Skript nicht sieht (T8). M3 ist damit auf Clustern mit gVisor erfüllt.
 M3 betrifft allein den Host-Kernel. Was der Prototyp innerhalb des Pods hinzufügt, den Transport mit seinem Kommando-Port und
-die Loopback-Verbindung zur Sandbox, gehört zu M1 und ist in \autoref{sec:ebenen} und über T10 bewertet. Die Aussage stützt sich auf die
-Konfiguration und sagt nichts über Lücken in gVisor selbst. M1 ist im Entwurf mit Auth Callout erfüllt (T10), im gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
+die Loopback-Verbindung zur Sandbox, gehört zu M1 und M6 und ist in \autoref{sec:ebenen} und über T10 bewertet. Die Aussage stützt sich auf die
+Konfiguration und sagt nichts über Lücken in gVisor selbst. M1 ist erfüllt, die Pod-Grenze je Mandant ist dieselbe wie im Ausgangszustand. M6 ist im Entwurf mit Auth Callout
+erfüllt (T10), im gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
 NATS-Zugangsdaten (\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster, am 29.\ Oktober erneut geprüft, zeigt drei Dinge. Die
 Container teilen keinen Prozess-Namespace. Die Sandbox hat keine Volumes. Identitätssecret und NATS-Zugangsdaten sind nur
 im Transport eingehängt, ohne Token des Service-Accounts. Das Netz teilen beide Container. Dass der Transport fremde
@@ -471,7 +474,9 @@ am leeren Verzeichnis. Ob der Pfad in Produktion erreicht wird, ist nicht geprü
 \autoref{tab:s6}, ebenso die Wertung der vier gebündelten, nicht unterstützten Skripte (1.713 von 1.718, 99,7 Prozent).
 Dass 38 Skripte schon im Ausgangszustand scheitern, ändert dessen fünf Punkte nicht, denn S6 misst den Anteil, der nicht
 schlechter läuft als dort. Damit laufen bis zu 1.717 von 1.718 Mandanten, 99,9 Prozent, nicht schlechter als im
-Ausgangszustand. Das ist eine Obergrenze unter zwei Annahmen: Die
+Ausgangszustand. Werden die 664 Mandanten, deren Lauffähigkeit allein auf der Schicht beruht, pessimistisch als Ausfall
+gezählt, bleiben 1.053, also 61,3 Prozent, mit den vier gebündelten 61,1 Prozent. Das ist die Untergrenze und ergibt vier
+statt fünf Punkte. Die Obergrenze gilt unter zwei Annahmen: Die
 Schicht hält für die übrigen Pakete, was Differenztest und Treiber-Prüfung für einen Treiber zeigen, und die Ziele der
 Skripte sind erreichbar. Das hängt am Egress-Proxy
 (\autoref{sec:faehigkeitsmodell}). Im Modus audit lässt er jede öffentliche Adresse und jeden Port durch, in enforce, wie
@@ -503,8 +508,8 @@ gerundet drei) und S4 bei 2,0.
 
 \begin{table}[tbp]
   \caption[Stand der Bewertung entlang der Soll-Kriterien]{Stand der Bewertung entlang der Soll-Kriterien. Die
-    Muss-Kriterien M2 bis M5 erfüllt der gemessene Stand, M1 nur der Entwurf, lokal belegt über T10
-    (\autoref{sec:pruefung-isolation})}
+    Muss-Kriterien M1 bis M5 erfüllt der gemessene Stand, M6 nur der Entwurf, lokal belegt über T10
+    (\autoref{sec:pruefung-isolation}). Die Punkte gelten deshalb für den Entwurf mit Auth Callout}
   \label{tab:nutzwert}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} r r@{}}
@@ -513,16 +518,19 @@ gerundet drei) und S4 bei 2,0.
      & & & & & Prototyp & Ausgang \\
     \hline
     S1 & 0,30 & P95 verteilt 0,41 bis 0,53\,s, Schub 7,4 bis 8,6\,s & P95 verteilt 3,1 bis 3,3\,s, Schub 13,9 bis 16,5\,s & gemessen, ohne Callout & 4 & 3 \\
-    S6 & 0,25 & bis zu 99,9\,\% der Mandanten (Obergrenze) & -- & abgeleitet & 5 & 5 \\
+    S6 & 0,25 & 61,3 bis 99,9\,\% der Mandanten & -- & abgeleitet, Regelbedarf nicht erhoben & 4 bis 5 & 5 \\
     S2 & 0,15 & P50 139 bis 145\,ms, P95 220 bis 291\,ms, P99 313 bis 361\,ms & P50 300 bis 312\,ms, P95 720 bis 745\,ms, P99 3,5 bis 3,7\,s & gemessen & 5 & 3 \\
     S3 & 0,10 & 70,5\,MiB je Pod & 82,7\,MiB je Pod & gemessen & 3 & 3 \\
-    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & -- & abgeleitet & 5 & 5 \\
+    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & -- & abgeleitet, ohne Regelaufwand & 5 & 5 \\
     S4 & 0,10 & 400 Aufrufe/s, Stufe 300/s verfehlt & 200 Aufrufe/s & ein Lauf, vorläufig & 5 & 3 \\
-    Nutzwert & 1,00 & & & & 4,5 & 3,7 \\
+    Nutzwert & 1,00 & & & & 4,25 bis 4,5 & 3,7 \\
     \hline
   \end{tabularx}
 \end{table}
 
-Auf vier der sechs Kriterien erreicht der Prototyp die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte. Die Rangfolge hängt nicht von den Gewichten ab, denn der Prototyp ist bei S3, S6 und S7 gleichauf und bei den
-übrigen besser. Nur der Vorsprung von 0,8 ändert sich. Er hängt an S6, das unter enforce von den Regeln abhängt: Bei zwei
+Der Nutzwert liegt bei 4,25 bis 4,5 gegen 3,7, je nachdem, ob S6 mit seiner Unter- oder Obergrenze eingeht. Mit der
+Obergrenze erreicht der Prototyp auf vier der sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte.
+Dann ist er bei S3, S6 und S7 gleichauf und bei den übrigen besser, und die Rangfolge hängt nicht von den Gewichten ab.
+Mit der Untergrenze liegt er bei S6 einen Punkt zurück, und der Vorsprung sinkt von 0,8 auf 0,55. Er kehrte sich erst
+um, wenn S6 mehr als das Dreifache seines Gewichts erhielte. S6 hängt unter enforce von den Regeln ab: Bei zwei
 Punkten, also höchstens 40\,\% der Mandanten, läge der Prototyp mit 3,75 knapp vor 3,7, bei einem mit 3,5 dahinter. Die Vorbehalte der Zuordnung stehen in \autoref{sec:messaufbau}.

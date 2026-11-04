@@ -13,14 +13,17 @@ verworfen wird. Die Startzeit
 nimmt ein Pool vorgehaltener Pods vom Anfragepfad, den eine Control Plane über das vorhandene
 Messaging-System zuteilt. Ein Skript erreicht die Außenwelt nur über Bindings und einen
 Egress-Proxy, und eine Kompatibilitätsschicht bildet die Node-Schnittstellen nach, die der Bestand nutzt.
-Belegt ist diese Antwort nicht überall gleich stark. Die Mandantengrenze ist im Entwurf und lokal belegt (T10), der
+Übernommen aus dem Ausgangszustand ist die Mandantengrenze, neu sind Isolate je Ausführung, Bindings, Proxy und Pool.
+Den Latenzvorsprung im Webhook-Profil trägt der Pool, nicht die Engine, den Sicherheitsgewinn die Fähigkeitsgrenze.
+Belegt ist diese Antwort nicht überall gleich stark. Die Mandantengrenze besteht wie im Ausgangszustand. Dass ein
+Ausbruch hinter ihr nur die Rechte des eigenen Mandanten erbeutet (M6), ist im Entwurf und lokal belegt (T10), der
 gemessene Plattformstand lief ohne den Auth Callout. Zustandsfreiheit und Fähigkeitsgrenze sind auf der Plattform geprüft. Alle
 Vergleichszahlen stammen aus dem Webhook-Profil, und im Agentenprofil gilt die Sicherheitsaussage nur für
 aufeinanderfolgende Ausführungen.
 
 U1 fragte nach den Anforderungen. Sie stammen aus Ausgangslage und Betrieb der Fallstudie und der
 Auswertung von 1.718 Mandanten mit 14.575 Skriptversionen. Der Kern des Problems ist die Verschiebung der Vertrauenseinheit vom Mandanten auf
-die einzelne Ausführung, sobald der Code von einem Agenten stammt. Daraus folgen fünf
+die einzelne Ausführung, sobald der Code von einem Agenten stammt. Daraus folgen sechs
 Muss- und sechs gewichtete Soll-Kriterien (\autoref{sec:kriterienkatalog}).
 
 U2 fragte nach der Kombination aus Isolationsgrenze, Zuordnungsgranularität und Instanzverwaltung. Die Muss-Kriterien scheiden Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun
@@ -35,15 +38,18 @@ der Unterschied allein bei M4, also bei Netz, Umgebung und Dateisystem. Die Zust
 während der Arbeit selbst hergestellt, seit sein Runner jedes Skript in einem Worker-Thread ausführt. Die neun Prüffälle, die aus dem
 Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle. Der Ausgangszustand besteht sieben,
 T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). T7 und T9 bestehen im Prototyp gegen den Proxy in enforce, mit einer festen Testregel. Zustand überdauert keine Ausführung, ein erschöpfter Heap
-trifft nur die verursachende, und Netz, Dateisystem und Identität sind nur über Bindings und Proxy erreichbar. M3 gilt auf Clustern mit gVisor als erfüllt, weil
-der Pod in keinem Feld der Kernel-Oberfläche lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M5, der gemessene Prototyp
-M2 bis M5.
+trifft im geprüften Fall einer einzelnen Ausführung nur diese, ein erschöpftes Pod-Limit dagegen alle gleichzeitigen
+(\autoref{sec:ressourcenbegrenzung}), und Netz, Dateisystem und Identität sind nur über Bindings und Proxy erreichbar. M3 gilt auf Clustern mit gVisor als erfüllt, weil
+der Pod in keinem Feld der Kernel-Oberfläche lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp
+M1 bis M5. Nach der Regel aus \autoref{sec:kriterienkatalog} ist damit der Entwurf die Lösung, sobald der Callout
+eingerichtet ist, und der Nutzwert gilt unter diesem Vorbehalt.
 
 U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben Cluster startet der Prototyp mit Pool
 im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden. Er bedient in drei Läufen alle 90 Mandanten innerhalb von zwei
 Sekunden, der Ausgangszustand höchstens 3. Der Pool kostet dafür dauerhaft 3,0\,GiB und 1,0 Kerne. Ohne
 Pool (S1b) verfehlt er den Zielwert und liegt auf dem Niveau des Ausgangszustands. Der Latenzgewinn stammt also aus der
-Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings, und beide sind trennbar (\autoref{sec:kaltstart}). Gemessen ist
+Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings (\autoref{sec:kaltstart}). Dass beide trennbar sind, ein
+heutiger Runner mit Pool also ebenso schnell wäre, bleibt eine Hypothese. Gemessen ist
 allerdings der Gewinn des Gesamtsystems mit Control Plane, Zustellung und Skriptdienst. Der Anteil der Engine ist nur
 über die Läufe ohne Pool eingegrenzt, und ein heutiger Runner mit Pool ist nicht gemessen. Der Overhead im Lastprofil
 liegt im Median bei 139 bis 145 statt 300 bis 312\,ms, einschließlich der Begleitdienste (\autoref{sec:warm}). Im 95.\
@@ -52,8 +58,8 @@ Worker-Pod belegt mit 70,5\,MiB 85\,\% eines Runner-Pods. Unter Last braucht der
 34\,GiB. Der Durchsatz liegt in einem Lauf bei 400 statt 200 Aufrufen je Sekunde, mit einer verfehlten Stufe bei 300
 (\autoref{sec:durchsatz}). Beim Knotenentzug bleibt die Lücke für neue Ausführungen bei 0,2 bis 0,3 statt 2,1 bis 2,7
 Sekunden, ohne verlorene und ohne doppelte Ausführung in drei Läufen mit 48 Ausführungen (\autoref{sec:pruefung-m5}). In
-der Zusammenführung erreicht der Prototyp auf vier der sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei
-Punkte. Er kommt auf 4,5 gegen 3,7 (\autoref{sec:nutzwert}), wobei S6 abgeleitet statt gemessen ist.
+der Zusammenführung kommt der Prototyp auf 4,25 bis 4,5 gegen 3,7 (\autoref{sec:nutzwert}). Die Spanne stammt aus S6,
+das abgeleitet statt gemessen ist und zwischen 61,3 und 99,9\,\% der Mandanten liegt.
 
 Für das Agentenprofil ist gezeigt, dass der Prototyp alle neun Prüffälle besteht, T1 bis T3 auch mit zwei gleichzeitigen
 Ausführungen, und dass Erstaufruf und warme Latenz im Bereich des Webhook-Profils liegen (\autoref{sec:kaltstart}). Einen
@@ -64,9 +70,12 @@ Isolate-Grenze (\autoref{sec:betriebsplanung}).
 U5 beantworten die beiden folgenden Abschnitte. Zuvor die Grenzen. Die der Ergebnisse begründet
 \autoref{sec:messaufbau}, weitere folgen aus dem Entwurf (\autoref{sec:betriebsplanung}). S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht erhoben hat
 (\autoref{sec:pruefung-kompatibilitaet}). Die Sicherheitsaussage für das Agentenprofil gilt für aufeinanderfolgende
-Ausführungen. Zwischen gleichzeitigen im selben Pod trägt ein verdeckter Kanal, sobald ein freigegebenes Ziel eine Uhr
-liefert (\autoref{sec:pruefung-isolation}), und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Und eine Ausführung läuft ein zweites Mal, wenn ihr
-Worker oder ihre Sandbox mittendrin stirbt (\autoref{sec:zuteilung}). Offen bleiben drei Beobachtungen aus der Evaluation.
+Ausführungen. Zwischen gleichzeitigen trägt ein verdeckter Kanal, sobald ein freigegebenes Ziel eine Uhr liefert, im selben Pod,
+ohne virtuelle Uhr auch zwischen Pods verschiedener Mandanten (\autoref{sec:pruefung-isolation}), und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Mandantenisolation ist damit für
+Vertraulichkeit und Integrität belegt, für die Verfügbarkeit zwischen Mandanten nicht, die die Arbeit ausgrenzt
+(\autoref{sec:systemkontext}). Und eine Ausführung läuft ein zweites Mal, wenn ihr
+Worker oder ihre Sandbox mittendrin stirbt, auch wenn das cgroup die Sandbox wegen des überbuchten Speichers beendet
+(\autoref{sec:zuteilung}, \autoref{sec:ressourcenbegrenzung}). Offen bleiben drei Beobachtungen aus der Evaluation.
 Das 95.\ Perzentil von 898\,ms im ersten Noisy-Neighbour-Lauf ist nicht erklärt. Die Korrektur vom 2.\ November ist nicht
 erneut unter Last gemessen. Das Verwerfen verspäteter Skripte ist seit dem 27.\ Oktober umgesetzt, aber nicht gemessen.
 
@@ -80,22 +89,27 @@ einen Nutzer in einem Kontext, die Mechanismen, mit denen ein Implementierer es 
 Begründung dafür, dass die Mechanismen das Ziel erreichen. Für die folgenden Prinzipien ist der
 Implementierer der Betreiber einer mandantenfähigen Plattform, der Nutzer der Mandant und die
 Ausführungsumgebung der Akteur, der die Mechanismen ausführt. Aufgenommen wird nur, was alle vier Teile und einen Beleg aus \autoref{sec:Evaluation}
-hat, sonst bleibt es eine Eigenschaft des Prototyps.
+hat, sonst bleibt es eine Eigenschaft des Prototyps. Neu ist keines der Prinzipien für sich, die Herkunft steht jeweils
+dabei.
 
 \begin{description}
   \item[P1 Zwei Grenzen für zwei Schutzziele.] Ziel: Mandanten voneinander und aufeinanderfolgende
     Ausführungen voneinander trennen. Mechanismus: eine vom Kernel durchgesetzte Grenze je Mandant
     und eine Sprachgrenze je Ausführung innerhalb davon. Kontext: fremder Code, dessen
     Vertrauenseinheit die einzelne Ausführung ist. Beleg: Architekturprüfung für die äußere Grenze,
-    T1 bis T9 für die innere. Die Sprachgrenze trägt keine Mandantentrennung, die Kernelgrenze
-    keine Zustandsfreiheit ohne einen Pod je Ausführung. Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
+    T1 bis T9 für die innere. Begründung: Die Sprachgrenze trägt keine Mandantentrennung (A2), die Kernelgrenze
+    keine Zustandsfreiheit ohne einen Pod je Ausführung. Herkunft: zweistufige Trennung wie bei SAND
+    \autocite[S.~923]{akkus_sand_2018} und Prozess je Origin in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
     Sprachgrenze (\autoref{sec:betriebsplanung}).
   \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
     Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, deren Isolates aus einem
     Snapshot entstehen, dessen Nachfüllen nie auf dem Anfragepfad liegt. Kontext: die Größe des
     Vorrats ist von der Zahl der Mandanten entkoppelt, und es gibt kein Skalieren auf null. Beleg:
     S1a, S1b und der Lauf mit leerem Pool, der zeigt, dass der Vorsprung aus der Vorhaltung
-    stammt, nicht aus einem schnelleren Start. Die Wiederverwendung endet an der Grenze, die das
+    stammt, nicht aus einem schnelleren Start. Begründung: Ein frischer Pod trägt keinen Zustand, also braucht die
+    Zustandsfreiheit kein Vertrauen in ein Zurücksetzen. Herkunft: Pool vorgehaltener Instanzen nach
+    \textcite[S.~1]{lin_mitigating_2019}, hier ohne Wiederverwendung über Mandanten. Dass die Vorhaltung ohne die Isolate-Grenze ebenso wirkte, ist nicht
+    gemessen. Die Wiederverwendung endet an der Grenze, die das
     Schutzziel trägt: Ein Isolate wird nie über Ausführungen, ein Pod nie über Mandanten
     wiederverwendet, und gecacht wird nur Unveränderliches, nie Heap-Zustand.
   \item[P3 Die Fähigkeitsmenge folgt aus der Vertrauensklasse des Codes.] Ziel: einem Skript nur
@@ -103,22 +117,44 @@ hat, sonst bleibt es eine Eigenschaft des Prototyps.
     registrierter Bindings je Vertrauensklasse, die die Grenze selbst ist. Die Prüfung der Ziele im
     Egress-Proxy ist die zweite Linie. Kontext: der Inhalt des Codes taugt nicht als Grundlage,
     weil er im Agentenprofil von dem geschrieben wird, dessen Beeinflussbarkeit das
-    Bedrohungsmodell beschreibt. Beleg: T7 und T8, T7 auch gegen den Proxy in enforce.
+    Bedrohungsmodell beschreibt. Beleg: T7 und T8, T7 auch gegen den Proxy in enforce. Begründung: Was nicht registriert ist, existiert für das
+    Skript nicht, und eine Liste des Erlaubten hat keine Lücken der Art, die Denylisten zeigen
+    \autocite[S.~1--2]{chen_one_2026}. Herkunft: Complete Mediation und Least Privilege nach
+    \textcite[S.~1282]{saltzer_protection_1975}.
   \item[P4 Der Mandantenkontext liegt außerhalb des Heaps.] Ziel: dass eine Ausführung die Frage,
     in wessen Namen sie handelt, nicht beantworten und damit nicht falsch beantworten kann.
     Mechanismus: Kennung und Profil liegen im Zustand des Hosts, die zulässigen Ziele im Egress-Proxy, und die Bindings
     lesen sie dort. Alles, was das Skript sieht, sind Kopien, die kein Binding liest. Kontext:
     jede eingebettete Engine mit einem Host-Zustand je Instanz. Beleg: T9, in dem jede Kopie
-    überschrieben wird und keine Entscheidung sich ändert.
+    überschrieben wird und keine Entscheidung sich ändert. Begründung: Was im Heap liegt, kann der Code ändern, was
+    im Host liegt, nicht. Herkunft: der Zustand je Isolate, den \texttt{deno\_core} dem Host bereitstellt
+    (\autoref{sec:faehigkeitsmodell}).
   \item[P5 Ressourcenbegrenzung auf zwei Ebenen.] Ziel: dass eine Ausführung den Speicher
     anderer nicht erschöpft und die verursachende Ausführung benannt werden kann. Mechanismus: die
     Mechanismen der Engine, Heap-Limit, zählender Allokator und Watchdog, liefern die Zuordnung und
     einen abfangbaren Fehler. Die Grenze des Betriebssystems je Mandant liefert die Garantie.
-    Kontext: Mechanismen der Engine wirken nur an aufgezählten Pfaden, und die \ac{CPU} ist nicht begrenzt. Beleg: T6, in dem der
-    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt.
+    Kontext: Mechanismen der Engine wirken nur an aufgezählten Pfaden. Begründung: Die Engine kennt die
+    verursachende Ausführung, das cgroup erfasst auch Pfade, die niemand aufgezählt hat. Herkunft: Defense in Depth,
+    das cgroup des Kerns \autocite{the_kernel_development_community_control_2026} als zweite Ebene. Die \ac{CPU} begrenzt der Mechanismus
+    nicht. Beleg: T6, in dem der
+    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt. Erschöpfen gleichzeitige
+    Ausführungen das überbuchte Pod-Limit, trifft das cgroup alle (\autoref{sec:ressourcenbegrenzung}).
 \end{description}
 
 
+
+Ein anderer Betreiber kann das Modell übernehmen, wenn vier Voraussetzungen gelten. Er braucht für die Pod-Grenze eine
+Sandbox-Laufzeit wie gVisor, ein Messaging-System mit einem Consumer je Mandant und Rechten je Verbindung, einen
+Egress-Proxy als einzigen Netzweg der Pods, durchgesetzt über Netzwerkrichtlinien, und eine einbettbare Engine mit
+Zustand je Isolate im Host. Fehlt gVisor, fehlt die äußere Grenze gegen den Host-Kernel. Der Prototyp startet dann auf
+anderen Infrastrukturen trotzdem Worker (\autoref{sec:betriebsplanung}). Eine Übertragung sollte das umkehren und den
+Start ohne Sandbox-Laufzeit verweigern, wie auf der \ac{OTC}. Die Vorauswahl fiele anders aus, wenn die Knoten
+\texttt{/dev/kvm} bereitstellen, denn dann käme eine MicroVM je Mandant oder je Ausführung in Frage
+(\autoref{sec:randbedingungen}), oder wenn kein JavaScript-Bestand zu übernehmen ist, denn dann verlöre die nach
+WebAssembly kompilierte Engine ihren Nachteil bei S6. Neu zu bestimmen sind alle Parameter, die die Evaluation
+abgestimmt hat. Die Standardwerte im Code weichen von den gemessenen ab, etwa die Pool-Zielgröße mit drei statt vierzig
+Pods, die Zielauslastung mit 0,5 statt 0,75 und der Speicher-Request mit 128 statt 32\,Mi (\autoref{tab:parameter}).
+Auch Slots je Pod und die Fristen von einer Stunde und einer Minute sind gesetzt, nicht hergeleitet.
 
 Der Migrationspfad nutzt, dass das Modell je Mandant umschaltbar ist: Welcher Stack die Aufrufe bedient, entscheidet die
 Adresse der App in der Konfiguration des Mandanten. Die Umstellung erfolgt
@@ -136,7 +172,7 @@ gilt nur dort. Festzulegen ist außerdem, welches Zustellversprechen als Standar
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
 
-Offen für spätere Arbeiten sind vier Punkte, hinzu kommt ein akzeptiertes Restrisiko.
+Offen für spätere Arbeiten sind vier Punkte, hinzu kommt ein Restrisiko, das zur Entscheidung vorliegt.
 
 Der erste betrifft die Engine. Eine nach WebAssembly kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ist nicht
 dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf ist
@@ -159,8 +195,9 @@ Der vierte betrifft die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}). S
 aber die feste Zielgröße vierzig. Ob sie die Kosten des Pools im Ruhezustand senkt, ohne die Kaltstarts zur vollen
 Stunde zu verlängern, zeigt erst ein Lauf über mehrere Wochen mit dem Lastprofil des Betriebs.
 
-Als Restrisiko akzeptiert ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen desselben Mandanten
-(\autoref{sec:pruefung-isolation}). Seit die Uhr bei Timern virtuell läuft, braucht er eine Zeitquelle außerhalb der
+Zur Entscheidung vorgelegt ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen, im selben Pod und, vor der virtuellen
+Uhr gemessen, auch zwischen Pods verschiedener Mandanten (\autoref{sec:pruefung-isolation}). Ein Slot je Pod schlösse ihn im selben Pod für bis zu
+52\,\% mehr Speicher unter Last (\autoref{sec:betriebsplanung}). Seit die Uhr bei Timern virtuell läuft, braucht er eine Zeitquelle außerhalb der
 Sandbox, und die öffnet allein der Mandant durch eine Freigabe (\autoref{sec:betriebsplanung}). Ob
 eine Trennung nach Person statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
 

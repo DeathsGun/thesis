@@ -804,7 +804,45 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
         T9 & Eine Ausführung überschreibt jede ihr sichtbare Kopie ihrer Identität und handelt
          danach im Namen eines anderen Mandanten. & M4 & abgeleitet \\
     T10 & Code mit der Netz- und Prozesssicht der Sandbox verbindet sich ohne gültiges Token mit NATS oder weist dem
-         eigenen Transport einen Mandanten zu. & M1 & abgeleitet \\
+         eigenen Transport einen Mandanten zu. & M6 & abgeleitet \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\section{Vertrauenswürdige Dienste}
+\label{anh:tcb}
+
+Nach V3 gilt die Plattform als vertrauenswürdig. Die Tabelle nennt, welche Dienste das Modell dieser Menge hinzufügt,
+ob sie mehrere Mandanten bedienen und welche Geheimnisse sie halten (\autoref{sec:bausteine},
+\autoref{sec:faehigkeitsmodell}).
+
+\begin{table}[H]
+  \caption{Vertrauenswürdige Dienste des Modells und des Ausgangszustands}
+  \label{tab:tcb}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.16\textwidth} >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.14\textwidth} >{\RaggedRight\arraybackslash}p{0.27\textwidth}@{}}
+    \hline
+    Dienst & Grund für das Vertrauen & mandanten\-übergreifend & Geheimnisse \\
+    \hline
+    \multicolumn{4}{@{}l}{\emph{Modell}} \\
+    Gateway & prüft Signatur und Identität, bestimmt Mandant und Regeln eines Laufs & ja & Zugriff auf den Objektspeicher,
+      Token der Person bei Agentenläufen bis zur Registrierung \\
+    Control Plane & weist Pods Mandanten zu und stellt die NATS-Token aus & ja & Signaturschlüssel der Token, Rechte auf
+      Pods im Namespace, Zuteilungszustand in Redis \\
+    Auth Callout & gibt jeder NATS-Verbindung die Rechte genau eines Mandanten & ja & Schlüssel zur Prüfung der Token und
+      zur Vergabe von Rechten \\
+    Egress-Proxy & entscheidet über jedes Ziel der Sandbox & ja & Token der Person während eines Agentenlaufs, Protokoll
+      der Anfragen, beides in Redis bis zum Ablauf der Registrierung \\
+    Transport im Worker & zieht Aufträge, führt keinen Mandantencode aus & nein, ein Mandant & NATS-Verbindung des
+      Mandanten, Identitätsgeheimnis des Pods \\
+    Sandbox im Worker & nicht vertrauenswürdig, führt den Gastcode aus & nein, ein Mandant & keine \\
+    \multicolumn{4}{@{}l}{\emph{Ausgangszustand}} \\
+    Knative Serving & Ingress, Activator und Controller, die Runner anlegen und Anfragen leiten & ja & Rechte auf Pods im
+      Namespace \\
+    Skriptdienst & löst Skripte auf, prüft Berechtigungen, gemeinsam mit dem Modell genutzt & ja & entschlüsselte
+      Variablen der Mandanten \\
+    Runner & Node.js-Prozess je Mandant, führt den Gastcode aus & nein, ein Mandant & 23 Umgebungsvariablen des Pods
+      (T8) \\
     \hline
   \end{tabularx}
 \end{table}
