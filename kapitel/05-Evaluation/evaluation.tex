@@ -135,21 +135,18 @@ Pool-Zielgröße vierzig und mit Pool null, damit der nackte Startmechanismus be
   \end{tabularx}
 \end{table}
 
-Im verteilten Lauf liegt der Prototyp mit Pool im Median bei 278 bis 308\,ms gegen 2,54 bis 2,76 Sekunden, ein Faktor von
-gut neun. Er bedient in allen drei Läufen 90 von 90 Mandanten innerhalb von zwei Sekunden, der Ausgangszustand höchstens
-3. Die Spannweiten überlappen nicht. Nach den Traces in Tempo beginnt die Ausführung im Prototyp im Median 131 bis 139\,ms
+Im verteilten Lauf ist der Prototyp mit Pool im Median gut neunmal schneller, und die Spannweiten überlappen nicht. Nach den Traces in Tempo beginnt die Ausführung im Prototyp im Median 131 bis 139\,ms
 nach dem Eingang im Gateway, davon 91 bis 100\,ms für die Zuweisung eines Workers. Der Rest bis zum Median beim Client ist der
 Weg über Edge-Proxy und Internet. Im Ausgangszustand besteht die Zeit bis zum Ende des Skripts mit 2,4 bis 2,6 Sekunden
 fast ganz aus dem Kaltstart des Runners. Im Schub bekommen genau vierzig Mandanten einen Worker innerhalb von zwei
 Sekunden, die Zielgröße des Pools. Die übrigen fünfzig warten auf neue Pods, und dort müssen beide Modelle Pods starten.
-Der Prototyp bleibt mit einem 95.\ Perzentil von 7,4 bis 8,6 gegen 13,9 bis 16,5 Sekunden schneller und ohne Fehler. Die acht Fehler
+Der Prototyp bleibt auch dort schneller und ohne Fehler. Die acht Fehler
 des Ausgangszustands in zwei Läufen sind 502 mit \enquote{no route to host} zum Queue-Proxy eines Runner-Pods. Das deutet darauf hin,
 dass Knative frische Pods anspricht, bevor ihr Netz erreichbar ist, belegt ist das nicht. Der Egress-Proxy ist in allen
 Läufen des Prototyps enthalten, einen Lauf ohne ihn gibt es nicht.
 
-Die Läufe mit Pool null ordnen den Vorsprung ein. Ohne vorgehaltene Pods liegt der Prototyp im verteilten Lauf im Median
-mit 2,52 bis 2,65 Sekunden so hoch wie der Ausgangszustand. Im Schub liegt er mit 6,6 bis 7,7 gegen 8,1 bis 8,6 Sekunden
-etwas darunter. Der Vorsprung
+Ohne vorgehaltene Pods liegt der Prototyp im verteilten Lauf so hoch wie der Ausgangszustand und im Schub etwas
+darunter. Der Vorsprung
 stammt damit aus dem Pool und nicht aus einem schnelleren Startmechanismus. Ohne Pool bleibt die Zuverlässigkeit: Alle 540
 Aufrufe gelingen. Der Tail im verteilten Lauf ist mit 6,6 bis 8,2 Sekunden im 95.\ Perzentil länger als bei Knative.
 Nach den Logs der Control Plane liegt das daran, dass ein wartender Mandant den nächsten bereiten Pod nimmt, nicht den für
@@ -172,7 +169,7 @@ Mandanten überwiegend aktiv hält, nähert der Overhead die warme Latenz an und
 kleinen Anteil Erstkontakte.
 
 \begin{table}[H]
-  \caption[Overhead im Lastprofil auf hyper-int-otc in Millisekunden, k6, je Lauf rund 33 Minuten, 29.\ Oktober]{Overhead im Lastprofil auf hyper-int-otc in Millisekunden, k6, je Lauf rund 33 Minuten, 29.\ Oktober, Reihenfolge P1, K1, P2, K2, K3, P3, Fehler nicht in den Perzentilen}
+  \caption{Overhead im Lastprofil, 29.\ Oktober, in Millisekunden}
   \label{tab:overhead}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
@@ -192,16 +189,12 @@ kleinen Anteil Erstkontakte.
 \begin{figure}[H]
   \centering
   \includegraphics[width=\textwidth]{messungen_endstand.pdf}
-  \caption{Kaltstart und Overhead nach Perzentilen, Median dreier Läufe mit Spannweite, logarithmische Achse, Werte aus
-    \autoref{tab:kaltstart-vergleich}, \autoref{tab:overhead} und \autoref{tab:s1-laeufe}. Die gestrichelte Linie markiert zwei Sekunden.}
+  \caption{Kaltstart und Overhead nach Perzentilen, gestrichelt zwei Sekunden}
   \label{fig:endstand}
 \end{figure}
 
-\autoref{fig:endstand} stellt Kaltstart und Overhead beider Modelle nach Perzentilen gegenüber.
-Auf demselben Cluster und unter demselben Profil liegt der Prototyp im Median bei 139 bis 145\,ms gegen 300 bis 312\,ms des
-Ausgangszustands. Im 95.\ Perzentil sind es 220 bis 291 gegen 720 bis 745\,ms, im 99.\ Perzentil 313 bis 361\,ms gegen 3,5
-bis 3,7 Sekunden. Gemessen an den mittleren Läufen ist das das 2,1-, 2,4-, 2,9- und 10-Fache im 50., 90., 95.\ und 99.\
-Perzentil. Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
+\autoref{fig:endstand} stellt Kaltstart und Overhead beider Modelle nach Perzentilen gegenüber. Gemessen an den
+mittleren Läufen ist der Prototyp im 50., 90., 95.\ und 99.\ Perzentil 2,1-, 2,4-, 2,9- und 10-mal schneller. Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
 sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
@@ -232,8 +225,7 @@ Der Ausgangszustand lief mit mehreren festen Replikas des Skriptdienstes, weil s
 Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Modell gibt es einen Lauf vom 30.\ Oktober.
 
 \begin{table}[H]
-  \caption[Durchsatz (S4) auf hyper-int-otc, 30.\ Oktober]{Durchsatz (S4) auf hyper-int-otc, höchste Stufe mit Fehlerrate unter einem Prozent und
-    P95 unter zwei Sekunden, 30.\ Oktober}
+  \caption{Durchsatz (S4), 30.\ Oktober}
   \label{tab:s4}
   \small
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r >{\RaggedRight\arraybackslash}X@{}}
@@ -247,11 +239,10 @@ Autoscaler nicht anlegen ließ, was Knative leicht begünstigt. Je Modell gibt e
   \end{tabularx}
 \end{table}
 
-Der Prototyp hält 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht. Bei 300 Aufrufen je Sekunde reißt der Prototyp das
-Kriterium (P95 3,6 Sekunden, 740 ausgelassene Iterationen), die Ursache ist nicht zerlegt, bei 400 läuft er wieder sauber.
+Der Prototyp hält 400 Aufrufe je Sekunde gegen 200 im Ausgangszustand, der bei 380 abflacht. Die verfehlte Stufe 300 ist nicht zerlegt, bei 400 läuft er
+wieder sauber.
 Der Wert von 400 stammt aus diesem einen Lauf und ist deshalb vorläufig. Gälte die Stufe 200, läge der Prototyp gleichauf
-mit dem Ausgangszustand, und der Nutzwert sänke um 0,2. Bei 500 liegt das
-95.\ Perzentil mit 2,3 Sekunden knapp darüber, bei 600 liefert er noch 564 Aufrufe je Sekunde. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
+mit dem Ausgangszustand, und der Nutzwert sänke um 0,2. Seine Grenze liegt nicht in der Ausführung, sondern in der Architektur der
 bestehenden App: Der Resolve braucht im Lauf höchstens 1,3 Kerne, das Gateway 0,64. Der Ausgangszustand hat sich gegenüber dem 20.\ Oktober von 100 auf 200 verbessert, was zum Runner mit
 Worker-Threads und zur Abstimmung des Autoscalers passt. Die Stufen sind 100 Aufrufe
 breit und der Wert ist eine untere Schranke.
@@ -314,7 +305,7 @@ zweites Skript desselben Mandanten auf. T7 bis T9 laufen einmal und protokollier
 ausgelesen.
 
 \begin{table}[tbp]
-  \caption[Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp, 30.\ Oktober]{Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp, hyper-int-otc, 30.\ Oktober, Ausgangszustand zusätzlich 19.\ Oktober}
+  \caption{Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp}
   \label{tab:prueffaelle-ergebnis}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l l l l >{\RaggedRight\arraybackslash}X@{}}
@@ -500,16 +491,15 @@ alle 525 Aufrufe im Prototyp, kalt in höchstens 1,4 Sekunden.
 
 \autoref{tab:nutzwert} sammelt die erhobenen Werte entlang der Soll-Kriterien. Die Fehlerrate
 geht nicht ein, sie liegt bei 3 bis 7 gegen 18 bis 39 von rund 57.000 Aufrufen. S6 ist abgeleitet statt gemessen, bei S7 bleibt der Regelaufwand unbewertet. Die Punkte folgen der
-Regel aus \autoref{sec:kriterienkatalog}. Der Ausgangszustand erhält je bewertetem Kriterium drei
+Regel aus \autoref{sec:kriterienkatalog} und gelten für den Entwurf mit Auth Callout, weil der gemessene Stand M6 nicht
+erfüllt. Der Ausgangszustand erhält je bewertetem Kriterium drei
 Punkte, bei S6 und S7 nach derselben absoluten Regel fünf. Die Faktoren stammen aus dem Median der drei Läufe. S1a
 erreicht 6,1 im verteilten Lauf und 2,0 im Schub, beides fünf Punkte. S1b erreicht 0,41 und 1,33, also 1,2 und 3,7 Punkte,
 im Mittel 2,4. Zusammen mit S1a ergibt das 3,7, gerundet vier. S2 liegt im Median bei 2,1, S3 bei 1,17 (3,3 Punkte,
 gerundet drei) und S4 bei 2,0.
 
 \begin{table}[tbp]
-  \caption[Stand der Bewertung entlang der Soll-Kriterien]{Stand der Bewertung entlang der Soll-Kriterien. Die
-    Muss-Kriterien M1 bis M5 erfüllt der gemessene Stand, M6 nur der Entwurf, lokal belegt über T10
-    (\autoref{sec:pruefung-isolation}). Die Punkte gelten deshalb für den Entwurf mit Auth Callout}
+  \caption{Bewertung entlang der Soll-Kriterien}
   \label{tab:nutzwert}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} r r@{}}

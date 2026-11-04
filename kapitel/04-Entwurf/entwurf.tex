@@ -135,10 +135,7 @@ hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweite
 
 \begin{table}[H]
 \centering
-\caption[Anwendung der Muss-Kriterien auf die Kandidaten und Ergebnis der Auswahl]{Anwendung der Muss-Kriterien auf
-  die Kandidaten und Ergebnis der Auswahl. M5 und M6 entscheiden die Vorauswahl nicht und sind nur am Prototyp geprüft,
-  daher \enquote{offen} für die übrigen Kandidaten. \enquote{Entwurf} bei M6 heißt: erfüllt mit Auth Callout, im
-  gemessenen Stand nicht}
+\caption{Muss-Kriterien je Kandidat}
 \label{tab:kandidaten}
 \small
 \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X *{6}{>{\centering\arraybackslash}p{0.058\textwidth}} >{\RaggedRight\arraybackslash}p{0.15\textwidth}@{}}
@@ -163,7 +160,8 @@ V8-Isolate je Ausführung mit vermittelten Bindings & ja & ja & ja & ja & ja & E
 \end{tabularx}
 \end{table}
 
-Die Prozessgrenze je Mandant (M1) übernimmt das gewählte Modell vom Ausgangszustand. M6 ist eine Entwurfseigenschaft:
+M5 und M6 sind nur am Prototyp geprüft und für die übrigen Kandidaten offen. Die Prozessgrenze je Mandant (M1)
+übernimmt das gewählte Modell vom Ausgangszustand. M6 ist eine Entwurfseigenschaft:
 erfüllt mit dem Auth Callout, lokal erprobt (T10, \autoref{sec:pruefung-isolation}), auf der Plattform noch nicht
 eingerichtet (\autoref{sec:betriebsplanung}).
 
@@ -251,13 +249,12 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
     \draw[req] (-1.1,-2.0) -- node[lbl,right,xshift=4pt]{Anfragepfad} ++(0.8,0);
     \draw[ctl] (-1.1,-2.6) -- node[lbl,right,xshift=4pt]{Steuerpfad} ++(0.8,0);
   \end{tikzpicture}
-  \caption{Bausteine des Ausführungsmodells. Fett umrandet sind die fünf eigenen Dienste, grau die
-    bereits vorhandenen Bausteine der Plattform.}
+  \caption{Bausteine des Ausführungsmodells}
   \label{fig:bausteine}
 \end{figure}
 
 Das Modell besteht aus fünf eigenen Diensten und stützt sich im Übrigen auf Bausteine, die die Plattform bereits
-betreibt. \autoref{fig:bausteine} zeigt beide mit Anfrage- und Steuerpfad. Das \emph{Gateway} nimmt die \ac{HTTP}-Aufrufe entgegen, prüft Signatur, Mandant und Identität und bildet
+betreibt. In \autoref{fig:bausteine} sind die eigenen fett, die vorhandenen grau. Das \emph{Gateway} nimmt die \ac{HTTP}-Aufrufe entgegen, prüft Signatur, Mandant und Identität und bildet
 sie auf Ausführungsaufträge ab. Die \emph{Control Plane} verwaltet den Pool der Worker-Pods, die Zuordnung von
 Mandanten zu Pods und deren Consumer und stellt die Token aus, mit denen sich ein Worker bei NATS ausweist. Der
 \emph{Worker} ist ein Pod aus zwei Containern desselben Images: Der \emph{Transport} hält die Zugangsdaten zu NATS,
@@ -452,20 +449,15 @@ des Mandanten an der letzten Bestätigung fortsetzt.
     \node[m, anchor=west, align=left] at (11.75,-6.7) {9 frisches Isolate,\\Ausführung};
     \draw[msg] (11.6,-7.3) -- node[m,above,pos=0.5]{10 Reply über den Stream} (0,-7.3);
   \end{tikzpicture}
-  \caption{Erstkontakt eines Mandanten als \acs{UML}-Sequenzdiagramm. Ab dem zweiten Auftrag entfällt die Zuweisung. Der Watcher
-    prüft dann nur noch die Last des Mandanten.}
+  \caption{Erstkontakt eines Mandanten}
   \label{fig:erstkontakt}
 \end{figure}
 
-\autoref{fig:erstkontakt} zeigt den Erstkontakt eines Mandanten als \ac{UML}-Sequenzdiagramm. Die Control Plane prüft in Redis, ob der Mandant
-zugewiesen ist. Andernfalls nimmt sie in einem atomaren Schritt einen Pod aus dem Pool und markiert ihn als
-reserviert, sodass jeder bereite Pod stets in genau einer der drei Mengen steht. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an, höchstens einen je
+\autoref{fig:erstkontakt} zeigt den Erstkontakt eines Mandanten als \ac{UML}-Sequenzdiagramm. Die Control Plane nimmt
+den Pod in einem atomaren Schritt aus dem Pool, sodass jeder bereite Pod stets in genau einer der drei Mengen steht. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an, höchstens einen je
 Mandant innerhalb von 30 Sekunden, und wartet bis zu 20 Sekunden, bis irgendein Pod bereit wird. Ein frisch angelegter
 Pod braucht nach der Messung in \autoref{sec:kaltstart} rund 3,5 Sekunden bis zur ersten Ausführung und wird deshalb
-nie direkt zugewiesen. Steht ein Pod bereit, stellt sie ein Token aus, erteilt dem Pod die Zuweisung als
-\ac{HTTP}-Kommando an seinen Transport, legt währenddessen den Consumer des Mandanten an und bestätigt die Zuweisung
-in Redis. Der Transport verbindet sich mit NATS, wartet bis zu zwei Sekunden auf den Consumer, bindet ihn und zieht den
-wartenden Auftrag. Schlägt ein Schritt fehl, wird die Reservierung zurückgenommen, und der Stream stellt den Auftrag
+nie direkt zugewiesen. Schlägt ein Schritt fehl, wird die Reservierung zurückgenommen, und der Stream stellt den Auftrag
 der Control Plane mit Verzögerung erneut zu, bis zu zwanzigmal. Die weiteren Aufträge des Mandanten laufen an der
 Control Plane vorbei, sie liest zu ihnen nur noch die Last.
 
@@ -701,8 +693,7 @@ Skripte derselbe. Das entspricht dem von \textcite[S.~559]{ustiugov_benchmarking
 Prototyp enthält er das Buffer-Bundle und den Webhook-Adapter. Extensions mit eigenen Bindings tragen Zustand je
 Ausführung und werden je Isolate registriert.
 
-Ein \emph{skriptbezogener Code-Cache} spart das wiederholte Kompilieren desselben Quelltexts und ist nur für
-gespeicherte Skripte sinnvoll. Ein einmal laufendes Skript hat nichts wiederzuverwenden. Gecacht wird ausschließlich
+Ein \emph{skriptbezogener Code-Cache} spart das wiederholte Kompilieren desselben Quelltexts. Gecacht wird ausschließlich
 Unveränderliches, Quelltext und kompilierter Code, nie Heap-Zustand einer vorangegangenen Ausführung, denn ein
 Snapshot des Mandantenskripts verletzte M2 (T3 in \autoref{tab:prueffaelle}). Umgesetzt ist er über den Code-Cache
 von V8, der beim ersten vollständigen Lauf eines Bundles erzeugt, neben dem Quelltext unter demselben Content-Hash
@@ -770,15 +761,13 @@ Ausgangszustand lädt und kompiliert das Skript ebenfalls je Ausführung neu (\a
     \draw[->,rounded corners=6pt] (b2.south) |- (0,-3.05);
     \draw[->,rounded corners=6pt] (c2.south) |- (0,-5.5);
   \end{tikzpicture}
-  \caption{Ablauf einer einzelnen Ausführung mit Pod-Zuweisung und Cache}
+  \caption{Ablauf einer Ausführung}
   \label{fig:ablauf}
 \end{figure}
 
-\autoref{fig:ablauf} fasst den Ablauf zusammen. Wiederholt werden bei Transportfehlern nur Bundle-Abruf, Callback und
-Log-Upload, nie die Ausführung selbst (\autoref{tab:parameter}). Nach dem Lauf wird zuerst ein großer Response-Body
-hochgeladen, dann dem wartenden Aufrufer geantwortet, die Nachricht bestätigt und der Slot freigegeben. Erst
-danach wird das Konsolen-Log an den Skriptdienst übertragen, damit ein langsames Log-Ziel weder die Antwort verzögert noch
-einen Slot belegt, den die Control Plane als Last zählt.
+\autoref{fig:ablauf} fasst den Ablauf zusammen. Bei Transportfehlern werden nur Bundle-Abruf, Callback und
+Log-Upload wiederholt, nie die Ausführung selbst (\autoref{tab:parameter}). Das Konsolen-Log geht erst nach Antwort und
+Freigabe des Slots an den Skriptdienst, damit ein langsames Log-Ziel weder die Antwort verzögert noch einen Slot belegt.
 
 Eine Ausführung des Webhook-Profils endet, wenn das Ergebnis des Einstiegspunkts feststeht, wie im Ausgangszustand.
 Offene Timer, Sockets und Leseoperationen werden mit dem Isolate verworfen. Im Agentenprofil läuft die Event Loop
