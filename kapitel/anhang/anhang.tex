@@ -808,3 +808,32 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \hline
   \end{tabularx}
 \end{table}
+
+\section{Interne Quellen}
+\label{anh:intern}
+
+Vier Quellen der Arbeit sind interne, nicht veröffentlichte Unterlagen der d.velop AG. Die Tabelle nennt je Quelle
+anonymisiert die Aussage, auf die sich der Text stützt. Die Unterlagen selbst werden auf Anfrage geliefert.
+
+\begin{table}[H]
+  \caption{Interne Quellen und die Aussagen, auf die sich die Arbeit stützt}
+  \label{tab:intern}
+  \small
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.30\textwidth} >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.16\textwidth}@{}}
+    \hline
+    Quelle & Aussage & Verwendet in \\
+    \hline
+    Supportfälle zur \acs{OTC}, Dezember 2025 und Mai 2026 \autocite{intern_supportfaelle_otc_2026} & Webhooks liefen in
+      Timeouts oder wurden unzuverlässig ausgeführt, nach Kaltstarts und bei nacheinander abgearbeiteten Aufrufen &
+      \autoref{sec:einleitung:problemstellung} \\
+    Störungsfall, Oktober 2026 \autocite{intern_stoerungsfall_2026} & Verschachtelte Skriptaufrufe unter Last warteten
+      auf Kaltstarts & \autoref{sec:einleitung:problemstellung} \\
+    Änderungsvorgang, April 2026 \autocite{intern_runner_ersatz_2026} & Runner-Pods werden nach 24 Stunden ersetzt, weil
+      minütlich ausgelöste Funktionen nie auf null skalieren und ein Speicherleck einen Runner unbrauchbar machte &
+      \autoref{sec:angreifermodell} \\
+    Besprechung mit dem Plattformteam, 21.\ September 2026 \autocite{intern_ddp_updates_2026} & Die Clusterknoten
+      erhalten etwa vier rollierende Updates im Jahr, laufende Runner lassen sich dabei nicht übergeben &
+      \autoref{sec:einleitung:problemstellung} \\
+    \hline
+  \end{tabularx}
+\end{table}

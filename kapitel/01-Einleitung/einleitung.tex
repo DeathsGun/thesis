@@ -23,7 +23,7 @@ Ausgangszustand einer Fallstudie.
 Serverlose Plattformen führen Code aus, den nicht ihr Betreiber geschrieben hat. Der Betreiber
 stellt die Laufzeitumgebung, der Kunde liefert die Funktion, und die Grenze zwischen beiden muss
 die Plattform selbst durchsetzen \autocite[S.~419]{agache_firecracker_2020}. Die Fallstudie dieser
-Arbeit ist die Scripting-Engine eines Dokumentenmanagementsystems, ein mandantenfähiger Dienst,
+Arbeit ist die Scripting-Engine des Dokumentenmanagementsystems der d.velop AG, ein mandantenfähiger Dienst,
 der von Kunden hinterlegte JavaScript-Funktionen ausführt, sobald Ereignisse im \ac{DMS} sie
 auslösen \autocite{dvelop_ag_dvelop_2026}. Die Engine läuft auf mehreren Plattformen. Die älteste läuft nativ auf \ac{AWS} und trägt die meisten Kunden.
 Auf der internen Kubernetes-Plattform \ac{DDP} der Fallstudie läuft sie ebenfalls
@@ -36,7 +36,14 @@ lässt \autocite[S.~50208]{wang_executable_2024}. Damit ändert sich, wer den Co
 Webhook-Fall ist es der Mandant, der ihn geschrieben hat. Im Agentenfall hat ihn vor seinem
 einzigen Lauf niemand gelesen.
 
-\subsection{Problemstellung und Forschungsfrage}
+Die Lage ist nicht auf die Fallstudie beschränkt. Jeder Betreiber, der Kundencode mandantenfähig ausführt und diese
+Ausführung einem Agenten öffnet, verliert dieselbe Annahme, dass jemand den Code vor dem Lauf kennt. Läuft die
+Plattform wie hier auf einem Kubernetes-Cluster, dessen Knoten keine Hardwarevirtualisierung freigeben
+(\autoref{sec:randbedingungen}), scheiden MicroVMs aus, und es bleiben Container, Sandbox-Laufzeiten und sprachbasierte
+Grenzen. Für solche Betreiber beschreibt die Arbeit einen Entwurf, die Voraussetzungen, unter denen er übertragbar ist
+(\autoref{sec:diffusion:prinzipien}), und was er gegen einen produktiven Betrieb gemessen leistet.
+
+\subsection{Problemstellung}
 \label{sec:einleitung:problemstellung}
 
 Der Ausgangszustand genügt in zwei Punkten nicht. Der erste ist die Zeit bis zur ersten
@@ -44,7 +51,7 @@ Ausführung. Ein Runner, der auf null skaliert war, braucht mehrere Sekunden, bi
 Aufruf bedient. Mandanten, deren Webhooks selten ausgelöst werden, zahlen diese Zeit bei fast
 jedem Aufruf. Unter Last kommt hinzu, dass ein Runner Aufrufe nacheinander abarbeitet. Beides
 hat zu Supportfällen und einem internen Störungsfall geführt
-\autocites{intern_supportfaelle_otc_2026}{intern_stoerungsfall_2026} und war der Anlass für diese Arbeit. Der zweite Punkt ist
+\autocites{intern_supportfaelle_otc_2026}{intern_stoerungsfall_2026}, deren Kernaussagen \autoref{anh:intern} wiedergibt, und war der Anlass für diese Arbeit. Der zweite Punkt ist
 der Betrieb. Jedes rollierende Update der Clusterknoten, im Jahr etwa vier \autocite{intern_ddp_updates_2026}, trifft die gerade
 warmen Runner, die sich nicht übergeben lassen, und die Scripting-Engine kann in dieser Zeit für
 die betroffenen Mandanten nicht ausführungsfähig sein. Die geringe Wartbarkeit des heutigen Runners bleibt als Maßstab außen vor, weil sie sich nicht wie Startzeit und
@@ -59,41 +66,63 @@ innerhalb des Mandanten.
 Gesucht ist deshalb ein Modell, das schneller startet und zugleich jede Ausführung für sich
 isoliert.
 
-Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die
-Anforderungen des eigenen Betriebs begründet, etwa Amazon Web Services mit Firecracker
-\autocite[S.~419]{agache_firecracker_2020} oder Cloudflare mit dem Isolationsmodell der
-Workers-Plattform \autocite{cloudflare_security_2026}. Diese Arbeiten begründen jeweils die eigene
-Lösung. Ein Ausführungsmodell, das für die mandantenisolierte Ausführung zur Laufzeit
-erzeugter Funktionen konstruiert und anschließend gegen einen produktiven Ausgangszustand
-gemessen wird, ist in den gesichteten Arbeiten dagegen nicht zu finden. Gesucht wurde im Oktober 2026 nach Modellen,
-die ein Isolate je Ausführung, einen Pool vorgehaltener Pods und eine Messung gegen einen produktiven Ausgangszustand
-verbinden. Die Suche war eine gezielte Lückensuche über Websuche, Crossref und arXiv, ohne Fachdatenbanken mit Konto
-und ohne Anspruch auf Vollständigkeit. Die nächsten Vorarbeiten sind sprachbasierte Isolation je Funktion
-\autocite[S.~645]{boucher_putting_2018}, WebAssembly-Isolation mit geteiltem Zustand
-\autocite[S.~419]{shillaker_faasm_2020}, das Sandboxing von Funktionen in mandantenfähigen
-Serverless-Umgebungen \autocite[S.~25]{mainas_sandboxing_2024}, die Isolation der Anwendungen
-eines Agentensystems \autocite[S.~1]{wu_isolategpt_2025}, ein Sandbox-Dienst für Agenten
-\autocite[S.~1]{piao_agentbay_2025} und der Pool vorgehaltener Sandbox-Pods des
-Kubernetes-Projekts Agent Sandbox \autocite{kuo_running_2026}. 
-Groundhog stellt zwischen aufeinanderfolgenden Aufrufen einen sauberen Zustand durch Wiederherstellen
-eines Snapshots her \autocite[S.~1]{alzayat_groundhog_2023}, Photons und Catalyzer zielen auf
-Speicherbedarf und Kaltstart \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020}.
-SAND trennt zweistufig, mit einem Container je Anwendung und einem Prozess je Funktion
-\autocite[S.~923]{akkus_sand_2018}, und Faastlane führt die Funktionen eines Workflows als Threads eines Prozesses aus
-\autocite[S.~805]{kotni_faastlane_2021}. Cloudflare begründet das Isolate-Modell der Workers-Plattform mit Kaltstart und
-Speicherbedarf gegenüber Containern \autocite{bloom_cloud_2018}.
-Das Muster eines frischen Isolates je Ausführung in einem Node.js-Host kennen Produktdokumentationen,
-etwa mit \texttt{isolated-vm} je Code-Schritt \autocite{activepieces_sandboxing_2026} und je Aufruf
-\autocite{tanstack_code_2026}. Cloudflare nutzt für generierten Code ein Isolate je Ausführung
-\autocite{cloudflare_worker_2026}. Keine dieser Quellen beschreibt einen Kubernetes-Pool oder eine Messung gegen
-einen Ausgangszustand.
+\subsection{Verwandte Arbeiten und Forschungsfrage}
+\label{sec:einleitung:verwandt}
+
+Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die Anforderungen des eigenen
+Betriebs begründet, etwa Amazon Web Services mit Firecracker \autocite[S.~419]{agache_firecracker_2020} oder Cloudflare
+mit dem Isolationsmodell der Workers-Plattform \autocites{bloom_cloud_2018}{cloudflare_security_2026}. Daneben stehen
+Forschungsprototypen, die je einen Teil des Problems bearbeiten. \autoref{tab:verwandt} ordnet die nächsten Arbeiten
+nach ihrer Isolationseinheit und nennt, was diese Arbeit von ihnen übernimmt oder anders löst. Gesucht wurde im Oktober
+2026 gezielt über Websuche, Crossref und arXiv, ohne Fachdatenbanken mit Konto und ohne Anspruch auf Vollständigkeit.
+Preprints sind im Literaturverzeichnis an der arXiv-Kennung ohne Tagungsband oder Zeitschrift erkennbar.
+
+\begin{table}[H]
+  \caption{Verwandte Arbeiten nach Isolationseinheit und Bezug zu dieser Arbeit}
+  \label{tab:verwandt}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.21\textwidth} >{\RaggedRight\arraybackslash}p{0.30\textwidth} >{\RaggedRight\arraybackslash}X@{}}
+    \hline
+    Arbeit & Isolationseinheit & Bezug zu dieser Arbeit \\
+    \hline
+    Firecracker \autocite[S.~419]{agache_firecracker_2020} & MicroVM mit eigenem Kernel & stärkste Grenze, scheidet
+      ohne \texttt{/dev/kvm} aus (\autoref{sec:randbedingungen}) \\
+    \textcite[S.~645]{boucher_putting_2018} & Sprachgrenze je Funktion im geteilten Prozess & Startkosten der inneren
+      Grenze, hier nur zusätzlich zur Pod-Grenze (A2) \\
+    Faasm \autocite[S.~419]{shillaker_faasm_2020}, \textcite[S.~25]{mainas_sandboxing_2024} & WebAssembly je Funktion &
+      als Engine zurückgestellt, nicht widerlegt (\autoref{sec:wasm-zurueckgestellt}) \\
+    SAND \autocite[S.~923]{akkus_sand_2018} & Container je Anwendung, Prozess je Funktion & Vorbild der zwei Ebenen,
+      hier Mandant und Ausführung \\
+    Faastlane \autocite[S.~805]{kotni_faastlane_2021} & Threads eines Prozesses je Workflow & hier trägt der Thread
+      keine Trennung (\autoref{tab:ebenen}) \\
+    Groundhog \autocite[S.~1]{alzayat_groundhog_2023} & Container, Snapshot zwischen Aufrufen & setzt eine Ausführung
+      je Container voraus \\
+    Photons, Catalyzer \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020} & geteilte oder
+      wiederhergestellte Laufzeit & hier Snapshot des Isolates statt des Prozesses \\
+    \textcite[S.~1]{lin_mitigating_2019}, Agent Sandbox \autocite{kuo_running_2026} & Pool vorgehaltener Pods &
+      Pool übernommen, Zuordnung zum Mandanten endgültig \\
+    Cloudflare Workers \autocites{cloudflare_security_2026}{cloudflare_worker_2026} & V8-Isolate je Worker, für
+      generierten Code je Ausführung & gleiche innere Grenze auf eigener Plattform, nicht in Kubernetes \\
+    \texttt{isolated-vm} in Produkten \autocites{activepieces_sandboxing_2026}{tanstack_code_2026} & Isolate je
+      Aufruf in einem Node.js-Host & dieselbe Bauart, aus Wartungsgründen nicht gewählt
+      (\autoref{sec:ausschluesse}) \\
+    IsolateGPT \autocite[S.~1]{wu_isolategpt_2025}, AgentBay \autocite[S.~1]{piao_agentbay_2025} & Anwendungen eines
+      Agentensystems, Sandbox-Dienst & Schutzziel aus Sicht des Agenten, ohne Mandanten einer Plattform \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+Für sich ist keiner dieser Bausteine neu. Nicht gefunden wurde ihre Verbindung unter drei Randbedingungen zugleich:
+ein Kubernetes-Cluster ohne Hypervisor, eine Isolate-Grenze je Ausführung für auch zur Laufzeit erzeugten Code bei
+Mandantentrennung über den Pod und eine Messung gegen einen produktiven Ausgangszustand auf demselben Cluster. Der
+Beitrag der Arbeit liegt in dieser Verbindung und in der Messung, nicht in einem neuen Mechanismus.
 Die folgende Oberfrage ist deshalb als
 Gestaltungsfrage im Sinne der \ac{DSR} formuliert \autocite[S.~664--665]{osterle_memorandum_2010}. Sie
 fragt nicht danach, welches der bekannten Modelle am besten abschneidet, sondern danach, wie
 ein Modell beschaffen sein muss, das die genannten Eigenschaften zugleich erfüllt.
 
 \begin{description}
-  \item[FF] Wie muss ein Ausführungsmodell für nicht vertrauenswürdige, zur Laufzeit erzeugte
+  \item[FF] Wie muss ein Ausführungsmodell für nicht vertrauenswürdige, auch zur Laufzeit erzeugte
     JavaScript-Funktionen gestaltet sein, damit es in einer bestehenden Kubernetes-Plattform
     betreibbar bleibt, die Isolation zwischen Mandanten und die Zustandsfreiheit zwischen
     aufeinanderfolgenden Ausführungen sicherstellt und die Kaltstartlatenz gegenüber
@@ -138,8 +167,9 @@ entlang der beiden Achsen des Zielkonflikts, wobei U3 die Sicherheitseigenschaft
 Damit das Artefakt seine eigenen Kriterien verfehlen kann, legt \autoref{sec:kriterienkatalog} fest, welche
 Messgrößen zählen, wie sie in Punkte eingehen und dass der Prototyp bei Kaltstart und warmer Latenz den
 Ausgangszustand unterbieten muss. Der Ausgangszustand wird erst in \autoref{sec:Evaluation} unter denselben
-Lastprofilen gemessen. Die Bewertungsregel steht vor dem Entwurf fest, die Parameter des Prototyps wurden danach bis zum
-28.\ Oktober abgestimmt. Ein dokumentiertes Verfehlen ist
+Lastprofilen gemessen. Gewichte, Skala und Zielwerte stehen vor dem Entwurf fest, die Messvorschriften von S3 und S6 wurden während der
+Evaluation präzisiert (\autoref{sec:kriterienkatalog}), und die Parameter des Prototyps wurden bis zum 28.\ Oktober
+abgestimmt. Ein dokumentiertes Verfehlen ist
 ein gültiges Ergebnis.
 
 Nicht als Forschungsfrage geführt wird der Vergleich der bekannten Isolationstechnologien untereinander, ihre
@@ -156,14 +186,37 @@ erfolgen kann, unabhängig davon, wie er zustande kam.
 \subsection{Methodisches Vorgehen}
 \label{sec:einleitung:methodik}
 
-Die fünf Unterfragen folgen den vier Phasen des Forschungsprozesses nach \textcite[S.~667--668]{osterle_memorandum_2010},
-also Analyse, Entwurf, Evaluation und Diffusion. Das Memorandum nennt als Methoden für den Entwurf die Konstruktion von
-Prototypen und für die Evaluation das Laborexperiment und die Pilotierung eines Prototyps
-\autocite[S.~668]{osterle_memorandum_2010}, also das Vorgehen dieser Arbeit. Nach der Einteilung von
-\textcite[S.~80--81]{venable_feds_2016} ist die Evaluation summativ, weil sie das fertige Artefakt gegen vorab
-festgelegte Kriterien beurteilt, und artifiziell, weil sie im Laborexperiment unter nachgespieltem Lastprofil misst und
-nicht im laufenden Betrieb. Das entspricht den Richtlinien von \textcite[S.~83]{hevner_design_2004} und dem Prozessmodell von
-\textcite[S.~54]{peffers_design_2007}.   
+Die Arbeit folgt der \ac{DSR}, weil die Oberfrage nach der Gestalt eines Artefakts fragt und die Antwort erst durch
+Konstruktion und Prüfung dieses Artefakts entsteht. Ein Technologievergleich beantwortete, welches bekannte Modell am
+besten abschneidet, eine Fallstudie beschriebe den Ausgangszustand, ohne ein Modell zu bauen. Die fünf Unterfragen
+folgen den vier Phasen des Forschungsprozesses nach \textcite[S.~667--668]{osterle_memorandum_2010}, also Analyse,
+Entwurf, Evaluation und Diffusion. In den Aktivitäten von \textcite[S.~54]{peffers_design_2007} gesprochen,
+identifiziert \autoref{sec:Einleitung} das Problem, \autoref{sec:bedrohungsmodell} legt die Ziele der Lösung als
+Kriterienkatalog fest, \autoref{sec:Entwurf} entwirft und entwickelt, \autoref{sec:Evaluation} demonstriert und
+evaluiert auf dem Cluster der Fallstudie, und die Arbeit selbst ist die Kommunikation.
+
+Die Anforderungen stammen aus Betriebsdaten statt aus Interviews. Supportfälle, ein Störungsfall und die Auswertung
+von 1.718 Mandanten bilden die Sicht der Nutzer quantitativ ab, und die Fragestellung ist technisch. Nach der
+Einteilung von \textcite[S.~80--81]{venable_feds_2016} ist die Evaluation summativ, weil sie das fertige Artefakt gegen
+vorab festgelegte Kriterien beurteilt, und artifiziell, weil sie im Laborexperiment unter nachgespieltem Lastprofil
+misst und nicht im laufenden Betrieb. Das Labor ist hier keine Notlösung. Nur dort lassen sich beide Modelle auf
+demselben Cluster in verschränkter Reihenfolge messen, Pods unter Last löschen und Prüffälle ausführen, die im Betrieb
+einen Mandanten angriffen. Das entspricht den Richtlinien von \textcite[S.~83]{hevner_design_2004}.
+
+Das Memorandum nennt für die Evaluation neben dem Laborexperiment die Pilotierung eines Prototyps
+\autocite[S.~668]{osterle_memorandum_2010}. Sie entfällt hier, ebenso die Diffusion im Sinne einer Einführung beim
+Anwender. Beides setzt Freigaben voraus, die außerhalb der Arbeit liegen, den Auth Callout und gVisor auf jedem
+Ziel-Cluster durch das Plattformteam (\autoref{sec:betriebsplanung}), und ein Rollout über Monate passt nicht in den
+Zeitrahmen. Die Diffusion beschränkt sich deshalb auf übertragbare Designprinzipien und einen Migrationspfad, der die
+Pilotierung als erste Stufe vorbereitet (\autoref{sec:diffusion:prinzipien}).
+
+% TODO Verfasser: prüfen, wer die Umstellungen des Ausgangszustands vorgenommen hat und ob sie auf Hinweise aus der Arbeit
+% zurückgehen; ggf. ergänzen, ob KI beim Programmieren half (dann auch im KI-Verzeichnis).
+Vom Verfasser stammen Entwurf und Umsetzung der fünf Dienste des Modells (\autoref{sec:bausteine}), die
+Kompatibilitätsschicht, die Bestandsanalyse mit ihrem Scanner, der Differenztest, die Prüffälle und die Lastskripte.
+Vorhanden waren die Plattform mit NATS, Redis, Objektspeicher und Skriptdienst sowie der Ausgangszustand. Dessen
+Umstellungen während der Arbeit (\autoref{sec:messaufbau}) gehören nicht zum Artefakt und gehen nur als veränderter
+Vergleichsstand in die Messung ein.
 
 \subsection{Aufbau der Arbeit}
 \label{sec:einleitung:aufbau}

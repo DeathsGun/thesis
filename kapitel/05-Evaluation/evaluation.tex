@@ -195,6 +195,7 @@ kleinen Anteil Erstkontakte.
   \label{fig:endstand}
 \end{figure}
 
+\autoref{fig:endstand} stellt Kaltstart und Overhead beider Modelle nach Perzentilen gegenüber.
 Auf demselben Cluster und unter demselben Profil liegt der Prototyp im Median bei 139 bis 145\,ms gegen 300 bis 312\,ms des
 Ausgangszustands. Im 95.\ Perzentil sind es 220 bis 291 gegen 720 bis 745\,ms, im 99.\ Perzentil 313 bis 361\,ms gegen 3,5
 bis 3,7 Sekunden. Gemessen an den mittleren Läufen ist das das 2,1-, 2,4-, 2,9- und 10-Fache im 50., 90., 95.\ und 99.\
@@ -206,8 +207,8 @@ zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht. D
 Das 504 im Lauf P3 geht auf einen Fehler im Executor zurück: Ein frischer Consumer ohne Leader lieferte beim ersten Pull ein 503, und der
 Worker zog danach nie wieder. Die Korrektur vom 2.\ November ist nicht erneut unter Last gemessen. Die übrigen Fehler des Prototyps sind clientseitige Abbrüche, im Ausgangszustand sind 51 von 85 Fehlern 502 \enquote{no route to host} und zwölf 504, dazu 9 bis 27 ausgelassene Iterationen.
 
-Der Egress-Proxy kostet je Aufruf rund 17\,ms, je 8,2\,ms für Anmeldung und Abmeldung im Median (95.\ Perzentil 21 bis
-22\,ms). Das sind 30\,\% des serverseitigen Overheads von 51 bis 52\,ms (Gateway-Zeit abzüglich \texttt{run\_script}) und rund ein Achtel des Overheads
+Der Egress-Proxy kostet je Aufruf rund 16\,ms, je 8,2\,ms für Anmeldung und Abmeldung im Median (95.\ Perzentil 21 bis
+22\,ms). Das ist knapp ein Drittel des serverseitigen Overheads von 51 bis 52\,ms (Gateway-Zeit abzüglich \texttt{run\_script}) und rund ein Achtel des Overheads
 beim Client. Seit dem 2.\ November läuft die Abmeldung im Hintergrund und spart rund 7\,ms je Aufruf. Reale Bundles
 (\autoref{tab:bundles} im Anhang) verlängern den Kaltstart im Prototyp um 60 bis 670\,ms gegenüber \enquote{Hello World},
 am meisten \texttt{pdfmake} mit seinen Schriften. Mit einem 95.\ Perzentil unter 1,5 Sekunden bleiben sie unter dem

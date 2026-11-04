@@ -255,7 +255,7 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
 \end{figure}
 
 Das Modell besteht aus fünf eigenen Diensten und stützt sich im Übrigen auf Bausteine, die die Plattform bereits
-betreibt. Das \emph{Gateway} nimmt die \ac{HTTP}-Aufrufe entgegen, prüft Signatur, Mandant und Identität und bildet
+betreibt. \autoref{fig:bausteine} zeigt beide mit Anfrage- und Steuerpfad. Das \emph{Gateway} nimmt die \ac{HTTP}-Aufrufe entgegen, prüft Signatur, Mandant und Identität und bildet
 sie auf Ausführungsaufträge ab. Die \emph{Control Plane} verwaltet den Pool der Worker-Pods, die Zuordnung von
 Mandanten zu Pods und deren Consumer und stellt die Token aus, mit denen sich ein Worker bei NATS ausweist. Der
 \emph{Worker} ist ein Pod aus zwei Containern desselben Images: Der \emph{Transport} hält die Zugangsdaten zu NATS,

@@ -124,7 +124,7 @@ benötigt. Für die Pakete mit nennenswertem Mandantengewicht wurde deshalb der 
 vermitteltes Binding nicht bereitstellt. Diese Gruppe wird im Folgenden als Hard Floor
 bezeichnet. Werden die Mandanten, deren Pakete vollständig außerhalb der geprüften Menge liegen,
 pessimistisch als nicht lauffähig gewertet, ergibt sich ein Viabilitätsintervall von 39,0\,\% bis
-42,9\,\%.
+42,9\,\%. \autoref{fig:hard-floor-einordnung} zeigt den Anteil am Bestand und die beiden Paketgruppen, die ihn tragen.
 
 \begin{figure}[H]
   \centering
@@ -217,8 +217,8 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 \subsubsection{A2, Sprachebene: geteilte Laufzeit im selben Prozess}
 
 Der zweite Weg greift die Grenze innerhalb eines Prozesses an, die nach \autoref{sec:grundlagen:isolation} Angriffe
-unterhalb der Softwareebene nicht abfängt. Dass das auf einer produktiven Plattform mit V8 Isolates gelingt, ist
-gezeigt. Über einen entfernten Timer ließ sich aus einem ko-lokierten Cloudflare Worker ein
+unterhalb der Softwareebene nicht abfängt. Dass das auf einer produktiven Plattform mit V8 Isolates gelingt, zeigt ein noch nicht begutachteter
+Preprint. Über einen entfernten Timer ließ sich aus einem ko-lokierten Cloudflare Worker ein
 \ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
 von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
 demselben Grund die Trennung von Origins im gemeinsamen Prozess aufgegeben
@@ -238,7 +238,7 @@ zwei aber erfolgreich bleiben \autocite[S.~44]{reeves_towards_2021}. Die Fallstu
 sie verlagert sich auf den Sentry, der selbst in Software implementiert und angreifbar ist, was
 eine gezielte Fuzzing-Untersuchung belegt \autocite[S.~168]{li_g-fuzz_2024}.
 
-Der Weg bleibt damit relevant, wenn auch auf höherem Niveau. Ein Agent mit Codeausführung im Container kann
+Der Weg bleibt damit relevant, wenn auch auf höherem Niveau. Nach einem Preprint kann ein Agent mit Codeausführung im Container
 Fehlkonfigurationen, Kernel-Schwachstellen sowie Schwächen der Laufzeit und der Orchestrierung selbst auffinden und
 ausnutzen \autocite[S.~1]{marchand_quantifying_2026}, auch wenn die Untersuchung Container ohne vorgeschaltete
 Sandbox-Laufzeit betrifft. Sie beschreibt den Angreifertyp, dem die Grenze standhalten muss: Aus einem menschlichen
