@@ -72,8 +72,9 @@ U5 beantworten die beiden folgenden Abschnitte. Zuvor die Grenzen. Die der Ergeb
 (\autoref{sec:pruefung-kompatibilitaet}). Die Sicherheitsaussage für das Agentenprofil gilt für aufeinanderfolgende
 Ausführungen. Zwischen gleichzeitigen trägt ein verdeckter Kanal, sobald ein freigegebenes Ziel eine Uhr liefert, im selben Pod,
 ohne virtuelle Uhr auch zwischen Pods verschiedener Mandanten (\autoref{sec:pruefung-isolation}), und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Mandantenisolation ist damit für
-Vertraulichkeit und Integrität belegt, für die Verfügbarkeit zwischen Mandanten nicht, die die Arbeit ausgrenzt
-(\autoref{sec:systemkontext}). Und eine Ausführung läuft ein zweites Mal, wenn ihr
+Vertraulichkeit und Integrität auf den geprüften Angriffswegen belegt, ohne Freiheit von Seitenkanälen
+(\autoref{sec:randbedingungen}) und mit dem verdeckten Kanal als offener Lücke. Für die Verfügbarkeit zwischen Mandanten,
+die die Arbeit ausgrenzt (\autoref{sec:systemkontext}), ist sie nicht belegt. Und eine Ausführung läuft ein zweites Mal, wenn ihr
 Worker oder ihre Sandbox mittendrin stirbt, auch wenn das cgroup die Sandbox wegen des überbuchten Speichers beendet
 (\autoref{sec:zuteilung}, \autoref{sec:ressourcenbegrenzung}). Offen bleiben drei Beobachtungen aus der Evaluation.
 Das 95.\ Perzentil von 898\,ms im ersten Noisy-Neighbour-Lauf ist nicht erklärt. Die Korrektur vom 2.\ November ist nicht

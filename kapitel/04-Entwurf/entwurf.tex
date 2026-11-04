@@ -664,7 +664,7 @@ Puffer, zusammen schon das ganze Pod-Limit. Hinzu kommen 32\,MB Headroom je Isol
 Grundbedarf des Prozesses von rund 70\,MiB (\autoref{sec:durchsatz}), in der Summe 4 $\times$ (64 + 64 + 32) + 128 = 768\,MB
 ohne Grundbedarf. Unter das Pod-Limit gebracht, blieben bei vier Slots je Ausführung rund 23\,MB für Heap und Puffer,
 weniger als das Minimum von 64\,MB. Der Entwurf wählt deshalb die Dichte. Unter dem Lastprofil kam kein Pod über
-103\,MiB, weil die Skripte wenig Speicher brauchen. Schöpfen aber mehrere gleichzeitige Ausführungen ihre Limits aus,
+103\,MiB (\autoref{tab:ressourcen-pod}), weil die Skripte wenig Speicher brauchen. Schöpfen aber mehrere gleichzeitige Ausführungen ihre Limits aus,
 greift vor den Mechanismen des Isolates das cgroup und beendet die Sandbox mit allen laufenden Ausführungen. Deren
 Nachrichten stellt der Consumer nach der Ack-Wait neu zu, und sie laufen ein zweites Mal (\autoref{sec:zuverlaessigkeit}).
 T6 prüft eine einzelne Ausführung, die den Speicher erschöpft, nicht eine neben drei laufenden. Der Pod erhält ein Speicherlimit, aber kein
@@ -855,7 +855,7 @@ eines solchen Kanals deckelte, ist nicht vorgesehen.
 Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber den über den Garbage
 Collector zwischen Pods. Ein Lauf mit einem Slot je Pod unter dem Lastprofil vom 29.\ Oktober, je einmal am
 30.\ Oktober, beziffert den Preis: 64\,\% mehr gleichzeitige Worker-Pods (340 statt 207), 52\,\% mehr Speicher
-(22,8 statt 15,0\,GiB) und 28\,\% mehr \ac{CPU}. Der Pool deckt dann 40 statt 160 gleichzeitige Ausführungen, und die
+(22,8 statt 15,0\,GiB) und 28\,\% mehr \ac{CPU} (\autoref{tab:ein-slot}). Der Pool deckt dann 40 statt 160 gleichzeitige Ausführungen, und die
 Control Plane brauchte ein höheres Speicherlimit. Weil die Einstellung beide Profile traf, ist das die Obergrenze der
 Kosten für das Agentenprofil. Der Entwurf behält mehrere Slots je Pod. Ob ein Slot im Agentenprofil diesen Preis
 wert ist, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor, ebenso eine Begrenzung
