@@ -371,11 +371,9 @@ halten Instanzen ebenfalls eine feste Zeit warm, AWS zehn und Azure zwanzig Minu
 das Aufrufmuster anpassen \autocite[S.~205]{shahrad_serverless_2020}. Die Fristen sind Betriebsparameter
 (\autoref{tab:parameter}).
 
-Aus demselben Grund unterscheidet das Modell die beiden Lastprofile nicht in der Topologie, sie unterscheiden sich
-allein in der Menge ihrer Bindings (\autoref{sec:faehigkeitsmodell}). Ein Schnitt nach Profil brächte nur, was unterhalb
-dieser Grenze liegt: Ein Abbruch des Prozesses träfe nicht alle laufenden Ausführungen, und nach einem Ausbruch aus
-der Engine teilten die Profile nicht den Adressraum. Beides betrifft nur Ausführungen desselben Mandanten. Dass bis
-zu vier gleichzeitige Ausführungen einen Prozess teilen, benennt \autoref{sec:betriebsplanung}.
+Aus demselben Grund unterscheiden sich die beiden Profile nicht in der Topologie, sondern allein in der Menge ihrer
+Bindings (\autoref{sec:faehigkeitsmodell}). Ein Schnitt nach Profil trennte nur Ausführungen desselben Mandanten
+(\autoref{sec:betriebsplanung}).
 
 Die Bindung eines Isolates an einen Thread ist eine Eigenschaft von \texttt{deno\_core}. Der Prototyp startet deshalb je
 Ausführung einen eigenen Betriebssystem-Thread mit eigener Event Loop, begrenzt durch eine Semaphore im Consumer des Mandanten.
@@ -384,9 +382,9 @@ ein Thread außerhalb des Isolates die Terminierung auslösen kann. Der Thread t
 Prozesses teilen Adressraum und cgroup. Beide Profile schöpfen aus demselben Vorrat an Slots, lange Hintergrundläufe
 können synchrone verdrängen (\autoref{sec:betriebsplanung}).
 
-Die Isolate-Grenze je Ausführung erfüllt M2 und kostet nach \autoref{sec:warm} im Median 18,7\,ms und liegt seit dem
-29.\ Oktober als warmes Isolate vor dem Aufruf. Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
-aber nicht her, weil Contexts denselben Heap verwenden. Ein Zurücksetzen des Prozesses auf einen Snapshot zwischen
+Die Isolate-Grenze je Ausführung erfüllt M2, und das Isolate liegt seit dem 29.\ Oktober warm vor dem Aufruf
+(\autoref{sec:warm}). Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
+aber nicht her, weil Heap-Limit, Abbruch und Host-Zustand je Isolate wirken, nicht je Context. Ein Zurücksetzen des Prozesses auf einen Snapshot zwischen
 zwei Ausführungen, wie \textcite[S.~1]{alzayat_groundhog_2023} es für Container beschreiben, setzt voraus, dass ein
 Container höchstens eine Ausführung zur Zeit trägt. Das passt nicht zu bis zu vier gleichzeitigen Ausführungen je Pod.
 
@@ -426,10 +424,9 @@ Die Zahl der Zustellungen begrenzt, wie oft ein Skript so einen Prozess beenden 
 die eine Neuzustellung dem Aufrufer als Fehlschlag meldet statt sie zu wiederholen, kostete einen Redis-Zugriff je
 Ausführung auf dem Anfragepfad. Sie ist nicht umgesetzt (\autoref{sec:diffusion:ausblick}).
 
-Ein Worker wartet nach dem Binden eines frisch angelegten Consumers auf dessen Leader, zieht je Nachricht genau einen
-Pull und beendet sich nur zwischen zwei Pulls. Eine in einen verworfenen Pull zugestellte Nachricht war bis zum
-26.\ Oktober, mit einer einzigen Zustellung, verloren (\autoref{sec:zuverlaessigkeit}). Der Name des Consumers hängt nur
-vom Mandanten ab, sodass der nächste Pod, der den Mandanten übernimmt, an der letzten Bestätigung fortsetzt.
+Ein Worker wartet nach dem Binden eines frisch angelegten Consumers auf dessen Leader und beendet sich nur zwischen
+zwei Pulls (\autoref{sec:zuverlaessigkeit}). Der Name des Consumers hängt nur vom Mandanten ab, sodass der nächste Pod
+des Mandanten an der letzten Bestätigung fortsetzt.
 
 \begin{figure}[H]
   \centering
@@ -462,9 +459,7 @@ vom Mandanten ab, sodass der nächste Pod, der den Mandanten übernimmt, an der 
 
 \autoref{fig:erstkontakt} zeigt den Erstkontakt eines Mandanten als \ac{UML}-Sequenzdiagramm. Die Control Plane prüft in Redis, ob der Mandant
 zugewiesen ist. Andernfalls nimmt sie in einem atomaren Schritt einen Pod aus dem Pool und markiert ihn als
-reserviert, sodass ein bereiter Pod zu keinem Zeitpunkt in keiner der drei Mengen steht. Ein frisch angelegter Pod
-steht, bis der Informer ihn als bereit meldet, in keiner Menge, weshalb unbekannte Pods erst nach einer Schonfrist
-gelöscht werden. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an, höchstens einen je
+reserviert, sodass jeder bereite Pod stets in genau einer der drei Mengen steht. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an, höchstens einen je
 Mandant innerhalb von 30 Sekunden, und wartet bis zu 20 Sekunden, bis irgendein Pod bereit wird. Ein frisch angelegter
 Pod braucht nach der Messung in \autoref{sec:kaltstart} rund 3,5 Sekunden bis zur ersten Ausführung und wird deshalb
 nie direkt zugewiesen. Steht ein Pod bereit, stellt sie ein Token aus, erteilt dem Pod die Zuweisung als
@@ -487,9 +482,9 @@ Den Rückbau übernimmt die Control Plane: Sie merkt sich, wie viele Pods jede L
 ältesten Pods über dem Maximum der letzten Minute zurück. Die letzten Nachrichtenzeiten je Mandant legt sie in Redis
 ab, damit ein Neustart sie nicht vergisst.
 
-Die Control Plane kann die Zielgröße des Pools aus den Zuweisungen der vergangenen Wochen vorhersagen (Parameter in
-\autoref{tab:parameter}), denn geplante Skripte machen die vollen Stunden zu den geschäftigsten Minuten. Alle Messungen
-liefen mit der festen Zielgröße vierzig, und die Vorhersage ist Gegenstand des Ausblicks (\autoref{sec:diffusion:ausblick}).
+Eine Vorhersage der Zielgröße aus den Zuweisungen der vergangenen Wochen ist umgesetzt, weil geplante Skripte die
+vollen Stunden zu den geschäftigsten Minuten machen. Alle Messungen liefen mit der festen Zielgröße vierzig
+(\autoref{sec:diffusion:ausblick}).
 
 Der Zustand der Zuteilung liegt in Redis ohne Ablaufzeiten, sodass die Control Plane ihn nach einem Neustart
 zurückliest und offene Zuweisungen wiederholt. Es gibt eine Replik und keine Leader Election. Eine Schleife hält den
@@ -630,10 +625,8 @@ Abweichung verschwindet. Integrationstests sprechen über \texttt{http}, \texttt
 einem rohen Socket mit echten Gegenstellen und prüfen Backpressure, Redirects, Abbrüche und die Allowlist. Der dritte
 Weg prüft den Bestand gegen die Schicht. Ein Scanner bündelt jede gespeicherte Skriptversion mit esbuild wie der
 Builder der Plattform. Dann prüft er jeden Import und jeden freien Bezeichner gegen eine Liste dessen, was ein
-laufendes Isolate des Prototyps bereitstellt. Ein früher Lauf war die Arbeitsliste für die zweite Schicht. Da der Scanner auch
-Bezeichner in Zweigen zählt, die unter Node nie laufen, sind seine Urteile eine Obergrenze der Blocker. Gegen den
-heutigen Stand der Schicht wird er nicht wiederholt. \autoref{sec:pruefung-kompatibilitaet} leitet S6 stattdessen aus
-der Bestandsanalyse ab.
+laufendes Isolate des Prototyps bereitstellt. Ein früher Lauf war die Arbeitsliste für die zweite Schicht. Weil er auch Bezeichner in nie ausgeführten
+Zweigen zählt, liefert er nur eine Obergrenze der Blocker (\autoref{sec:pruefung-kompatibilitaet}).
 
 \subsubsection{Begrenzung der Ressourcen}
 \label{sec:ressourcenbegrenzung}
@@ -713,8 +706,7 @@ gespeicherte Skripte sinnvoll. Ein einmal laufendes Skript hat nichts wiederzuve
 Unveränderliches, Quelltext und kompilierter Code, nie Heap-Zustand einer vorangegangenen Ausführung, denn ein
 Snapshot des Mandantenskripts verletzte M2 (T3 in \autoref{tab:prueffaelle}). Umgesetzt ist er über den Code-Cache
 von V8, der beim ersten vollständigen Lauf eines Bundles erzeugt, neben dem Quelltext unter demselben Content-Hash
-abgelegt und beim nächsten Lauf eingespeist wird. Ein Angreifer, der aus der Engine ausbricht, könnte den Cache seines
-eigenen Mandanten verändern, das bleibt in dessen Vertrauensdomäne, und im Agentenprofil gibt es keinen Cache.  
+abgelegt und beim nächsten Lauf eingespeist wird. Ein Ausbruch aus der Engine könnte nur den Cache des eigenen Mandanten verändern, und im Agentenprofil gibt es keinen.
 
 Nach \autoref{sec:bestandsanalyse} misst ein Bundle im Median 69,3\,KB und im 95.\ Perzentil 429,0\,KB. Schwer wiegt
 nicht die Übertragung, sondern der konstante Anteil eines Abrufs aus dem Objektspeicher, rund 50\,ms bei jedem Aufruf.
@@ -726,9 +718,8 @@ geladenen Bytes gegen ihn, ein \ac{SHA}-256 über die komprimierten Bytes, bevor
 was eine stabile Kennung hat. Zur Laufzeit erzeugter Code hat keine. Ohne diese Regel könnte ein Mandant über
 Agentenaufrufe beliebig viele einmalige Skripte einlagern und die Bundles seines Webhook-Pfads verdrängen, die
 Erschöpfung einer geteilten Ressource aus A1. Und die Grenze ist ein Budget in Byte, denn einzelne Mandanten halten
-bis zu 151 gebündelte Versionen. Das Budget liegt neben den Heap-Limits unter demselben Speicherlimit des Pods
-(\autoref{sec:ressourcenbegrenzung}), wird dort aber nicht abgezogen, sodass Heap-Limits, Headroom und Cache zusammen
-das Pod-Limit übersteigen (\autoref{sec:ressourcenbegrenzung}). Verdrängt wird der am längsten nicht genutzte Eintrag.
+bis zu 151 gebündelte Versionen. Verdrängt wird der am längsten nicht genutzte Eintrag. Von den Heap-Limits wird das
+Budget nicht abgezogen (\autoref{sec:ressourcenbegrenzung}).
 
 Der Cache nimmt dem zweiten Aufruf den Abruf ab, dem ersten nicht. Ein Vorladen der zuletzt aufgerufenen Bundles bei
 der Zuweisung folgte derselben Regel wie der Pool, ist aber nicht umgesetzt (\autoref{sec:betriebsplanung}). Ein
@@ -736,10 +727,8 @@ gemeinsamer Cache für alle Pods eines Knotens würde mehr sparen, wird aber ver
 Mandanten erreichbar wäre und über seine Antwortzeit verriete, ob ein anderer Mandant dasselbe Bundle hält. Dass
 solche Treffer vorkämen, belegt die Bestandsanalyse, in der dieselbe Skriptkennung bei mehreren Mandanten auftritt.
 
-Dass ein frisches Isolate das Bundle je Ausführung erneut auswerten muss, ist gegenüber dem Ausgangszustand keine
-Verschlechterung, denn dort wird das Skript nach \autoref{sec:systemkontext} ebenfalls je Ausführung neu geladen und
-kompiliert. Der Aufwand beseitigt nur den Zustand auf Modulebene. Der Code-Cache ist eine Verbesserung an einer
-Stelle, an der der Ausgangszustand bei jeder Ausführung voll bezahlt.
+Dass ein frisches Isolate das Bundle je Ausführung erneut auswertet, ist keine Verschlechterung, denn der
+Ausgangszustand lädt und kompiliert das Skript ebenfalls je Ausführung neu (\autoref{sec:systemkontext}).
 
 \subsubsection{Lebenszyklus einer Ausführung}
 \label{sec:lebenszyklus}
@@ -789,16 +778,14 @@ Stelle, an der der Ausgangszustand bei jeder Ausführung voll bezahlt.
 Log-Upload, nie die Ausführung selbst (\autoref{tab:parameter}). Nach dem Lauf wird zuerst ein großer Response-Body
 hochgeladen, dann dem wartenden Aufrufer geantwortet, die Nachricht bestätigt und der Slot freigegeben. Erst
 danach wird das Konsolen-Log an den Skriptdienst übertragen, damit ein langsames Log-Ziel weder die Antwort verzögert noch
-einen Slot belegt, den die Control Plane als Last zählt. Die Nachricht wird nach jedem Ausgang bestätigt oder beendet,
-auch wenn die Zustellung scheitert, damit nur ein Absturz die Ausführung wiederholt.
+einen Slot belegt, den die Control Plane als Last zählt.
 
 Eine Ausführung des Webhook-Profils endet, wenn das Ergebnis des Einstiegspunkts feststeht, wie im Ausgangszustand.
 Offene Timer, Sockets und Leseoperationen werden mit dem Isolate verworfen. Im Agentenprofil läuft die Event Loop
 dagegen leer, weil ein zur Laufzeit erzeugtes Skript keinen Handler hat, begrenzt durch die Frist des Watchdogs. Jede
 Ressource führt dafür eine Abbruchmöglichkeit mit, die beim Schließen ausgelöst wird, sonst trüge eine hängende
-Leseoperation die Ausführung über deren Ende hinaus (T1, T5). Ein Abbruch von außen beim Entzug der Zuweisung nutzt denselben Weg.
-Beim Herunterfahren per SIGTERM bricht der Worker dagegen nichts ab, sondern lässt laufende Ausführungen zu Ende kommen und
-nimmt keine Zuweisung mehr an.
+Leseoperation die Ausführung über deren Ende hinaus (T1, T5). Ein Abbruch von außen beim Entzug der Zuweisung nutzt denselben Weg, SIGTERM dagegen bricht nichts ab
+(\autoref{sec:zuteilung}).
 
 \subsection{Betrieb und offene Maßnahmen}
 \label{sec:betriebsplanung}
@@ -814,70 +801,53 @@ Redis gar nicht. Für M3 heißt das, dass die dem Gastcode zugängliche Kernel-O
 Konfigurationsvergleich führt \autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
 Pods neu, sodass ein Release ohne Lücke durch den Pool rollt.
 
-Das in \autoref{sec:vorauswahl-ergebnis} benannte Wartungsrisiko betrifft \texttt{deno\_core} selbst und hat sich
-während der Arbeit verschärft. Am 9.\,Oktober 2026 kündigte Deno an, dass das gesamte Team zu Cloudflare wechselt. Die
-Deno-Laufzeitumgebung erhält noch ein Jahr monatliche Releases, weitergepflegt wird \texttt{rusty\_v8} mit dem Ziel, es in
-workerd zu integrieren \autocite{noauthor_deno_2026}. \texttt{deno\_core} nennt die Ankündigung nicht und gilt für die
-Planung vorsorglich als auslaufend.
-
-Der Entwurf begrenzt das Risiko: Übernommen ist nur die Kernschicht, auf eine exakte Version festgelegt, nicht die
-Kompatibilitätsschicht von Deno (\autoref{sec:kompatibilitaetsschicht}). Der übernommene Node-Code ist auf einen
-Commit festgelegt, den der Differenztest bei jeder Anhebung mit neuen Fällen prüft. Wird \texttt{deno\_core} nicht
-weitergeführt, bleibt \texttt{rusty\_v8} als Grundlage. Zu ersetzen wäre die Einbettungsschicht, die der Prototyp in rund
-30 Quelldateien berührt, ein benennbarer, aber kein kleiner Eingriff. Die Prüfung dieses Aufwands ist Teil des
-Ausblicks (\autoref{sec:diffusion:ausblick}).
+Das in \autoref{sec:vorauswahl-ergebnis} benannte Wartungsrisiko von \texttt{deno\_core} hat sich während der Arbeit
+verschärft. Am 9.\,Oktober 2026 kündigte Deno an, dass das gesamte Team zu Cloudflare wechselt. Weitergepflegt wird
+\texttt{rusty\_v8}, um es in workerd zu integrieren \autocite{noauthor_deno_2026}. \texttt{deno\_core} nennt die
+Ankündigung nicht und gilt für die Planung vorsorglich als auslaufend. Übernommen ist nur seine Kernschicht in einer
+exakten Version, der übernommene Node-Code ist auf einen Commit festgelegt, den der Differenztest bei jeder Anhebung
+prüft. Fällt \texttt{deno\_core} weg, wäre die Einbettungsschicht in rund 30 Quelldateien auf \texttt{rusty\_v8}
+umzustellen (\autoref{sec:diffusion:ausblick}).
 
 Eine zweite offene Maßnahme betrifft die Härtung der Engine. Die Speichersandbox von V8 erfordert einen vollständigen
-Build der Engine. Der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Die vollständige Sandbox
-ist für M1 bis M6 nicht erforderlich, weil die Mandantentrennung über die Pod-Grenze läuft. Würde die Sandbox
-tragfähig, verlöre die Regel aus \autoref{sec:ebenen}, einen
-Pod nie einem zweiten Mandanten zu geben, ihren Charakter als Sicherheitsmechanismus und würde zur
-Kostenentscheidung.
+Build, der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Für M1 bis M6 ist sie nicht
+erforderlich, weil Mandanten über die Pod-Grenze getrennt sind. Würde sie tragfähig, wäre die Regel aus
+\autoref{sec:ebenen}, einen Pod nie einem zweiten Mandanten zu geben, keine Sicherheits-, sondern eine Kostenfrage.
 
-Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich
-Ausführungen desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben
-Prozess liegt allein die Isolate-Grenze, die nach A2 keine hinreichende Mandantengrenze ist. M2 und
-die Prüffälle betreffen aufeinanderfolgende Ausführungen. Drei Klassen von Wegen sind zu trennen. Ein
-\emph{verdeckter Kanal} braucht einen Sender, der mitwirkt: Eine Ausführung, die über ihre Eingaben beeinflusst ist
-und Daten einer Person verarbeitet, aber kein freigegebenes Ziel erreicht, moduliert die \ac{CPU}, und eine
-gleichzeitige Ausführung mit freigegebenem Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne
-Mitwirkung des Opfers aus und nutzt Eigenschaften der Hardware (A2). Ein \emph{Speicherfehler} in der Engine
-erreicht ohne die Speichersandbox von V8 die Heaps der gleichzeitigen Isolates desselben Prozesses. Gemessen ist nur
-der erste Weg. Auf dem Messcluster trug er vor der virtuellen Uhr im selben Pod über die \ac{CPU} und unter
-Allocation-Last auch zwischen Pods verschiedener Mandanten auf demselben Knoten (\autoref{sec:pruefung-isolation}). Er
-betrifft damit auch die Mandantengrenze, mit virtueller Uhr und externer Zeitquelle lag er zwischen Pods bis auf einen
-Lauf auf Zufallsniveau. Seit die Uhr aus \autoref{sec:kompatibilitaetsschicht} bei Timern virtuell läuft, braucht er eine
-externe Zeitquelle, und die erreicht ein Skript nur über die Regeln aus \autoref{sec:faehigkeitsmodell}. Ausschließen
-lässt sie sich damit nicht. Jedes Ziel, das der Mandant freigibt, kann Zeitstempel liefern, mindestens das eigene
-System mit seinem \texttt{Date}-Header auf die Sekunde. Eine Begrenzung der Anfragen je Zeit, die die Bandbreite
-eines solchen Kanals deckelte, ist nicht vorgesehen.
+Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich Ausführungen
+desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben Prozess liegt allein die
+Isolate-Grenze. M2 und die Prüffälle betreffen aufeinanderfolgende Ausführungen. Drei Wege sind zu trennen. Ein
+\emph{verdeckter Kanal} braucht einen mitwirkenden Sender: Eine beeinflusste Ausführung, die Daten einer Person
+verarbeitet, aber kein freigegebenes Ziel erreicht, moduliert die \ac{CPU}, und eine gleichzeitige mit freigegebenem
+Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitwirkung des Opfers aus (A2). Ein
+\emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox die Heaps der gleichzeitigen Isolates. Gemessen
+ist nur der erste Weg. Vor der virtuellen Uhr trug er im selben Pod und unter Allocation-Last auch zwischen Pods
+verschiedener Mandanten auf demselben Knoten, betrifft also auch die Mandantengrenze. Mit virtueller Uhr braucht er
+eine externe Zeitquelle, und zwischen Pods lag er dann bis auf einen Lauf auf Zufallsniveau
+(\autoref{sec:pruefung-isolation}). Die Zeitquelle erreicht ein Skript nur über die Regeln aus
+\autoref{sec:faehigkeitsmodell}, doch jedes freigegebene Ziel kann Zeitstempel liefern, mindestens das eigene System
+mit seinem \texttt{Date}-Header auf die Sekunde. Eine Begrenzung der Anfragen je Zeit ist nicht vorgesehen.
 
-Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber den über den Garbage
-Collector zwischen Pods. Ein Lauf mit einem Slot je Pod unter dem Lastprofil vom 29.\ Oktober, je einmal am
-30.\ Oktober, beziffert den Preis: 64\,\% mehr gleichzeitige Worker-Pods (340 statt 207), 52\,\% mehr Speicher
-(22,8 statt 15,0\,GiB) und 28\,\% mehr \ac{CPU} (\autoref{tab:ein-slot}). Der Pool deckt dann 40 statt 160 gleichzeitige Ausführungen, und die
-Control Plane brauchte ein höheres Speicherlimit. Weil die Einstellung beide Profile traf, ist das die Obergrenze der
-Kosten für das Agentenprofil. Der Entwurf behält mehrere Slots je Pod. Ob ein Slot im Agentenprofil diesen Preis
-wert ist, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor, ebenso eine Begrenzung
-der Anfragen je Zeit.
+Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht den zwischen Pods. Ein Lauf
+mit einem Slot unter dem Lastprofil, am 30.\ Oktober, beziffert den Preis mit 64\,\% mehr gleichzeitigen Worker-Pods,
+52\,\% mehr Speicher und 28\,\% mehr \ac{CPU} (\autoref{tab:ein-slot}). Der Pool deckte dann 40 statt 160
+gleichzeitige Ausführungen. Weil die Einstellung beide Profile traf, ist das die Obergrenze für das Agentenprofil. Der
+Entwurf behält mehrere Slots. Ob ein Slot im Agentenprofil diesen Preis wert ist und ob die Anfragen je Zeit zu begrenzen
+sind, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor.
 
-Eine vierte Einschränkung betrifft die Zugangsdaten und damit M6. Zunächst trugen alle Worker-Pods dieselben Zugangsdaten für
-NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth Callout aus
-\autoref{sec:bausteine} und hat die Kette lokal erprobt. Auf der Plattform setzt der Callout Anpassungen des
-DDP-Teams voraus. Bis sie vorliegen, gelten dort die gemeinsamen Zugangsdaten, und die Messungen in
-\autoref{sec:Evaluation} laufen ohne den Callout.
+Eine vierte Einschränkung betrifft die Zugangsdaten und damit M6. Zunächst trugen alle Worker-Pods dieselben
+Zugangsdaten für NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth
+Callout (\autoref{sec:bausteine}) und hat die Kette lokal erprobt. Auf der Plattform setzt der Callout Anpassungen des
+DDP-Teams voraus, bis dahin gelten dort die gemeinsamen Zugangsdaten, auch in allen Messungen.
 
-Eine fünfte Einschränkung betrifft die Rotation: Sie entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur
+Eine fünfte Einschränkung betrifft die Rotation. Sie entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur
 vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Nachfrage am höchsten ist.
 
-
-
-Weitere Maßnahmen folgen aus der Umsetzung und sind im Quellcode als solche markiert. Die mandantenweite Pflege
-der Regeln fehlt, solange die Skriptverwaltung keine hält. Der Prototyp gibt sie deshalb fest vor, im Modus audit, der
-nur die internen Bereiche verwehrt, oder wie am 28.\ Oktober in enforce mit einer Testregel. Die mandantenweite Freischaltung des Socket-Bindings (\autoref{sec:faehigkeitsmodell}) ist
-nicht umgesetzt. Ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist
-nicht erhoben, denn die Bestandsanalyse wertet Pakete aus und keine Hosts und Ports. Für enforce im Betrieb ist das zu erheben, und S6
-und S7 stehen bis dahin unter dem Vorbehalt aus \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für
-synchrone und Hintergrundläufe sollen verhindern, dass lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) und ein je Slot vorab
-erzeugtes Isolate (\autoref{sec:warm}) wahren M2, solange jedes Isolate genau eine Ausführung trägt. Eine weitere folgt aus der Messung mit leerem Pool
-(\autoref{sec:kaltstart}): Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der Kaltstarts.
+Weitere Maßnahmen sind im Quellcode markiert. Die mandantenweite Pflege der Regeln fehlt, solange die Skriptverwaltung
+keine hält, der Prototyp gibt sie fest vor. Die mandantenweite Freischaltung des Socket-Bindings ist nicht umgesetzt,
+ihr Standardwert und die Politik des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist nicht erhoben, denn
+die Bestandsanalyse wertet Pakete aus, keine Hosts und Ports. Bis dahin stehen S6 und S7 unter dem Vorbehalt aus
+\autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für synchrone und Hintergrundläufe sollen verhindern, dass
+lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) ist nicht
+umgesetzt. Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der
+Kaltstarts ohne Pool (\autoref{sec:kaltstart}).

@@ -8,79 +8,49 @@ Ergebnisse von der Fallstudie.
 \label{sec:diffusion:fazit}
 
 Die Antwort der Arbeit auf die Oberfrage ist ein Modell mit zwei Grenzen. Die Mandantengrenze bleibt der Pod unter
-gVisor, wie im Ausgangszustand. Innerhalb des Pods erhält jede Ausführung ein eigenes V8-Isolate, das nach dem Lauf
-verworfen wird. Die Startzeit
-nimmt ein Pool vorgehaltener Pods vom Anfragepfad, den eine Control Plane über das vorhandene
-Messaging-System zuteilt. Ein Skript erreicht die Außenwelt nur über Bindings und einen
-Egress-Proxy, und eine Kompatibilitätsschicht bildet die Node-Schnittstellen nach, die der Bestand nutzt.
-Übernommen aus dem Ausgangszustand ist die Mandantengrenze, neu sind Isolate je Ausführung, Bindings, Proxy und Pool.
-Den Latenzvorsprung im Webhook-Profil trägt der Pool, nicht die Engine, den Sicherheitsgewinn die Fähigkeitsgrenze.
-Belegt ist diese Antwort nicht überall gleich stark. Die Mandantengrenze besteht wie im Ausgangszustand. Dass ein
-Ausbruch hinter ihr nur die Rechte des eigenen Mandanten erbeutet (M6), ist im Entwurf und lokal belegt (T10), der
-gemessene Plattformstand lief ohne den Auth Callout. Zustandsfreiheit und Fähigkeitsgrenze sind auf der Plattform geprüft. Alle
-Vergleichszahlen stammen aus dem Webhook-Profil, und im Agentenprofil gilt die Sicherheitsaussage nur für
-aufeinanderfolgende Ausführungen.
+gVisor, wie im Ausgangszustand. Neu sind ein V8-Isolate je Ausführung, das nach dem Lauf verworfen wird, ein Pool
+vorgehaltener Pods, den eine Control Plane über das vorhandene Messaging-System zuteilt, und eine Fähigkeitsgrenze aus
+Bindings und Egress-Proxy. Eine Kompatibilitätsschicht bildet die Node-Schnittstellen nach, die der Bestand nutzt. Den
+Latenzvorsprung im Webhook-Profil trägt der Pool, nicht die Engine, den Sicherheitsgewinn die Fähigkeitsgrenze. Alle
+Vergleichszahlen stammen aus dem Webhook-Profil.
 
 U1 fragte nach den Anforderungen. Sie stammen aus Ausgangslage und Betrieb der Fallstudie und der
 Auswertung von 1.718 Mandanten mit 14.575 Skriptversionen. Der Kern des Problems ist die Verschiebung der Vertrauenseinheit vom Mandanten auf
 die einzelne Ausführung, sobald der Code von einem Agenten stammt. Daraus folgen sechs
 Muss- und sechs gewichtete Soll-Kriterien (\autoref{sec:kriterienkatalog}).
 
-U2 fragte nach der Kombination aus Isolationsgrenze, Zuordnungsgranularität und Instanzverwaltung. Die Muss-Kriterien scheiden Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun
-und workerd aus. Eine nach WebAssembly kompilierte Engine ist zurückgestellt, nicht widerlegt
-(\autoref{sec:vorauswahl}). Die Zuordnung ist grob bei der Sicherheitsgrenze, ein Pod je Mandant,
-und fein bei den Rechten, feste Bindings je Profil mit einer mandantenweiten Freischaltung für
-rohe Sockets. Die Instanzverwaltung hält die Zuteilung vom Anfragepfad fern und entkoppelt die
-Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
+U2 fragte nach der Kombination aus Isolationsgrenze, Zuordnungsgranularität und Instanzverwaltung. Die Muss-Kriterien
+scheiden Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun und workerd aus, eine nach WebAssembly
+kompilierte Engine ist zurückgestellt (\autoref{sec:vorauswahl}). Die Zuordnung ist grob bei der Sicherheitsgrenze, ein
+Pod je Mandant, und fein bei den Rechten, feste Bindings je Profil. Die Instanzverwaltung hält die Zuteilung vom
+Anfragepfad fern und entkoppelt die Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
 
-U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Gegenüber dem Ausgangszustand vom 30.\ Oktober liegt
-der Unterschied allein bei M4, also bei Netz, Umgebung und Dateisystem. Die Zustandsfreiheit hat der Ausgangszustand
-während der Arbeit selbst hergestellt, seit sein Runner jedes Skript in einem Worker-Thread ausführt. Die neun Prüffälle, die aus dem
-Bedrohungsmodell abgeleitet sind, besteht der Prototyp in beiden Profilen alle. Der Ausgangszustand besteht sieben,
-T7 und T9 nicht, und gibt bei T8 23 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). T7 und T9 bestehen im Prototyp gegen den Proxy in enforce, mit einer festen Testregel. Zustand überdauert keine Ausführung, ein erschöpfter Heap
-trifft im geprüften Fall einer einzelnen Ausführung nur diese, ein erschöpftes Pod-Limit dagegen alle gleichzeitigen
-(\autoref{sec:ressourcenbegrenzung}), und Netz, Dateisystem und Identität sind nur über Bindings und Proxy erreichbar. M3 gilt auf Clustern mit gVisor als erfüllt, weil
-der Pod in keinem Feld der Kernel-Oberfläche lockerer ist als der Ausgangszustand (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp
-M1 bis M5. Nach der Regel aus \autoref{sec:kriterienkatalog} ist damit der Entwurf die Lösung, sobald der Callout
-eingerichtet ist, und der Nutzwert gilt unter diesem Vorbehalt.
+U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Der Prototyp besteht die neun Prüffälle in beiden
+Profilen, der Ausgangszustand vom 30.\ Oktober sieben. Er scheitert an T7 und T9 und gibt bei T8 23
+Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Die Zustandsfreiheit hat er während der Arbeit selbst
+hergestellt, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und Dateisystem. M3 gilt auf Clustern mit
+gVisor (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp M1 bis M5, weil ohne Auth Callout
+ein doppelter Ausbruch die gemeinsamen NATS-Zugangsdaten erreicht. Nach der Regel aus \autoref{sec:kriterienkatalog}
+ist damit der Entwurf die Lösung, sobald der Callout eingerichtet ist, und der Nutzwert gilt unter diesem Vorbehalt.
 
 U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben Cluster startet der Prototyp mit Pool
-im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden. Er bedient in drei Läufen alle 90 Mandanten innerhalb von zwei
-Sekunden, der Ausgangszustand höchstens 3. Der Pool kostet dafür dauerhaft 3,0\,GiB und 1,0 Kerne. Ohne
-Pool (S1b) verfehlt er den Zielwert und liegt auf dem Niveau des Ausgangszustands. Der Latenzgewinn stammt also aus der
-Vorhaltung, der Sicherheitsgewinn aus Isolate und Bindings (\autoref{sec:kaltstart}). Dass beide trennbar sind, ein
-heutiger Runner mit Pool also ebenso schnell wäre, bleibt eine Hypothese. Gemessen ist
-allerdings der Gewinn des Gesamtsystems mit Control Plane, Zustellung und Skriptdienst. Der Anteil der Engine ist nur
-über die Läufe ohne Pool eingegrenzt, und ein heutiger Runner mit Pool ist nicht gemessen. Der Overhead im Lastprofil
-liegt im Median bei 139 bis 145 statt 300 bis 312\,ms, einschließlich der Begleitdienste (\autoref{sec:warm}). Im 95.\
-Perzentil sind es 220 bis 291 statt 720 bis 745\,ms, im 99.\ Perzentil 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden. Ein
-Worker-Pod belegt mit 70,5\,MiB 85\,\% eines Runner-Pods. Unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis
-34\,GiB. Der Durchsatz liegt in einem Lauf bei 400 statt 200 Aufrufen je Sekunde, mit einer verfehlten Stufe bei 300
-(\autoref{sec:durchsatz}). Beim Knotenentzug bleibt die Lücke für neue Ausführungen bei 0,2 bis 0,3 statt 2,1 bis 2,7
-Sekunden, ohne verlorene und ohne doppelte Ausführung in drei Läufen mit 48 Ausführungen (\autoref{sec:pruefung-m5}). In
-der Zusammenführung kommt der Prototyp auf 4,25 bis 4,5 gegen 3,7 (\autoref{sec:nutzwert}). Die Spanne stammt aus S6,
-das abgeleitet statt gemessen ist und zwischen 61,3 und 99,9\,\% der Mandanten liegt.
+im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden, für 3,0\,GiB und 1,0 Kerne Pool im Ruhezustand. Ohne Pool
+liegt er auf dem Niveau des Ausgangszustands (\autoref{sec:kaltstart}). Dass ein heutiger Runner mit Pool ebenso schnell
+wäre, ist nicht gemessen und bleibt eine Hypothese. Der Overhead im Lastprofil liegt im Median bei 139 bis 145 statt 300
+bis 312\,ms, im 99.\ Perzentil bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden, jeweils mit den Begleitdiensten
+(\autoref{sec:warm}). Unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis 34\,GiB, der Durchsatz liegt in einem
+Lauf bei 400 statt 200 Aufrufen je Sekunde (\autoref{sec:durchsatz}). Beim Knotenentzug bleibt die Lücke bei 0,2 bis 0,3
+statt 2,1 bis 2,7 Sekunden, ohne verlorene und ohne doppelte Ausführung (\autoref{sec:pruefung-m5}). Der Nutzwert liegt
+bei 4,25 bis 4,5 gegen 3,7, je nach Unter- oder Obergrenze des abgeleiteten S6 (\autoref{sec:nutzwert}). Für das
+Agentenprofil gibt es keinen Ausgangswert. Erstaufruf und warme Latenz liegen im Bereich des Webhook-Profils, Lastprofil,
+Parallelität und Regelbedarf bleiben Annahmen (\autoref{sec:kaltstart}).
 
-Für das Agentenprofil ist gezeigt, dass der Prototyp alle neun Prüffälle besteht, T1 bis T3 auch mit zwei gleichzeitigen
-Ausführungen, und dass Erstaufruf und warme Latenz im Bereich des Webhook-Profils liegen (\autoref{sec:kaltstart}). Einen
-Ausgangswert gibt es nicht. Angenommen bleiben Lastprofil, Nutzlast, Parallelität und Regelbedarf, weil für das Profil keine
-Betriebsdaten vorliegen (\autoref{sec:bedrohungsmodell}). Gleichzeitige Ausführungen desselben Mandanten trennt dort allein die
-Isolate-Grenze (\autoref{sec:betriebsplanung}).
-
-U5 beantworten die beiden folgenden Abschnitte. Zuvor die Grenzen. Die der Ergebnisse begründet
-\autoref{sec:messaufbau}, weitere folgen aus dem Entwurf (\autoref{sec:betriebsplanung}). S6 und S7 gelten unter enforce nur mit Regeln, die die Arbeit nicht erhoben hat
-(\autoref{sec:pruefung-kompatibilitaet}). Die Sicherheitsaussage für das Agentenprofil gilt für aufeinanderfolgende
-Ausführungen. Zwischen gleichzeitigen trägt ein verdeckter Kanal, sobald ein freigegebenes Ziel eine Uhr liefert, im selben Pod,
-ohne virtuelle Uhr auch zwischen Pods verschiedener Mandanten (\autoref{sec:pruefung-isolation}), und die \ac{CPU} ist je Mandant nicht begrenzt (\autoref{sec:pruefung-isolation}). Mandantenisolation ist damit für
-Vertraulichkeit und Integrität auf den geprüften Angriffswegen belegt, ohne Freiheit von Seitenkanälen
-(\autoref{sec:randbedingungen}) und mit dem verdeckten Kanal als offener Lücke. Für die Verfügbarkeit zwischen Mandanten,
-die die Arbeit ausgrenzt (\autoref{sec:systemkontext}), ist sie nicht belegt. Und eine Ausführung läuft ein zweites Mal, wenn ihr
-Worker oder ihre Sandbox mittendrin stirbt, auch wenn das cgroup die Sandbox wegen des überbuchten Speichers beendet
-(\autoref{sec:zuteilung}, \autoref{sec:ressourcenbegrenzung}). Offen bleiben drei Beobachtungen aus der Evaluation.
-Das 95.\ Perzentil von 898\,ms im ersten Noisy-Neighbour-Lauf ist nicht erklärt. Die Korrektur vom 2.\ November ist nicht
-erneut unter Last gemessen. Das Verwerfen verspäteter Skripte ist seit dem 27.\ Oktober umgesetzt, aber nicht gemessen.
-
-Der Beitrag liegt in der Kombination für eine Plattform ohne \ac{KVM}, die über Messaging skaliert, und im Vergleich mit einem produktiven Ausgangszustand.
+Mandantenisolation ist damit für Vertraulichkeit und Integrität auf den geprüften Angriffswegen belegt, ohne Freiheit
+von Seitenkanälen (\autoref{sec:randbedingungen}). Offen sind der verdeckte Kanal zwischen gleichzeitigen Ausführungen,
+die Wiederholung einer Ausführung nach dem Tod ihrer Sandbox und die nicht begrenzte \ac{CPU}
+(\autoref{sec:betriebsplanung}, \autoref{sec:ressourcenbegrenzung}). Die Verfügbarkeit zwischen Mandanten grenzt die Arbeit aus
+(\autoref{sec:systemkontext}), die Grenzen der Messung nennt \autoref{sec:messaufbau}. U5 beantworten die beiden
+folgenden Abschnitte.
 
 \subsection{Designprinzipien und Migrationspfad}
 \label{sec:diffusion:prinzipien}
@@ -176,43 +146,31 @@ gilt nur dort. Festzulegen ist außerdem, welches Zustellversprechen als Standar
 Offen für spätere Arbeiten sind vier Punkte, hinzu kommt ein Restrisiko, das zur Entscheidung vorliegt.
 
 Der erste betrifft die Engine. Eine nach WebAssembly kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ist nicht
-dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf ist
-gegen ein eingebettetes Isolate nicht gemessen und wäre in einer eigenen Evaluation unter demselben Lastprofil zu prüfen.
+dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf wäre
+unter demselben Lastprofil zu messen.
 
-Der zweite betrifft die Einbettung. Zu prüfen ist der Aufwand, die Einbettung von \texttt{deno\_core} direkt auf das
-\texttt{v8}-Paket (\texttt{rusty\_v8}) umzustellen. Nach dem Wechsel des Deno-Teams zu Cloudflare wird
-\texttt{rusty\_v8} weitergepflegt, \texttt{deno\_core} gilt dagegen als auslaufend (\autoref{sec:betriebsplanung}).
-Der Prototyp berührt die Einbettungsschicht in rund 30 Quelldateien. Event Loop, Modulauflösung und die Ops, über die
-der Host Funktionen in das Isolate reicht, müssten dann selbst entstehen und für M4 abgesichert werden.
+Der zweite betrifft die Einbettung. Weil \texttt{deno\_core} als auslaufend gilt (\autoref{sec:betriebsplanung}), ist der
+Aufwand zu prüfen, die rund 30 Quelldateien der Einbettungsschicht direkt auf \texttt{rusty\_v8} umzustellen. Event
+Loop, Modulauflösung und Ops müssten dann selbst entstehen und für M4 abgesichert werden.
 
 Der dritte betrifft das Zustellversprechen. Der Ausgangszustand stellt höchstens einmal zu, der Prototyp führt ein
-Skript nach dem Absturz von Worker oder Sandbox ein zweites Mal aus (\autoref{sec:zuteilung}). Beide Verhalten lassen
-sich nebeneinander anbieten, als Einstellung je Mandant oder je Skript. Idempotente Skripte erhielten die erneute
-Zustellung, alle übrigen eine Startmarke je Nachricht, die eine Neuzustellung als Fehlschlag meldet. Welcher Standard
-gilt und ob die Startmarke den zusätzlichen Redis-Zugriff auf dem Anfragepfad rechtfertigt, ist mit Produkt und
-Mandanten zu entscheiden und danach zu messen.
+Skript nach dem Tod von Worker oder Sandbox ein zweites Mal aus (\autoref{sec:zuteilung}). Beides ließe sich je Mandant
+oder je Skript anbieten, mit einer Startmarke je Nachricht für nicht idempotente Skripte. Welcher Standard gilt und ob
+die Startmarke den zusätzlichen Redis-Zugriff auf dem Anfragepfad rechtfertigt, ist mit Produkt und Mandanten zu
+entscheiden und danach zu messen.
 
 Der vierte betrifft die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}). Sie ist umgesetzt, alle Läufe nutzten
-aber die feste Zielgröße vierzig. Ob sie die Kosten des Pools im Ruhezustand senkt, ohne die Kaltstarts zur vollen
-Stunde zu verlängern, zeigt erst ein Lauf über mehrere Wochen mit dem Lastprofil des Betriebs.
+aber die feste Zielgröße vierzig. Ob sie die Ruhekosten senkt, ohne die Kaltstarts zur vollen Stunde zu verlängern,
+zeigt erst ein Lauf über mehrere Wochen.
 
-Zur Entscheidung vorgelegt ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen, im selben Pod und, vor der virtuellen
-Uhr gemessen, auch zwischen Pods verschiedener Mandanten (\autoref{sec:pruefung-isolation}). Ein Slot je Pod schlösse ihn im selben Pod für bis zu
-52\,\% mehr Speicher unter Last (\autoref{sec:betriebsplanung}). Seit die Uhr bei Timern virtuell läuft, braucht er eine Zeitquelle außerhalb der
-Sandbox, und die öffnet allein der Mandant durch eine Freigabe (\autoref{sec:betriebsplanung}). Ob
-eine Trennung nach Person statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
+Zur Entscheidung vorgelegt ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen (\autoref{sec:betriebsplanung}).
+Ein Slot je Pod schlösse ihn im selben Pod für bis zu 52\,\% mehr Speicher unter Last. Ob eine Trennung nach Person
+statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
 
-Für die Fallstudie selbst stehen zwei Schritte an. Der erste ist die stufenweise Einführung auf der \ac{DDP} für die
-Kunden der \ac{OTC}, bei denen der Ausgangszustand heute läuft, nach dem Pfad aus \autoref{sec:diffusion:prinzipien}.
-Solange eine Stufe nicht gehalten hat, bleibt der Knative-Service des Mandanten bestehen, und die Umschaltung lässt
-sich zurücknehmen.
-
-Der zweite Schritt ist der Wechsel der Kunden der AWS-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen
-Knative-Service, auf den sich zurückfallen ließe. Der Wechsel umfasst zwei Dinge. Das eine sind die Daten des
-Mandanten, also seine hinterlegten Skripte mit ihren Versionen, seine Variablen und die Ereignisse, die seine Skripte
-auslösen. Das andere ist die Ausführung, denn der erste Aufruf nach dem Wechsel läuft bereits auf dem neuen Runner.
-Beides gehört in einen Schritt je Mandant. Dann steht kein Mandant zwischen zwei Ständen, und die AWS-native Variante
-bleibt der Rückweg, bis seine Stufe gehalten hat. Zwei Bedingungen aus der Arbeit gelten dafür. Auf dem AWS-Cluster der
-\ac{DDP} muss gVisor bereitstehen, bevor der erste dieser Mandanten wechselt, weil M3 nur mit gVisor gilt
-(\autoref{sec:betriebsplanung}). Und die Last dieser Kunden ist genau das Lastprofil der Evaluation. Die Stufen des
-Wechsels prüfen damit den vorläufigen Wert für S4 (\autoref{sec:durchsatz}) im Betrieb nach.
+Für die Fallstudie stehen zwei Schritte an. Der erste ist die stufenweise Einführung für die Kunden der \ac{OTC} nach dem
+Pfad aus \autoref{sec:diffusion:prinzipien}, mit dem Knative-Service als Rückweg. Der zweite ist der Wechsel der Kunden
+der AWS-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen Knative-Service. Daten und Ausführung eines
+Mandanten, also Skripte, Versionen, Variablen und auslösende Ereignisse, wechseln deshalb in einem Schritt, und die
+AWS-native Variante bleibt der Rückweg, bis seine Stufe gehalten hat. Auf dem AWS-Cluster der \ac{DDP} muss vorher gVisor
+bereitstehen, weil M3 nur damit gilt. Die Last dieser Kunden ist das Lastprofil der Evaluation, die Stufen prüfen damit
+den vorläufigen Wert für S4 (\autoref{sec:durchsatz}) im Betrieb nach.
