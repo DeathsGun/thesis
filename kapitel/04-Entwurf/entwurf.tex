@@ -144,7 +144,7 @@ Kandidat & M1 & M2 & M3 & M4 & M5 & M6 & Ergebnis \\
 \hline
 Ausgangszustand bei der Analyse, Node.js mit wiederverwendetem Prozess & ja & nein & ja & nein & ja & offen &
   scheidet aus \\
-Ausgangszustand am 30.\ Oktober, Worker-Thread je Ausführung & ja & ja & ja & nein & ja & offen &
+Ausgangszustand, Worker-Thread je Ausführung & ja & ja & ja & nein & ja & offen &
   scheidet aus \\
 Node.js, frischer Prozess je Ausführung & ja & ja & ja & nein & offen & offen &
   scheidet aus \\
@@ -379,7 +379,7 @@ ein Thread außerhalb des Isolates die Terminierung auslösen kann. Der Thread t
 Prozesses teilen Adressraum und cgroup. Beide Profile schöpfen aus demselben Vorrat an Slots, lange Hintergrundläufe
 können synchrone verdrängen (\autoref{sec:diffusion:ausblick}).
 
-Die Isolate-Grenze je Ausführung erfüllt M2, und das Isolate liegt seit dem 29.\ Oktober warm vor dem Aufruf
+Die Isolate-Grenze je Ausführung erfüllt M2, und das Isolate liegt im Endstand warm vor dem Aufruf
 (\autoref{sec:warm}). Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
 aber nicht her, weil Heap-Limit, Abbruch und Host-Zustand je Isolate wirken, nicht je Context. Ein Zurücksetzen des Prozesses auf einen Snapshot zwischen
 zwei Ausführungen, wie \textcite[S.~1]{alzayat_groundhog_2023} es für Container beschreiben, setzt voraus, dass ein
@@ -546,7 +546,7 @@ Zeitquelle für den Kanal aus \autoref{sec:pruefung-isolation}. Unabhängig von 
 Link-Local- und Metadaten-Adressen und die Adressbereiche des Clusters. Einen Treffer außerhalb der Regeln lehnt er im
 Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Proxy wertet Agentenläufe ohne Angabe in enforce.
 Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. Er registrierte beide Profile in audit,
-und ein Skript erreichte jede öffentliche Adresse. In der Messumgebung stehen beide Profile seit dem 28.\ Oktober in
+und ein Skript erreichte jede öffentliche Adresse. In der Messumgebung stehen beide Profile inzwischen in
 enforce, mit einer Testregel und dem eigenen System je Lauf (T7, \autoref{sec:pruefung-isolation}). Jeder Zugriff steht
 im Protokoll, und verwehrt bleiben stets die internen Bereiche. Den Token der Person setzt der Proxy bei Agentenläufen selbst
 ein, er gelangt nie in die Sandbox. Lauschende Ports sind in beiden Profilen verwehrt.
@@ -654,7 +654,7 @@ weniger als das Minimum von 64\,MB. Der Entwurf nimmt diese Überbuchung in Kauf
 greift vor den Mechanismen des Isolates die cgroup und beendet die Sandbox mit allen laufenden Ausführungen. Deren
 Nachrichten stellt der Consumer nach der Ack-Wait neu zu, und sie laufen ein zweites Mal (\autoref{sec:zuverlaessigkeit}).
 T6 prüft eine einzelne Ausführung, die den Speicher erschöpft, nicht eine neben drei laufenden. Der Pod erhält ein Speicherlimit, aber kein
-\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand trug bis zum 17.\ Oktober eines (100\,m, \autoref{tab:ressourcen-vergleich}), eine Fehlkonfiguration, seither zwei Kerne. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
+\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand trug anfangs eines (100\,m, \autoref{tab:ressourcen-vergleich}), eine Fehlkonfiguration, inzwischen zwei Kerne. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
 von S4 eingeht (\autoref{tab:parameter}). Die Mechanismen auf Ebene des Isolates liefern damit die Attribution und
 einen im Skript abfangbaren Fehler, die cgroup die Garantie. Ihre Belastbarkeit wird in \autoref{sec:Evaluation}
 anhand der Prüffälle aus \autoref{tab:prueffaelle} geprüft.
