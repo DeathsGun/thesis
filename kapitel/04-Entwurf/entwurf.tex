@@ -223,10 +223,10 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
             label={[font=\tiny]above:Pods: Pool und je Mandant ein bis zehn}] (pool) {};
     \end{pgfonlayer}
     \node[infra] (sapp)   at (3.2,-2.3)  {Skriptdienst\\(Bestand)};
-    \node[own]   (cp)     at (6.6,-2.3)  {Control Plane};
-    \node[infra] (redis)  at (10.2,-2.3)  {Redis};
-    \node[infra] (k8s)    at (6.6,-4.4)  {Kubernetes-\acs{API}};
-    \node[infra] (s3)     at (11.8,-4.4) {Objektspeicher};
+    \node[own]   (cp)     at (7.3,-2.3)  {Control Plane};
+    \node[infra] (redis)  at (10.8,-2.3)  {Redis};
+    \node[infra] (k8s)    at (7.3,-4.4)  {Kubernetes-\acs{API}};
+    \node[infra] (s3)     at (12.65,-4.4) {Objektspeicher};
 
     \draw[req] (caller) -- node[lbl,above]{\acs{HTTP}} (gw);
     \draw[req] (gw) -- node[lbl,above=2pt]{Auftrag auf\\das Subject\\des Mandanten} (nats);
@@ -237,9 +237,9 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
     \draw[req,rounded corners=6pt] (pool.east) -- (13.6,0) -- (13.6,3.3) -- node[lbl,above,pos=0.5]{\texttt{fetch} und Sockets der Sandbox (\acs{HTTP}, CONNECT)} (3.2,3.3) -- (ep.north);
 
     \draw[req,<->] (gw) -- node[lbl,right]{Skript auflösen\\(über NATS)} (sapp);
-    \draw[req,<->,rounded corners=6pt] (gw.west) -- (1.65,0) -- (1.65,-5.3) -- (11.8,-5.3)
+    \draw[req,<->,rounded corners=6pt] (gw.west) -- (1.65,0) -- (1.65,-5.3) -- (12.65,-5.3)
                    node[lbl,pos=0.55,above]{Request- und Response-Body} -- (s3.south);
-    \draw[req,<->] (pool.south) -- node[lbl,right]{Bundle und Bodies\\über vorsignierte \acsp{URL}} (s3.north);
+    \draw[req,<->] (pool.south -| s3.north) -- node[lbl,left,pos=0.75]{Bundle und Bodies\\über vorsignierte \acsp{URL}} (s3.north);
 
     \draw[ctl] (nats) -- node[lbl,right]{Watcher sieht\\jeden Auftrag} (cp);
     \draw[ctl,<->] (cp.north east) -- node[lbl,sloped,above]{assign, unassign (\acs{HTTP})} (pool.south west);
