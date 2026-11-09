@@ -103,8 +103,8 @@ dabei.
     verursachende Ausführung, die cgroup erfasst auch Pfade, die niemand aufgezählt hat. Herkunft: Defense in Depth,
     die cgroup des Kernels \autocite{the_kernel_development_community_control_2026} als zweite Ebene. Die \ac{CPU} begrenzt der Mechanismus
     nicht. Beleg: T6, in dem der
-    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt. Erschöpfen gleichzeitige
-    Ausführungen das überbuchte Pod-Limit, trifft die cgroup alle (\autoref{sec:ressourcenbegrenzung}).
+    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt. Brauchen gleichzeitige
+    Ausführungen zusammen mehr als das Pod-Limit, beendet die cgroup alle (\autoref{sec:ressourcenbegrenzung}).
 \end{description}
 
 

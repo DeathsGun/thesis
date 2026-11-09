@@ -632,9 +632,10 @@ entsteht bei allen dreien durch Aufzählung der abgedeckten Pfade, ein nicht auf
 
 Auf Ebene des Pods greift deshalb eine cgroup je Mandant. Sie erfasst jeden Allokationspfad und ist die harte
 Schranke, feiner ist sie nach \autoref{sec:randbedingungen} nicht zu bekommen. Weil ein Pod genau einen Mandanten
-trägt, fällt die feinste erreichbare Einheit mit der Mandantengrenze zusammen. Der Kernel wählt sein Opfer bei
-Überschreitung nach eigener Bewertung, doch jede in Frage kommende Ausführung gehört demselben Mandanten. Die
-Zuordnung zur verursachenden Ausführung leistet die Ebene des Isolates. 
+trägt, fällt die feinste erreichbare Einheit mit der Mandantengrenze zusammen. Überschreitet der Pod sein
+Speicherlimit, beendet der OOM Killer des Kernels einen Prozess, und welchen, lässt sich nicht steuern. Weil alle
+Ausführungen im Pod demselben Mandanten gehören, trifft das nie einen anderen Mandanten. Welche Ausführung den
+Speicher verbraucht hat, erkennt nur die Ebene des Isolates.
 
 Die Umsetzung bemisst die innere Ebene aus der äußeren. Der Worker liest das Speicherlimit seines Pods über die
 Downward \ac{API}, nicht aus den cgroup-Dateien, die gVisor nur emuliert
@@ -644,11 +645,11 @@ Callback das Isolate und gewährt festen Headroom, ohne den V8 den gesamten Proz
 verweigert eine Zuteilung oberhalb des Limits und meldet das als abfangbaren \texttt{RangeError}. Weitere Limits
 gelten für entpackte Bundles, Bodies und das Dateisystem im Speicher.
 
-Die Limits sind überbucht. Bei 512\,MiB Pod-Limit und vier Slots erhält jede Ausführung 64\,MB Heap und 64\,MB für
+Zusammen übersteigen die Limits der Ausführungen das Limit des Pods. Bei 512\,MiB Pod-Limit und vier Slots erhält jede Ausführung 64\,MB Heap und 64\,MB für
 Puffer, zusammen schon das ganze Pod-Limit. Hinzu kommen 32\,MB Headroom je Isolate, 128\,MB Bundle-Cache und der
 Grundbedarf des Prozesses von rund 70\,MiB (\autoref{sec:durchsatz}), in der Summe 4 $\times$ (64 + 64 + 32) + 128 = 768\,MB
 ohne Grundbedarf. Unter das Pod-Limit gebracht, blieben bei vier Slots je Ausführung rund 23\,MB für Heap und Puffer,
-weniger als das Minimum von 64\,MB. Der Entwurf wählt deshalb die Dichte. Unter dem Lastprofil kam kein Pod über
+weniger als das Minimum von 64\,MB. Der Entwurf nimmt diese Überbuchung in Kauf und behält vier Slots je Pod. Unter dem Lastprofil kam kein Pod über
 103\,MiB (\autoref{tab:ressourcen-pod}), weil die Skripte wenig Speicher brauchen. Schöpfen aber mehrere gleichzeitige Ausführungen ihre Limits aus,
 greift vor den Mechanismen des Isolates die cgroup und beendet die Sandbox mit allen laufenden Ausführungen. Deren
 Nachrichten stellt der Consumer nach der Ack-Wait neu zu, und sie laufen ein zweites Mal (\autoref{sec:zuverlaessigkeit}).
