@@ -212,8 +212,8 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
     \node[infra] (caller) at (0,0)      {Aufrufer};
     \node[own]   (gw)     at (3.2,0)    {Gateway};
     \node[infra] (nats)   at (7.3,0)    {NATS JetStream\\Stream der Plattform};
-    \node[own]   (w1)     at (11.8,0.55)  {Worker-Pod\\{\tiny Transport, Sandbox}};
-    \node[own]   (w2)     at (11.8,-0.55) {Worker-Pod\\{\tiny Transport, Sandbox}};
+    \node[own]   (w1)     at (12.2,0.55)  {Worker-Pod\\{\tiny Transport, Sandbox}};
+    \node[own]   (w2)     at (12.2,-0.55) {Worker-Pod\\{\tiny Transport, Sandbox}};
         \node[own]   (ac)     at (7.3,2.0)  {Auth Callout};
     \node[own]   (ep)     at (3.2,2.0)  {Egress-Proxy};
     \node[infra] (ext)    at (0,2.0)    {Ziele der\\Skripte};
@@ -226,7 +226,7 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
     \node[own]   (cp)     at (7.3,-2.3)  {Control Plane};
     \node[infra] (redis)  at (10.8,-2.3)  {Redis};
     \node[infra] (k8s)    at (7.3,-4.4)  {Kubernetes-\acs{API}};
-    \node[infra] (s3)     at (12.65,-4.4) {Objektspeicher};
+    \node[infra] (s3)     at (12.2,-4.4) {Objektspeicher};
 
     \draw[req] (caller) -- node[lbl,above]{\acs{HTTP}} (gw);
     \draw[req] (gw) -- node[lbl,above=2pt]{Auftrag auf\\das Subject\\des Mandanten} (nats);
@@ -234,12 +234,12 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
         \draw[ctl,<->] (nats) -- node[lbl,right]{Verbindung\\prüfen} (ac);
     \draw[ctl] (gw) -- node[lbl,right]{Lauf\\registrieren} (ep);
     \draw[req] (ep) -- (ext);
-    \draw[req,rounded corners=6pt] (pool.east) -- (13.6,0) -- (13.6,3.3) -- node[lbl,above,pos=0.5]{\texttt{fetch} und Sockets der Sandbox (\acs{HTTP}, CONNECT)} (3.2,3.3) -- (ep.north);
+    \draw[req,rounded corners=6pt] (pool.east) -- (13.8,0) -- (13.8,3.3) -- node[lbl,above,pos=0.5]{\texttt{fetch} und Sockets der Sandbox (\acs{HTTP}, CONNECT)} (3.2,3.3) -- (ep.north);
 
     \draw[req,<->] (gw) -- node[lbl,right]{Skript auflösen\\(über NATS)} (sapp);
-    \draw[req,<->,rounded corners=6pt] (gw.west) -- (1.65,0) -- (1.65,-5.3) -- (12.65,-5.3)
+    \draw[req,<->,rounded corners=6pt] (gw.west) -- (1.65,0) -- (1.65,-5.3) -- (12.2,-5.3)
                    node[lbl,pos=0.55,above]{Request- und Response-Body} -- (s3.south);
-    \draw[req,<->] (pool.south -| s3.north) -- node[lbl,left,pos=0.75]{Bundle und Bodies\\über vorsignierte \acsp{URL}} (s3.north);
+    \draw[req,<->] (pool.south) -- node[lbl,left,pos=0.75]{Bundle und Bodies\\über vorsignierte \acsp{URL}} (s3.north);
 
     \draw[ctl] (nats) -- node[lbl,right]{Watcher sieht\\jeden Auftrag} (cp);
     \draw[ctl,<->] (cp.north east) -- node[lbl,sloped,above]{assign, unassign (\acs{HTTP})} (pool.south west);
