@@ -128,7 +128,7 @@ Engine-Ebene bei S1 steht ein sicherer Nachteil bei S6, dem Kriterium mit dem zw
 gegenüber. Zudem schließt der erste Weg den zweiten nicht aus: V8 führt WebAssembly-Module innerhalb derselben
 Isolate-Grenze aus \autocite[S.~196]{haas_bringing_2017}, während eine Wasm-Sandbox eine Engine mit \ac{JIT} nicht
 aufnehmen kann \autocite[S.~187]{haas_bringing_2017}. Der erste Weg ist die Obermenge, und die Entscheidung für ihn
-hält den zweiten offen. \autoref{sec:diffusion:ausblick} führt ihn als Erweiterung.
+hält den zweiten offen. Er ist in \autoref{sec:diffusion:ausblick} als Erweiterung vorgesehen.
 
 \subsubsection{Ergebnis der Vorauswahl}
 \label{sec:vorauswahl-ergebnis}
@@ -496,7 +496,7 @@ der Zuteilung. Der nächste Auftrag des Mandanten wird einem Pod aus dem Pool zu
 Überschreitet eine Ausführung die Grace Period, beendet Kubernetes den Pod, und die Nachricht kommt nach der
 Bestätigungsfrist zurück. Die Untergrenze des Pools ist so zu
 wählen, dass der Entzug eines Knotens nicht dazu führt, dass Aufträge auf das Nachfüllen warten. Ob die Zeit ohne
-Ausführungsfähigkeit damit M5 einhält, misst \autoref{sec:pruefung-m5}.
+Ausführungsfähigkeit damit M5 einhält, wird in \autoref{sec:pruefung-m5} gemessen.
 
 \subsubsection{Fähigkeitsmodell und Mandantenkontext}
 \label{sec:faehigkeitsmodell}
@@ -581,7 +581,7 @@ schwierigsten Stelle des Bestands geprüft, an \texttt{tedious}, dem Treiber unt
 eine bestehende Verbindung mitten im Datenstrom auf \ac{TLS} um, indem er den Handshake in die Frames des
 \ac{TDS}-Protokolls verpackt. Der unveränderte Treiber läuft dafür über den Socket-Shim. Die \ac{TLS}-Umstellung
 übernimmt eine Zustandsmaschine ohne eigene Ein- und Ausgabe, die nur über synchrone Bindings angesprochen wird,
-während der Treiber das Framing selbst verantwortet. Das Ergebnis berichtet
+während der Treiber das Framing selbst verantwortet. Das Ergebnis steht in
 \autoref{sec:pruefung-kompatibilitaet}.
 
 Der Vermittlungspunkt liegt bei der Socket-Gruppe auf Ebene des Verbindungsaufbaus. Der Proxy prüft Zielhost und
@@ -610,7 +610,7 @@ echten Millisekunden messen und sich nicht an der Wanduhr ausrichten. Eine Zeitq
 \autocite{schwarzl_remote-timer-as--service_2026}, sofern die Regeln aus \autoref{sec:faehigkeitsmodell} sie erreichbar
 machen. Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
 
-Ob die Schicht trägt, wird auf drei Wegen geprüft, deren Ergebnisse \autoref{sec:Evaluation} berichtet. Ein
+Ob die Schicht trägt, wird auf drei Wegen geprüft, deren Ergebnisse in \autoref{sec:Evaluation} stehen. Ein
 Differenztest führt 757 Fälle, die in einem echten Node derselben Version erzeugt wurden, in einem frischen Isolate
 erneut aus und verlangt dasselbe Ergebnis, wobei eine Liste bekannter Abweichungen fehlschlägt, sobald eine
 Abweichung verschwindet. Integrationstests sprechen über \texttt{http}, \texttt{fetch}, \texttt{net} und \ac{TLS} über
@@ -655,8 +655,8 @@ Nachrichten stellt der Consumer nach der Ack-Wait neu zu, und sie laufen ein zwe
 T6 prüft eine einzelne Ausführung, die den Speicher erschöpft, nicht eine neben drei laufenden. Der Pod erhält ein Speicherlimit, aber kein
 \ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand trug bis zum 17.\ Oktober eines (100\,m, \autoref{tab:ressourcen-vergleich}), eine Fehlkonfiguration, seither zwei Kerne. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
 von S4 eingeht (\autoref{tab:parameter}). Die Mechanismen auf Ebene des Isolates liefern damit die Attribution und
-einen im Skript abfangbaren Fehler, das cgroup die Garantie. Ihre Belastbarkeit prüft \autoref{sec:Evaluation}
-anhand der Prüffälle aus \autoref{tab:prueffaelle}.
+einen im Skript abfangbaren Fehler, das cgroup die Garantie. Ihre Belastbarkeit wird in \autoref{sec:Evaluation}
+anhand der Prüffälle aus \autoref{tab:prueffaelle} geprüft.
 
 \subsubsection{Zustellung und Caching des Skripts}
 \label{sec:zustellung}
@@ -786,8 +786,8 @@ Plane wählt sie nach dem Namen der Infrastruktur. Auf OTC startet sie nicht, we
 Klasse ankäme. Auf anderen Infrastrukturen laufen Worker ohne gVisor. Kein Deployment
 kann diese Felder lockern, das Image enthält außer der Binärdatei keine Shell, und der Pod erreicht das Internet nur über
 den Proxy. NATS erreicht der Pod über ein Label der Cluster-Richtlinien,
-Redis gar nicht. Für M3 heißt das, dass die dem Gastcode zugängliche Kernel-Oberfläche nicht wächst, den
-Konfigurationsvergleich führt \autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
+Redis gar nicht. Für M3 heißt das, dass die dem Gastcode zugängliche Kernel-Oberfläche nicht wächst, der
+Konfigurationsvergleich folgt in \autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
 Pods neu, sodass ein Release ohne Lücke durch den Pool rollt.
 
 Das in \autoref{sec:vorauswahl-ergebnis} benannte Wartungsrisiko von \texttt{deno\_core} hat sich während der Arbeit

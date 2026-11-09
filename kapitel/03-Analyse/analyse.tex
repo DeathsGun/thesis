@@ -69,8 +69,8 @@ verlangen die Mandantenisolation aus \autoref{sec:grundlagen:eigenschaften}. Die
 Modell an zwei Stellen: Eine Ausführung darf die folgenden desselben Mandanten nicht unbrauchbar machen (A1, T6), und
 ein Knotenupdate darf die Ausführung nicht unterbrechen (M5). Den Speicher eines Mandanten begrenzt das cgroup seines
 Pods. Dass ein Mandant die Rechenzeit eines anderen nicht schmälert, ist dagegen kein Ziel des Modells. Die \ac{CPU}
-der Knoten teilt der Cluster nach seinen Richtlinien, die das Modell nicht ändert, und \autoref{sec:pruefung-isolation}
-misst nur, wie weit die Wirkung eines lastintensiven Mandanten reicht. Hinzu tritt die \emph{Zustandsfreiheit}, die verlangt, dass eine Ausführung
+der Knoten teilt der Cluster nach seinen Richtlinien, die das Modell nicht ändert, und in \autoref{sec:pruefung-isolation}
+wird nur gemessen, wie weit die Wirkung eines lastintensiven Mandanten reicht. Hinzu tritt die \emph{Zustandsfreiheit}, die verlangt, dass eine Ausführung
 keinen Zustand an eine spätere weitergibt.
 
 Der Charakter des vierten Ziels hängt vom Lastprofil ab. In
@@ -327,7 +327,7 @@ verletzt, ist keine Lösung.
 \end{table}
 
 M2 ist auf aufeinanderfolgende Ausführungen geschnitten, weil der Ausgangszustand je Prozess eine Ausführung
-vorsieht. Der Zuschnitt folgt nicht aus dem Bedrohungsmodell, sondern ist ein Zugeständnis an die Kosten, die \autoref{sec:betriebsplanung} beziffert. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
+vorsieht. Der Zuschnitt folgt nicht aus dem Bedrohungsmodell, sondern ist ein Zugeständnis an die Kosten, die in \autoref{sec:betriebsplanung} beziffert sind. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
 Pod (\autoref{sec:betriebsplanung}). M3 ist gegen den Ausgangszustand formuliert, weil dieser mit gVisor bereits einen
 User-Space-Kernel einsetzt. Ein Modell, das diese Schicht aufgibt, wäre auf der Infrastrukturebene ein Rückschritt,
 auch bei besserem Nutzwert. M4 folgt aus V5, denn die Schnittstelle zur Ausführungsumgebung ist der einzige
@@ -367,7 +367,7 @@ folgt, weil die Kompatibilität nach \autoref{sec:bestandsanalyse} am stärksten
 Kriterien prägen die Wartezeit weniger oder sind durch S6 bereits begrenzt.
 
 Jedes Kriterium erhält null bis fünf Punkte, der Nutzwert ist die gewichtete Summe. Gerundet wird je Kriterium auf ganze
-Punkte, die Zuordnung der Messwerte legt \autoref{sec:Evaluation} offen.
+Punkte, die Zuordnung der Messwerte steht in \autoref{sec:Evaluation}.
 
 \begin{itemize}
   \item \textbf{S1 bis S4} vergleichen den Prototyp mit dem Ausgangszustand im selben Messaufbau. Maßgeblich ist der
@@ -381,8 +381,8 @@ Bei S1 und S2 muss der Prototyp den Ausgangszustand unterbieten. Eine feste Zahl
 Ausgangszustand unter den Lastprofilen dieser Arbeit noch nicht gemessen war. S3 und S4 haben keinen Zielwert.
 
 Die Nutzwertanalyse hat zwei bekannte Schwächen \autocite{keeney_decisions_1993}. Die Gewichte sind subjektiv, und ein
-guter Wert gleicht einen schlechten aus. Deshalb lassen sich Muss-Kriterien nicht ausgleichen, und \autoref{sec:nutzwert}
-prüft, ob die Rangfolge von den Gewichten abhängt. Außerdem unterscheidet die Skala oberhalb von Faktor zwei nicht mehr,
+guter Wert gleicht einen schlechten aus. Deshalb lassen sich Muss-Kriterien nicht ausgleichen, und in \autoref{sec:nutzwert}
+wird geprüft, ob die Rangfolge von den Gewichten abhängt. Außerdem unterscheidet die Skala oberhalb von Faktor zwei nicht mehr,
 1,9 und 5 zählen fast gleich.
 
 Zwei Messgrößen wurden während der Evaluation präzisiert. S3 wird unter dem Lastprofil gemessen statt im Kaltstartlauf,
