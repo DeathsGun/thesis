@@ -142,9 +142,10 @@ zuverlässig bestimmen lassen (269 Inhalte, 519 Skriptversionen, 25 Mandanten), 
 verschiebt die Kennzahlen um gut einen Prozentpunkt. Jedes Skript wird anhand seiner Importe klassifiziert, wobei die
 härteste Einschränkung zählt, und ein Mandant erhält die Einstufung seines härtesten Skripts. Die Analyse ist
 statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündeltes Kompilat, 27 Versionen bei 24 Mandanten sind
-Parse-Fehler und nicht einstufbar. Ein Import sagt nichts darüber, was ein npm-Paket seinerseits
-benötigt. Für die Pakete mit nennenswertem Mandantengewicht wurde deshalb der ausgelieferte Quelltext gelesen, 27 von
-203 verwendeten Paketen, die 87,9\,\% der npm-nutzenden Mandanten erreichen.
+Parse-Fehler und nicht einstufbar. Der Scanner sieht nur, welche Pakete ein Skript importiert, nicht welche
+Node-Module diese Pakete selbst laden. Ein Skript, das nur \texttt{axios} importiert, braucht über das Paket trotzdem
+\texttt{http} und \texttt{https}. Deshalb wurde für 27 häufig genutzte der 203 npm-Pakete der ausgelieferte Quelltext
+gelesen. 87,9\,\% der Mandanten mit npm-Paketen verwenden mindestens eines davon.
 
 \subsubsection{Ergebnis}
 
