@@ -260,6 +260,10 @@ Controller, der die Runner anlegt, hält unter Last 2,3\,GiB. Control Plane, Gat
 hochgerechnet. Der Ausgangszustand kostet dort nichts außer Knative Serving mit 1,9\,GiB im Ruhezustand. Mit diesen Ruhekosten erkauft der Pool die kurzen Kaltstarts. Unter Last spart der Prototyp damit mehr Speicher, als der Pool
 im Ruhezustand kostet. NATS ist dem Prototyp nicht zugerechnet.
 
+Mit einem Slot je Worker-Pod statt vier (\autoref{sec:betriebsplanung}) lief am 30.\ Oktober ein Lauf mit dem
+Lastprofil. Er brauchte 64\,\% mehr gleichzeitige Worker-Pods, 52\,\% mehr Speicher und 28\,\% mehr \ac{CPU}
+(\autoref{tab:ein-slot}). Weil die Einstellung beide Profile traf, ist das die Obergrenze für das Agentenprofil.
+
 \subsection{Zuverlässigkeit der Zustellung}
 \label{sec:zuverlaessigkeit}
 

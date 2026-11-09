@@ -787,8 +787,8 @@ Plane wählt sie nach dem Namen der Infrastruktur. Auf OTC startet sie nicht, we
 RuntimeClass ankäme. Auf anderen Infrastrukturen laufen Worker ohne gVisor. Kein Deployment
 kann diese Felder lockern, das Image enthält außer der Binärdatei keine Shell, und der Pod erreicht das Internet nur über
 den Proxy. NATS erreicht der Pod über ein Label der Cluster-Richtlinien,
-Redis gar nicht. Für M3 heißt das, dass die dem Gastcode zugängliche Kernel-Oberfläche nicht wächst, der
-Konfigurationsvergleich folgt in \autoref{sec:Evaluation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
+Redis gar nicht. Damit soll die Angriffsfläche des Kernels für den Gastcode nicht wachsen (M3), geprüft wird das in
+\autoref{sec:pruefung-isolation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
 Pods neu, sodass ein Release ohne Lücke durch den Pool rollt.
 
 Das in \autoref{sec:vorauswahl-ergebnis} benannte Wartungsrisiko von \texttt{deno\_core} hat sich während der Arbeit
@@ -811,18 +811,14 @@ Isolate-Grenze. M2 und die Prüffälle betreffen aufeinanderfolgende Ausführung
 verarbeitet, aber kein freigegebenes Ziel erreicht, moduliert die \ac{CPU}, und eine gleichzeitige mit freigegebenem
 Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitwirkung des Opfers aus (A2). Ein
 \emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox die Heaps der gleichzeitigen Isolates. Gemessen
-ist nur der erste Weg. Vor der virtuellen Uhr trug er im selben Pod und unter Allocation-Last auch zwischen Pods
-verschiedener Mandanten auf demselben Knoten, betrifft also auch die Mandantengrenze. Mit virtueller Uhr braucht er
-eine externe Zeitquelle, und zwischen Pods lag er dann bis auf einen Lauf auf Zufallsniveau
-(\autoref{sec:pruefung-isolation}). Die Zeitquelle erreicht ein Skript nur über die Regeln aus
+ist nur der erste Weg (\autoref{sec:pruefung-isolation}). Seit der virtuellen Uhr aus
+\autoref{sec:kompatibilitaetsschicht} braucht er eine Zeitquelle außerhalb der Sandbox. Diese erreicht ein Skript nur über die Regeln aus
 \autoref{sec:faehigkeitsmodell}, doch jedes freigegebene Ziel kann Zeitstempel liefern, mindestens das eigene System
 mit seinem \texttt{Date}-Header auf die Sekunde. Eine Begrenzung der Anfragen je Zeit ist nicht vorgesehen.
 
-Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht den zwischen Pods. Ein Lauf
-mit einem Slot unter dem Lastprofil, am 30.\ Oktober, beziffert den Preis mit 64\,\% mehr gleichzeitigen Worker-Pods,
-52\,\% mehr Speicher und 28\,\% mehr \ac{CPU} (\autoref{tab:ein-slot}). Der Pool deckte dann 40 statt 160
-gleichzeitige Ausführungen. Weil die Einstellung beide Profile traf, ist das die Obergrenze für das Agentenprofil. Der
-Entwurf behält mehrere Slots. Ob ein Slot im Agentenprofil diesen Preis wert ist und ob die Anfragen je Zeit zu begrenzen
+Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber einen Kanal zwischen Pods auf demselben Knoten. Dafür braucht
+das Modell mehr Pods, Speicher und \ac{CPU} (\autoref{sec:durchsatz}), und der Pool deckt nur noch 40 statt 160
+gleichzeitige Ausführungen. Der Entwurf behält deshalb mehrere Slots. Ob ein Slot im Agentenprofil diesen Preis wert ist und ob die Anfragen je Zeit zu begrenzen
 sind, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor.
 
 Eine vierte Einschränkung betrifft die Zugangsdaten und damit M6. Zunächst trugen alle Worker-Pods dieselben
