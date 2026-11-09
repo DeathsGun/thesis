@@ -254,8 +254,8 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 \subsubsection{A2, Sprachebene: geteilte Laufzeit im selben Prozess}
 
 Der zweite Weg greift die Grenze innerhalb eines Prozesses an, die nach \autoref{sec:grundlagen:isolation} Angriffe
-unterhalb der Softwareebene nicht abfängt. Dass das auf einer produktiven Plattform mit V8 Isolates gelingt, zeigt ein noch nicht begutachteter
-Preprint. Über einen entfernten Timer ließ sich aus einem ko-lokierten Cloudflare Worker ein
+unterhalb der Softwareebene nicht abfängt. Cloudflare hat einen solchen Angriff auf der eigenen produktiven Plattform
+mit V8 Isolates selbst vorgeführt. Über einen entfernten Timer ließ sich aus einem ko-lokierten Worker ein
 \ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
 von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
 demselben Grund die Trennung von Origins im gemeinsamen Prozess aufgegeben
