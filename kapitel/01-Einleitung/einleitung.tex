@@ -66,53 +66,12 @@ innerhalb des Mandanten.
 Gesucht ist deshalb ein Modell, das schneller startet und zugleich jede Ausführung für sich
 isoliert.
 
-\subsection{Verwandte Arbeiten und Forschungsfrage}
-\label{sec:einleitung:verwandt}
+\subsection{Forschungslücke und Forschungsfrage}
+\label{sec:einleitung:forschungsfrage}
 
-Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die Anforderungen des eigenen
-Betriebs begründet, etwa Amazon Web Services mit Firecracker \autocite[S.~419]{agache_firecracker_2020} oder Cloudflare
-mit dem Isolationsmodell der Workers-Plattform \autocites{bloom_cloud_2018}{cloudflare_security_2026}. Daneben stehen
-Forschungsprototypen, die je einen Teil des Problems bearbeiten. \autoref{tab:verwandt} ordnet die nächsten Arbeiten
-nach ihrer Isolationseinheit und nennt ihren Schwerpunkt und ihre Grenze für das hier gestellte Problem.
-
-\begin{table}[H]
-  \caption{Verwandte Arbeiten nach Isolationseinheit}
-  \label{tab:verwandt}
-  \footnotesize
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.21\textwidth} >{\RaggedRight\arraybackslash}p{0.30\textwidth} >{\RaggedRight\arraybackslash}X@{}}
-    \hline
-    Arbeit & Isolationseinheit & Schwerpunkt und Grenze \\
-    \hline
-    Firecracker \autocite[S.~419]{agache_firecracker_2020} & MicroVM mit eigenem Kernel & stärkste Grenze, braucht
-      Hardwarevirtualisierung (\autoref{sec:randbedingungen}) \\
-    \textcite[S.~645]{boucher_putting_2018} & Sprachgrenze je Funktion im geteilten Prozess & misst die Startkosten der
-      Sprachgrenze \\
-    Faasm \autocite[S.~419]{shillaker_faasm_2020}, \textcite[S.~25]{mainas_sandboxing_2024} & WebAssembly je Funktion &
-      Bewertung in
-      \autoref{sec:wasm-zurueckgestellt} \\
-    SAND \autocite[S.~923]{akkus_sand_2018} & Container je Anwendung, Prozess je Funktion & trennt Anwendungen, nicht
-      Mandanten \\
-    Faastlane \autocite[S.~805]{kotni_faastlane_2021} & Threads eines Prozesses je Workflow & Ziel ist die
-      Beschleunigung von Workflows \\
-    Groundhog \autocite[S.~1]{alzayat_groundhog_2023} & Container, Snapshot zwischen Aufrufen & Zustandsfreiheit durch
-      Zurücksetzen, eine Ausführung je Container \\
-    Photons, Catalyzer \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020} & Laufzeit je
-      Funktion & Ziel sind Speicherbedarf und Kaltstart \\
-    \textcite[S.~1]{lin_mitigating_2019}, Agent Sandbox \autocite{kuo_running_2026} & Pool vorgehaltener Pods &
-      Ziel ist der Kaltstart \\
-    Cloudflare Workers \autocites{cloudflare_security_2026}{cloudflare_worker_2026} & V8-Isolate je Worker, für
-      generierten Code je Ausführung & eigene Plattform, nicht in
-      Kubernetes \\
-    \texttt{isolated-vm} in Produkten \autocites{activepieces_sandboxing_2026}{tanstack_code_2026} & Isolate je
-      Aufruf in einem Node.js-Host & Bewertung in
-      \autoref{sec:ausschluesse} \\
-    IsolateGPT \autocite[S.~1]{wu_isolategpt_2025}, AgentBay \autocite[S.~1]{piao_agentbay_2025} & Anwendungen eines
-      Agentensystems, Sandbox-Dienst & Schutzziel aus Sicht des Agenten, ohne Mandanten einer Plattform \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-Für sich ist keiner dieser Bausteine neu. Nicht gefunden wurde ihre Verbindung unter drei Randbedingungen zugleich:
+Die Mechanismen, aus denen ein solches Modell bestehen kann, sind für sich bekannt. Anbieter serverloser
+Plattformen und Forschungsprototypen setzen sie jeweils für einen Teil des Problems ein
+(\autoref{sec:grundlagen:stand}). Nicht gefunden wurde ihre Verbindung unter drei Randbedingungen zugleich:
 ein Kubernetes-Cluster ohne Hypervisor, eine Grenze je Ausführung, die auch zur Laufzeit erzeugten Code von anderen
 Ausführungen und Mandanten trennt, und eine Messung gegen einen produktiven Ausgangszustand auf demselben Cluster. Der
 Beitrag der Arbeit liegt in dieser Verbindung und in der Messung, nicht in einem neuen Mechanismus.
@@ -226,7 +185,7 @@ Pilotierung ist (\autoref{sec:diffusion:prinzipien}).
 \subsection{Aufbau der Arbeit}
 \label{sec:einleitung:aufbau}
 
-Die Kapitel folgen den vier Phasen. \autoref{sec:grundlagen} erklärt die Begriffe, \autoref{sec:bedrohungsmodell} bildet
+Die Kapitel folgen den vier Phasen. \autoref{sec:grundlagen} erklärt die Begriffe und ordnet die verwandten Arbeiten ein, \autoref{sec:bedrohungsmodell} bildet
 die Analysephase und beantwortet U1 mit dem Kriterienkatalog aus Ausgangslage, Angreifermodell und Skriptbestand,
 \autoref{sec:Entwurf} ist der Entwurf und beantwortet U2. \autoref{sec:Evaluation} prüft das Artefakt gegen den Katalog
 und den gemessenen Ausgangszustand, U3 über die Prüffälle, U4 über die Lastläufe. \autoref{sec:Diffusion} überträgt die Ergebnisse (Diffusion nach \textcite{osterle_memorandum_2010}), beantwortet
