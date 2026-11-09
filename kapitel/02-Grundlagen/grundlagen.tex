@@ -13,28 +13,28 @@ diesen Kern aber mit allen anderen Containern desselben Hosts
 Prozessliste, und cgroups begrenzen seinen Anteil an Speicher und Prozessor
 \autocite[S.~6--7]{souppaya_application_2017}. Ein seccomp-Profil legt fest, welche Systemaufrufe der Prozess absetzen
 darf \autocite[S.~25]{souppaya_application_2017}. In Kubernetes ist der \emph{Pod} die kleinste Einheit, die sich
-ausbringen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen und gemeinsam auf
-einen Knoten geplant werden \autocite{the_kubernetes_authors_pods_2026}. Limits für Speicher und Prozessor vergibt
+deployen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen und gemeinsam auf
+einem Knoten laufen \autocite{the_kubernetes_authors_pods_2026}. Limits für Speicher und Prozessor vergibt
 Kubernetes je Container \autocite{the_kubernetes_authors_resource_2026}. Beim Update eines Knotens nimmt die Plattform
 ihn aus dem Betrieb. Ein \emph{Drain} beendet die Pods des Knotens geordnet, und sie werden auf anderen Knoten neu
 angelegt \autocite{the_kubernetes_authors_safely_2026}.
 
 \emph{gVisor} schiebt zwischen Container und Host-Kernel eine weitere Schicht. Sein Kernstück, der Sentry, fängt die
-Systemaufrufe der Anwendung ab und beantwortet sie selbst, statt sie an den Host-Kernel durchzureichen. Die Laufzeit
-\texttt{runsc} setzt die Spezifikation der Open Container Initiative um und lässt sich als Runtime-Klasse in
+Systemaufrufe der Anwendung ab und bearbeitet sie selbst, statt sie an den Host-Kernel durchzureichen. Die Laufzeit
+\texttt{runsc} setzt die Spezifikation der Open Container Initiative um und lässt sich als RuntimeClass in
 Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}. Weil der Sentry im User Space läuft und nur eine
-verkleinerte Oberfläche des Host-Kernels nutzt \autocite{the_gvisor_authors_security_2026}, gilt gVisor als
+verkleinerte Angriffsfläche des Host-Kernels nutzt \autocite{the_gvisor_authors_security_2026}, gilt gVisor als
 User-Space-Kernel, der Preis sind langsamere Systemaufrufe \autocite[S.~3]{young_true_2019}. Welche Teile eines
 Systems eine solche Grenze tragen, benennt die \ac{TCB}. Sie ist die Gesamtheit der Schutzmechanismen, deren
 Zusammenwirken eine Sicherheitsrichtlinie durchsetzt \autocite[S.~112]{dod_trusted_1985}. Ein Fehler in einer dieser
 Komponenten bricht die Grenze. In der Fallstudie gehört der Sentry dazu, weil er die Systemaufrufe des Gastcodes
-beantwortet.
+bearbeitet.
 
 Die stärkste der hier betrachteten äußeren Grenzen zieht ein Hypervisor. Eine microVM wie Firecracker gibt jeder Funktion einen eigenen
 Gastkernel und beschränkt die Schnittstelle zum Host auf wenige virtuelle Geräte
 \autocite[S.~420]{agache_firecracker_2020}. Kata Containers startet Kubernetes-Pods in solchen virtuellen Maschinen
 \autocite{the_kata_containers_authors_hypervisors_2026}. Beides setzt \ac{KVM} voraus, die Virtualisierungsschnittstelle
-des Linux-Kerns, die der Host als Gerät \texttt{/dev/kvm} bereitstellt \autocite{the_firecracker_authors_getting_2026}.
+des Linux-Kernels, die der Host als Gerät \texttt{/dev/kvm} bereitstellt \autocite{the_firecracker_authors_getting_2026}.
 Ob die Zielplattform sie bietet, klärt \autoref{sec:randbedingungen}.
 
 Ein \emph{V8-Isolate} ist eine Instanz der JavaScript-Engine V8 mit eigenem Heap. Innerhalb eines
@@ -53,13 +53,13 @@ und dem JavaScript-Code, der sie dem Skript in der gewohnten Form anbietet.
 
 Eine sprachbasierte Grenze hält, was die Engine prüft, nicht aber, was die Hardware preisgibt. Ein \emph{Seitenkanal}
 verrät Daten über ein Merkmal, das nicht als Ausgabe gedacht ist, etwa über die Dauer eines Speicherzugriffs. Spectre
-nutzt dafür die spekulative Ausführung des Prozessors und liest so Speicher, den die Sprachgrenze schützt
+nutzt dafür die spekulative Ausführung des Prozessors und liest so Speicher, den die sprachbasierte Grenze schützt
 \autocite[S.~1]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Origins im selben Prozess aufgegeben und
 durch eine Prozessgrenze ersetzt \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Ein
 \emph{verdeckter Kanal} ist ein Übertragungsweg, über den ein Prozess Informationen entgegen der Sicherheitsrichtlinie
 weitergibt \autocite[S.~107]{dod_trusted_1985}, etwa indem ein Sender den Prozessor belastet und ein Empfänger seine
-eigene Laufzeit misst. Beides setzt eine Uhr voraus, die fein genug auflöst. Eine Uhr außerhalb der Sandbox leistet
-das ebenso wie eine im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}. gVisor schützt nach eigener
+eigene Laufzeit misst. Beides setzt einen Timer voraus, der fein genug auflöst. Ein Timer außerhalb der Sandbox leistet
+das ebenso wie einer im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}. gVisor schützt nach eigener
 Darstellung nicht vor hardwareseitigen Seitenkanälen \autocite{the_gvisor_authors_security_2026}.
 
 \subsection{Bausteine der Ausführung}
@@ -73,10 +73,10 @@ dieses Verhalten, wie \autoref{sec:systemkontext} zeigt.
 
 Ein \emph{Kaltstart} ist die Verzögerung, die eine Anfrage erfährt, wenn keine laufende Instanz sie
 bedienen kann und die Plattform erst eine bereitstellen muss
-\autocite[S.~1]{lin_mitigating_2019}. In der Fallstudie umfasst sie das Anlegen und Planen des
+\autocite[S.~1]{lin_mitigating_2019}. In der Fallstudie umfasst sie das Anlegen und Scheduling des
 Pods, den Start der Laufzeitumgebung und das Laden des Codes. Eine Anfrage, die auf eine bereits
 laufende Instanz trifft, gilt als \emph{warm}. Drei Gegenmittel sind in der Literatur
-beschrieben: ein Vorrat vorgehaltener Instanzen, der den Start vom Anfragepfad nimmt
+beschrieben: ein Pool vorgehaltener Instanzen, der den Start vom Anfragepfad nimmt
 \autocite[S.~1]{lin_mitigating_2019}, vorinitialisierte Laufzeitumgebungen, aus denen neue Instanzen
 entstehen \autocite[S.~57]{oakes_sock_2018}, und Snapshots initialisierter Instanzen, aus denen ein Start
 schneller hervorgeht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}.
@@ -132,8 +132,8 @@ nach ihrer Isolationseinheit und nennt ihren Schwerpunkt und ihre Grenze für da
     \hline
     Firecracker \autocite[S.~419]{agache_firecracker_2020} & MicroVM mit eigenem Kernel & stärkste Grenze, braucht
       Hardwarevirtualisierung (\autoref{sec:randbedingungen}) \\
-    \textcite[S.~645]{boucher_putting_2018} & Sprachgrenze je Funktion im geteilten Prozess & misst die Startkosten der
-      Sprachgrenze \\
+    \textcite[S.~645]{boucher_putting_2018} & Sprachbasierte Grenze je Funktion im geteilten Prozess & misst die Startkosten der
+      sprachbasierten Grenze \\
     Faasm \autocite[S.~419]{shillaker_faasm_2020}, \textcite[S.~25]{mainas_sandboxing_2024} & WebAssembly je Funktion &
       Bewertung in
       \autoref{sec:wasm-zurueckgestellt} \\

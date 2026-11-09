@@ -26,13 +26,13 @@
   description={Werkzeug, das Ressourcenverbrauch und Leistungsdaten laufender Container erfasst \autocite{googlecadvisor_contributors_cadvisor_2026}. Prometheus sammelt seine Werte (\autoref{sec:messaufbau}).}}
 
 \newglossaryentry{cgroup}{name={cgroup},sort={cgroup},
-  description={Mechanismus des Linux-Kerns, der Prozesse zu Gruppen zusammenfasst und ihren Verbrauch an Speicher, Prozessor und Ein- und Ausgabe begrenzt \autocite{the_kernel_development_community_control_2026}.}}
+  description={Mechanismus des Linux-Kernels, der Prozesse zu Gruppen zusammenfasst und ihren Verbrauch an Speicher, Prozessor und Ein- und Ausgabe begrenzt \autocite{the_kernel_development_community_control_2026}.}}
 
 \newglossaryentry{consumer}{name={Consumer},sort={Consumer},
   description={Serverseitige Sicht auf einen JetStream-Stream, die festhält, wie weit ein Client ihn gelesen hat \autocite{the_nats_authors_consumers_2026}. Siehe auch Pull-Consumer.}}
 
 \newglossaryentry{container}{name={Container},sort={Container},
-  description={Prozess, den der Betriebssystemkern über Namespaces, cgroups und seccomp abgrenzt, der sich den Kern aber mit allen anderen Containern des Hosts teilt \autocite[S.~6--7, 18]{souppaya_application_2017}.}}
+  description={Prozess, den der Betriebssystemkern über Namespaces, cgroups und seccomp abgrenzt, der sich den Kernel aber mit allen anderen Containern des Hosts teilt \autocite[S.~6--7, 18]{souppaya_application_2017}.}}
 
 \newglossaryentry{contenthash}{name={Content-Hash},sort={Content-Hash},
   description={SHA-256 über die komprimierten Bytes eines Bundles. Er kommt mit dem Aufruf, dient als Schlüssel des Caches im Worker und als Prüfwert beim Laden (\autoref{sec:zustellung}).}}
@@ -59,10 +59,10 @@
   description={Festlegung, welche Bindings ein Skript je Profil erhält und wohin es damit sprechen darf. Die Menge der Bindings ist die Grenze selbst, der Egress-Proxy legt die Ziele fest (\autoref{sec:faehigkeitsmodell}).}}
 
 \newglossaryentry{garbagecollector}{name={Garbage Collector},sort={Garbage Collector},
-  description={Speicherbereinigung der Engine, die nicht mehr erreichbare Objekte freigibt. In V8 ist das der Sammler Orinoco \autocite{marshall_trash_2019}.}}
+  description={Speicherbereinigung der Engine, die nicht mehr erreichbare Objekte freigibt. In V8 ist das der Garbage Collector Orinoco \autocite{marshall_trash_2019}.}}
 
 \newglossaryentry{gvisor}{name={gVisor},sort={gVisor},
-  description={Sandbox-Laufzeit, die zwischen Container und Host-Kernel eine weitere Schicht schiebt. Der Sentry beantwortet die Systemaufrufe der Anwendung im User Space, die Laufzeit \texttt{runsc} lässt sich als Runtime-Klasse in Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}.}}
+  description={Sandbox-Laufzeit, die zwischen Container und Host-Kernel eine weitere Schicht schiebt. Der Sentry bearbeitet die Systemaufrufe der Anwendung im User Space, die Laufzeit \texttt{runsc} lässt sich als RuntimeClass in Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}.}}
 
 \newglossaryentry{hardfloor}{name={Hard Floor},sort={Hard Floor},
   description={Die 713 Mandanten des Bestands, deren Skripte eine Schnittstelle brauchen, die eine sprachbasierte Laufzeit ohne vermitteltes Binding nicht bietet (\autoref{sec:bestandsanalyse}).}}
@@ -74,7 +74,7 @@
   description={Software, die mehrere virtuelle Maschinen mit je eigenem Gastkernel auf einem Host betreibt. Eine microVM wie Firecracker beschränkt die Schnittstelle zum Host dabei auf wenige virtuelle Geräte \autocite[S.~420]{agache_firecracker_2020}.}}
 
 \newglossaryentry{informer}{name={Informer},sort={Informer},
-  description={Baustein der Kubernetes-Client-Bibliothek client-go, der Objekte über die Watch-Schnittstelle beobachtet und einen lokalen Spiegel mit Änderungsmeldungen bereithält \autocite{the_kubernetes_authors_cache_2026}.}}
+  description={Baustein der Kubernetes-Client-Bibliothek client-go, der Objekte über die Watch-Schnittstelle beobachtet und einen lokalen Cache der Objekte bereithält und jede Änderung meldet \autocite{the_kubernetes_authors_cache_2026}.}}
 
 \newglossaryentry{isolate}{name={Isolate},sort={Isolate},
   description={Instanz der JavaScript-Engine V8 mit eigenem Heap. Ein Context führt darin voneinander unabhängigen Code aus \autocite{the_v8_authors_getting_2026}. Die Grenze zwischen Isolates verläuft innerhalb eines Prozesses.}}
@@ -104,7 +104,7 @@
   description={Eigenschaft, dass eine Ausführung Daten, Code und Verarbeitung anderer Mandanten weder einsehen noch verändern noch stören kann (\autoref{sec:grundlagen:eigenschaften}).}}
 
 \newglossaryentry{namespacelinux}{name={Namespace (Linux)},sort={Namespace Linux},
-  description={Mechanismus des Linux-Kerns, der einem Prozess eine eigene Sicht auf Dateisystem, Netz und Prozessliste gibt \autocite[S.~6]{souppaya_application_2017}.}}
+  description={Mechanismus des Linux-Kernels, der einem Prozess eine eigene Sicht auf Dateisystem, Netz und Prozessliste gibt \autocite[S.~6]{souppaya_application_2017}.}}
 
 \newglossaryentry{namespacek8s}{name={Namespace (Kubernetes)},sort={Namespace Kubernetes},
   description={Logischer Bereich, der die Objekte eines Clusters in Gruppen teilt, etwa je Team oder Umgebung \autocite{the_kubernetes_authors_namespaces_2026}.}}
@@ -125,7 +125,7 @@
   description={Wert, unter dem ein gegebener Anteil aller Messwerte liegt. P95 unterschreiten 95 Prozent der Aufrufe. Latenzen sollen über Perzentile und nicht allein über Mittelwerte berichtet werden \autocite[S.~6]{hoefler_scientific_2015}.}}
 
 \newglossaryentry{pod}{name={Pod},sort={Pod},
-  description={Kleinste Einheit, die sich in Kubernetes ausbringen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen \autocite{the_kubernetes_authors_pods_2026}.}}
+  description={Kleinste Einheit, die sich in Kubernetes deployen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen \autocite{the_kubernetes_authors_pods_2026}.}}
 
 \newglossaryentry{pool}{name={Pool},sort={Pool},
   description={Vorrat frischer Worker-Pods, den die Control Plane außerhalb des Anfragepfads nachfüllt, damit ein Mandant beim Erstkontakt keinen Pod-Start abwartet (\autoref{sec:zuteilung}). Das Vorgehen folgt \textcite[S.~1]{lin_mitigating_2019}.}}
@@ -145,14 +145,14 @@
 \newglossaryentry{redis}{name={Redis},sort={Redis},
   description={Datenstrukturspeicher im Arbeitsspeicher, der als Schlüssel-Wert-Speicher dient \autocite{redis_docs_2026}. Zustandsspeicher der Control Plane (\autoref{sec:bausteine}).}}
 
-\newglossaryentry{runtimeklasse}{name={Runtime-Klasse},sort={Runtime-Klasse},
+\newglossaryentry{runtimeklasse}{name={RuntimeClass},sort={RuntimeClass},
   description={Kubernetes-Objekt, das je Pod die Container-Laufzeit auswählt, etwa \texttt{runsc} für gVisor \autocite{the_kubernetes_authors_runtime_2026}.}}
 
 \newglossaryentry{sandbox}{name={Sandbox (Container)},sort={Sandbox},
   description={Der Container des Worker-Pods, der den Gastcode ausführt. Er hält keine Zugangsdaten und erreicht NATS nur über den Transport (\autoref{sec:bausteine}).}}
 
 \newglossaryentry{seccomp}{name={seccomp},sort={seccomp},
-  description={Mechanismus des Linux-Kerns, der über ein Profil festlegt, welche Systemaufrufe ein Prozess absetzen darf \autocite[S.~25]{souppaya_application_2017}.}}
+  description={Mechanismus des Linux-Kernels, der über ein Profil festlegt, welche Systemaufrufe ein Prozess absetzen darf \autocite[S.~25]{souppaya_application_2017}.}}
 
 \newglossaryentry{seitenkanal}{name={Seitenkanal},sort={Seitenkanal},
   description={Weg, über den Daten durch ein Merkmal abfließen, das nicht als Ausgabe gedacht ist, etwa die Dauer eines Speicherzugriffs. Spectre nutzt dafür die spekulative Ausführung des Prozessors \autocite[S.~1]{kocher_spectre_2019}.}}
@@ -167,7 +167,7 @@
   description={Bestehender Dienst der Fallstudie, der die hinterlegten Skripte verwaltet und eine Skriptkennung in Bundle, Variablen und Log-Ziel auflöst. Das Modell nutzt ihn unverändert mit (\autoref{sec:bausteine}).}}
 
 \newglossaryentry{slot}{name={Slot},sort={Slot},
-  description={Platz für eine gleichzeitige Ausführung in einem Worker-Pod. Ein Pod hält bis zu vier, jeder Slot treibt genau ein Isolate (\autoref{sec:ebenen}).}}
+  description={Platz für eine gleichzeitige Ausführung in einem Worker-Pod. Ein Pod hält bis zu vier, jeder Slot führt genau ein Isolate aus (\autoref{sec:ebenen}).}}
 
 \newglossaryentry{snapshot}{name={Snapshot},sort={Snapshot},
   description={Abbild einer initialisierten Laufzeitumgebung, aus dem eine neue Instanz schneller entsteht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}. Die Isolates des Modells entstehen aus einem solchen Abbild.}}

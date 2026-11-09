@@ -30,7 +30,7 @@ aus dem Interaktionsmuster eines Agenten hergeleitet und als Annahme gekennzeich
       auf und prüft die Berechtigung des Aufrufers \\
     Execution Service & Knative-Service je Mandant, der Runner-Pods anlegt und auf null skaliert \\
     Runner & Node.js-Prozess im Pod des Execution Service, der das Skript ausführt \\
-    Queue-Proxy & Begleitcontainer, den Knative jedem Runner-Pod beistellt und über den die Anfragen den Runner
+    Queue-Proxy & Sidecar-Container, den Knative jedem Runner-Pod hinzufügt und über den die Anfragen den Runner
       erreichen \\
     Objektspeicher & hält Bundles und große Bodies, abrufbar über vorsignierte \acsp{URL} \\
     NATS JetStream & Messaging-System der Plattform für Kommandos und Events (\autoref{sec:grundlagen:bausteine}) \\
@@ -40,11 +40,11 @@ aus dem Interaktionsmuster eines Agenten hergeleitet und als Annahme gekennzeich
 \end{table}
 
 Zwei Ressourcen teilen sich die Ausführungen heute, und an beiden muss eine Mandantengrenze
-verlaufen. Die erste ist der Host-Kernel. Der Execution Service schaltet seinen Runner-Pods
-dafür eine gVisor-Runtime-Klasse vor und ergänzt sie um einen gehärteten Sicherheitskontext, bei
+verlaufen. Die erste ist der Host-Kernel. Der Execution Service weist seinen Runner-Pods
+dafür die RuntimeClass für gVisor zu und ergänzt sie um einen gehärteten Sicherheitskontext, bei
 dem Privilege Escalation unterbunden ist, sämtliche Capabilities entzogen sind, das
-seccomp-Standardprofil greift und kein Service-Account-Token eingebunden wird. Der rohe Zugriff auf die Systemaufrufe des
-Hosts, den generische Containerisierung offenlegt \autocite[S.~17--18]{souppaya_application_2017}, wird
+seccomp-Standardprofil greift und kein Service-Account-Token eingebunden wird. Der direkte Zugriff auf die Systemaufrufe des
+Hosts, den ein gewöhnlicher Container gewährt \autocite[S.~17--18]{souppaya_application_2017}, wird
 dadurch verkleinert, aber nicht beseitigt.
 
 Welches Skript eine Instanz ausführt, entscheidet sich erst beim Aufruf. Das Skript wird je
@@ -56,7 +56,7 @@ auch das Übersetzen bei jeder Ausführung erneut anfällt.
 Die zweite geteilte Ressource liegt innerhalb dieser Sandbox. Jeder Mandant erhält einen eigenen
 Execution Service, sodass Instanzen mandantenübergreifend nicht wiederverwendet werden. Der
 Skriptcode wird unmittelbar in den laufenden Node.js-Prozess geladen, ohne einen eigenen
-Unterprozess je Ausführung, und es ist höchstens eine Ausführung zur Zeit vorgesehen. Bricht ein
+Unterprozess je Ausführung, und es ist jeweils höchstens eine Ausführung vorgesehen. Bricht ein
 Client eine Anfrage ab, gilt sie für Knative als beendet, und weitere Anfragen erreichen den Pod,
 obwohl die Ausführung noch läuft. Aufeinanderfolgende
 Ausführungen desselben Mandanten teilen sich damit den Prozessspeicher. Das temporäre Verzeichnis
@@ -79,8 +79,8 @@ gemeinsame Vertrauensdomäne. Übernommener Zustand stört dort die folgenden Au
 überschreitet aber keine Vertrauensgrenze, weshalb Zustandsfreiheit hier eine Anforderung an die
 Zuverlässigkeit ist. Im Agentenprofil gilt das nicht mehr. Zwei aufeinanderfolgende Ausführungen
 desselben Mandanten entstehen aus verschiedenen Kontexten und können nach V2 von verschiedenen
-Dritten beeinflusst sein, sind einander also nicht wechselseitig vertrauenswürdig. Der
-Zustandsübertrag wird damit auch innerhalb eines Mandanten zur Vertraulichkeitsverletzung. Die
+Dritten beeinflusst sein, sind einander also nicht wechselseitig vertrauenswürdig. Übernommener
+Zustand wird damit auch innerhalb eines Mandanten zur Vertraulichkeitsverletzung. Die
 Vertrauenseinheit verschiebt sich vom Mandanten auf die einzelne Ausführung, und die
 Isolationsgrenze muss dieser Verschiebung folgen.
 
@@ -103,9 +103,9 @@ Die Vertrauensannahmen lauten wie folgt.
     empirisch belegt \autocite[S.~106191]{guo_redcode_2024}.
 
   \item[V3: Die Plattform ist vertrauenswürdig.] Host-Kernel, gVisor, Container-Orchestrierung,
-    Laufzeitbinärdatei und Execution Service gelten als korrekt und nicht kompromittiert.
+    Runtime-Binary und Execution Service gelten als korrekt und nicht kompromittiert.
     Angriffe, die diese Bestandteile auf anderem Weg unterwandern, etwa über die
-    Kubernetes-Steuerungsebene, liegen außerhalb der Betrachtung. Ein neues Ausführungsmodell fügt dieser Menge eigene
+    Control Plane von Kubernetes, liegen außerhalb der Betrachtung. Ein neues Ausführungsmodell fügt dieser Menge eigene
     Dienste hinzu, die damit ebenfalls vertrauenswürdig sein müssen (\autoref{tab:tcb}). Das codeerzeugende Modell
     gehört nach V5 nicht dazu.
 
@@ -115,7 +115,7 @@ Die Vertrauensannahmen lauten wie folgt.
   \item[V5: Das codeerzeugende Modell liegt außerhalb der Kontrolle der Plattform.] Der Mandant
     kann ein eigenes Modell anbinden und kontrolliert dann Gewichte, System prompt und
     vorgelagerte Prüfungen vollständig. Aussagen über das Alignment dieses Modells, über seine
-    Widerstandsfähigkeit gegen die in V2 beschriebene Beeinflussung oder über die Einhaltung
+    Widerstandsfähigkeit gegen die in V2 beschriebene Prompt Injection oder über die Einhaltung
     einer vorgegebenen Schnittstelle sind deshalb nicht möglich.
 \end{description}
 
@@ -141,7 +141,7 @@ Ausgewertet wurden 1.718 Mandanten mit 14.575 Skriptversionen, die sich auf 8.31
 zuverlässig bestimmen lassen (269 Inhalte, 519 Skriptversionen, 25 Mandanten), eine Gegenrechnung ohne den Filter
 verschiebt die Kennzahlen um gut einen Prozentpunkt. Jedes Skript wird anhand seiner Importe klassifiziert, wobei die
 härteste Einschränkung zählt, und ein Mandant erhält die Einstufung seines härtesten Skripts. Die Analyse ist
-statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündeltes Kompilat, 27 Versionen bei 24 Mandanten sind
+statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündelten Code, 27 Versionen bei 24 Mandanten sind
 Parse-Fehler und nicht einstufbar. Der Scanner sieht nur, welche Pakete ein Skript importiert, nicht welche
 Node-Module diese Pakete selbst laden. Ein Skript, das nur \texttt{axios} importiert, braucht über das Paket trotzdem
 \texttt{http} und \texttt{https}. Deshalb wurde für 27 häufig genutzte der 203 npm-Pakete der ausgelieferte Quelltext
@@ -152,7 +152,7 @@ gelesen. 87,9\,\% der Mandanten mit npm-Paketen verwenden mindestens eines davon
 713 Mandanten (41,5\,\%) benötigen eine Schnittstelle, die eine sprachbasierte Laufzeit ohne
 vermitteltes Binding nicht bereitstellt. Diese Gruppe wird im Folgenden als Hard Floor
 bezeichnet. Werden die Mandanten, deren Pakete vollständig außerhalb der geprüften Menge liegen,
-pessimistisch als nicht lauffähig gewertet, ergibt sich ein Viabilitätsintervall von 39,0\,\% bis
+pessimistisch als nicht lauffähig gewertet, ergibt sich eine Spanne von 39,0\,\% bis
 42,9\,\%. \autoref{fig:hard-floor-einordnung} zeigt den Anteil am Bestand und die beiden Paketgruppen, die ihn tragen.
 
 \begin{figure}[H]
@@ -173,7 +173,7 @@ pessimistisch als nicht lauffähig gewertet, ergibt sich ein Viabilitätsinterva
 
 Die blockierenden Pakete zerfallen in zwei Gruppen mit deutlich verschiedenem Bedarf. Die eine benötigt \ac{HTTP}
 direkt und umgeht ein bereitgestelltes \texttt{fetch}, 14 Pakete bei 629 Mandanten, am häufigsten \texttt{axios} mit
-579. Die andere benötigt einen rohen \ac{TCP}- oder \ac{TLS}-Socket, 8 Pakete bei 63 Mandanten, am häufigsten
+579. Die andere benötigt einen eigenen \ac{TCP}- oder \ac{TLS}-Socket, 8 Pakete bei 63 Mandanten, am häufigsten
 \texttt{mssql} mit 46. 44 Mandanten gehören zu beiden Gruppen. Die Vereinigung umfasst 648 der 713 blockierten
 Mandanten, also 90,9\,\%. Bei ihnen fehlt nach der Paketanalyse allein ein Netzwerk-Binding. Die übrigen 65 brauchen
 nach der Paketanalyse Dateisystem, Betriebssystemmodule oder Prozesse (\autoref{sec:pruefung-kompatibilitaet}). Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
@@ -192,10 +192,10 @@ Abhängigkeit von Node-Globals konzentriert sich auf zwei Namen: \texttt{process
 Mandanten (30,2\,\%) und \texttt{Buffer} bei 396 Mandanten (23,1\,\%). Danach fällt die Verbreitung
 um eine Größenordnung, \texttt{\_\_dirname} erreicht noch 20 Mandanten, jedes weitere Mitglied von
 \texttt{process} unter zehn. Beide häufigen Namen lassen sich in einer eingebetteten Engine
-nachbilden, ohne eine Umgebungsautorität freizugeben. Sie bestimmen den Umfang der
+nachbilden, ohne Ambient Authority freizugeben. Sie bestimmen den Umfang der
 Kompatibilitätsschicht in \autoref{sec:kompatibilitaetsschicht}, nicht ihre Machbarkeit. Die
 Erkennung ist eine Analyse freier Bezeichner und zählt einen Namen nur, wenn das Skript ihn
-nirgends selbst bindet. Sie untertreibt daher eher, als dass sie Abhängigkeiten erfindet.
+nirgends selbst bindet. Sie unterschätzt den Bedarf daher eher, als dass sie Abhängigkeiten erfindet.
 
 Ein zweiter Befund betrifft die Größe der gebündelten Artefakte. Ein Bundle ist die eine Datei, in die der Builder der
 Plattform ein Skript samt seiner npm-Pakete zusammenfasst, sodass zur Laufzeit nichts nachgeladen wird. Von den 14.575
@@ -255,7 +255,7 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 
 Der zweite Weg greift die Grenze innerhalb eines Prozesses an, die nach \autoref{sec:grundlagen:isolation} Angriffe
 unterhalb der Softwareebene nicht abfängt. Cloudflare hat einen solchen Angriff auf der eigenen produktiven Plattform
-mit V8 Isolates selbst vorgeführt. Über einen entfernten Timer ließ sich aus einem ko-lokierten Worker ein
+mit V8 Isolates selbst vorgeführt. Über einen Remote Timer ließ sich aus einem Worker auf demselben Server ein
 \ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
 von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
 demselben Grund die Trennung von Origins im gemeinsamen Prozess aufgegeben
@@ -265,8 +265,8 @@ Mandantengrenze.
 
 \subsubsection{A3, Infrastrukturebene: Sandbox-Laufzeit und Host-Kernel}
 
-Der dritte Weg zielt auf den Ausbruch aus der Ausführungsumgebung. Generische Containerisierung
-trägt diese Grenze nur eingeschränkt. Das \ac{NIST} führt den geteilten Kernel als eigene
+Der dritte Weg zielt auf den Ausbruch aus der Ausführungsumgebung. Ein gewöhnlicher Container
+hält diese Grenze nur eingeschränkt. Das \ac{NIST} führt den geteilten Kernel als eigene
 Angriffsfläche und hält fest, dass ein Container eine Sandbox nicht vollwertig ersetzt
 \autocite[S.~7, 18]{souppaya_application_2017}. Eine Untersuchung an neun öffentlichen Ausbruchs-Exploits
 zeigt, dass eine Einschränkung der Containerrechte über User Namespaces sieben davon abwehrt,
@@ -310,14 +310,14 @@ verletzt, ist keine Lösung.
          späteren zugänglich, auch nicht innerhalb eines Mandanten. Umfasst Prozessspeicher,
          globale Variablen, registrierte Callbacks, offene Verbindungen und Dateisystem. &
          A1, Verschiebung der Vertrauens\-einheit & Prüffälle T1 bis T6 \\[2pt]
-    M3 & \textbf{Keine größere Kernel-Oberfläche.} Die dem Gastcode zugängliche Oberfläche des
+    M3 & \textbf{Keine größere Angriffsfläche des Kernels.} Die dem Gastcode zugängliche Angriffsfläche des
          Host-Kernels wächst gegenüber dem Ausgangszustand nicht. &
          A3 & Konfigurations\-vergleich \\[2pt]
     M4 & \textbf{Vermittelter Zugriff.} Netz und Dateisystem ausschließlich über Bindings, die
          die Ausführungsumgebung vermittelt. Keine Beschränkung beruht auf Mitwirkung des
          Modells. & V5 & Prüffälle T7 bis T9 \\[2pt]
     M5 & \textbf{Verfügbarkeit bei Knotenupdates.} Die Zeit ohne Ausführungsfähigkeit während
-         eines rollierenden Knotenupdates überschreitet den festgelegten Wert nicht. &
+         eines Rolling Updates der Knoten überschreitet den festgelegten Wert nicht. &
          Betriebs\-anforderung, vier Updates je Jahr & Messung gegen den Ausgangszustand \\[2pt]
     M6 & \textbf{Begrenzte Rechte hinter der Grenze.} Erreicht Code nach einem Ausbruch Zugangsdaten innerhalb des Pods,
          berechtigen sie nur zu den Nachrichten des eigenen Mandanten. &
@@ -351,7 +351,7 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
          S1a mit Pod aus dem Pool, S1b bei leerem Pool & 0,30 \\
     S6 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
          Ausgangszustand & 0,25 \\
-    S2 & Warme Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
+    S2 & Warmstart-Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
     S3 & Speicherbedarf & Bedarf je Pod unter dem Lastprofil, Pool als Vorbehalt & 0,10 \\
     S7 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,10 \\

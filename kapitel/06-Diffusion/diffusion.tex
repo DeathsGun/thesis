@@ -35,15 +35,15 @@ liegt er auf dem Niveau des Ausgangszustands (\autoref{sec:kaltstart}). Dass ein
 wäre, ist nicht gemessen und bleibt eine Hypothese. Der Overhead im Lastprofil liegt im Median bei 139 bis 145 statt 300
 bis 312\,ms, im 99.\ Perzentil bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden, jeweils mit den Begleitdiensten
 (\autoref{sec:warm}). Unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis 34\,GiB, der Durchsatz liegt in einem
-Lauf bei 400 statt 200 Aufrufen je Sekunde (\autoref{sec:durchsatz}). Beim Knotenentzug bleibt die Lücke bei 0,2 bis 0,3
+Lauf bei 400 statt 200 Aufrufen je Sekunde (\autoref{sec:durchsatz}). Beim Drain eines Knotens bleibt die Lücke bei 0,2 bis 0,3
 statt 2,1 bis 2,7 Sekunden, ohne verlorene und ohne doppelte Ausführung (\autoref{sec:pruefung-m5}). Der Nutzwert liegt
 bei 4,25 bis 4,5 gegen 3,7, je nach Unter- oder Obergrenze des abgeleiteten S6 (\autoref{sec:nutzwert}). Für das
-Agentenprofil gibt es keinen Ausgangswert. Erstaufruf und warme Latenz liegen im Bereich des Webhook-Profils, Lastprofil,
+Agentenprofil gibt es keinen Ausgangswert. Erstaufruf und Warmstart-Latenz liegen im Bereich des Webhook-Profils, Lastprofil,
 Parallelität und Regelbedarf bleiben Annahmen (\autoref{sec:kaltstart}).
 
 Mandantenisolation ist damit für Vertraulichkeit und Integrität auf den geprüften Angriffswegen belegt, ohne Freiheit
 von Seitenkanälen (\autoref{sec:randbedingungen}). Offen sind der verdeckte Kanal zwischen gleichzeitigen Ausführungen,
-die Wiederholung einer Ausführung nach dem Tod ihrer Sandbox und die nicht begrenzte \ac{CPU}
+die Wiederholung einer Ausführung nach einem Absturz ihrer Sandbox und die nicht begrenzte \ac{CPU}
 (\autoref{sec:betriebsplanung}, \autoref{sec:ressourcenbegrenzung}). Die Verfügbarkeit zwischen Mandanten grenzt die Arbeit aus
 (\autoref{sec:systemkontext}), die Grenzen der Messung nennt \autoref{sec:messaufbau}.
 
@@ -61,12 +61,12 @@ dabei.
 \begin{description}
   \item[P1 Zwei Grenzen für zwei Schutzziele.] Ziel: Mandanten voneinander und aufeinanderfolgende
     Ausführungen voneinander trennen. Mechanismus: eine vom Kernel durchgesetzte Grenze je Mandant
-    und eine Sprachgrenze je Ausführung innerhalb davon. Kontext: fremder Code, dessen
+    und eine sprachbasierte Grenze je Ausführung innerhalb davon. Kontext: fremder Code, dessen
     Vertrauenseinheit die einzelne Ausführung ist. Beleg: Architekturprüfung für die äußere Grenze,
-    T1 bis T9 für die innere. Begründung: Die Sprachgrenze trägt keine Mandantentrennung (A2), die Kernelgrenze
+    T1 bis T9 für die innere. Begründung: Die sprachbasierte Grenze trägt keine Mandantentrennung (A2), die Kernelgrenze
     keine Zustandsfreiheit ohne einen Pod je Ausführung. Herkunft: zweistufige Trennung wie bei SAND
     \autocite[S.~923]{akkus_sand_2018} und Prozess je Origin in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
-    Sprachgrenze (\autoref{sec:betriebsplanung}).
+    sprachbasierten Grenze (\autoref{sec:betriebsplanung}).
   \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
     Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, deren Isolates aus einem
     Snapshot entstehen, dessen Nachfüllen nie auf dem Anfragepfad liegt. Kontext: die Größe des
@@ -100,11 +100,11 @@ dabei.
     Mechanismen der Engine, Heap-Limit, zählender Allokator und Watchdog, liefern die Zuordnung und
     einen abfangbaren Fehler. Die Grenze des Betriebssystems je Mandant liefert die Garantie.
     Kontext: Mechanismen der Engine wirken nur an aufgezählten Pfaden. Begründung: Die Engine kennt die
-    verursachende Ausführung, das cgroup erfasst auch Pfade, die niemand aufgezählt hat. Herkunft: Defense in Depth,
-    das cgroup des Kerns \autocite{the_kernel_development_community_control_2026} als zweite Ebene. Die \ac{CPU} begrenzt der Mechanismus
+    verursachende Ausführung, die cgroup erfasst auch Pfade, die niemand aufgezählt hat. Herkunft: Defense in Depth,
+    die cgroup des Kernels \autocite{the_kernel_development_community_control_2026} als zweite Ebene. Die \ac{CPU} begrenzt der Mechanismus
     nicht. Beleg: T6, in dem der
     Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt. Erschöpfen gleichzeitige
-    Ausführungen das überbuchte Pod-Limit, trifft das cgroup alle (\autoref{sec:ressourcenbegrenzung}).
+    Ausführungen das überbuchte Pod-Limit, trifft die cgroup alle (\autoref{sec:ressourcenbegrenzung}).
 \end{description}
 
 
@@ -132,7 +132,7 @@ dem bisherigen Betrieb. Vor der ersten Stufe sind die
 offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands, der Standardwert der
 Socket-Freischaltung und die Regeln, die das Agentenprofil erhält, das keinen Bestand hat, den sie brechen könnten. Hinzu kommen
 die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, denn M3
-gilt nur dort. Festzulegen ist außerdem, welches Zustellversprechen als Standard gilt
+gilt nur dort. Festzulegen ist außerdem, welche Zustellgarantie als Standard gilt
 (\autoref{sec:diffusion:ausblick}).
 
 \subsection{Ausblick}
@@ -148,8 +148,8 @@ Der zweite betrifft die Einbettung. Weil \texttt{deno\_core} als auslaufend gilt
 Aufwand zu prüfen, die rund 30 Quelldateien der Einbettungsschicht direkt auf \texttt{rusty\_v8} umzustellen. Event
 Loop, Modulauflösung und Ops müssten dann selbst entstehen und für M4 abgesichert werden.
 
-Der dritte betrifft das Zustellversprechen. Der Ausgangszustand stellt höchstens einmal zu, der Prototyp führt ein
-Skript nach dem Tod von Worker oder Sandbox ein zweites Mal aus (\autoref{sec:zuteilung}). Beides ließe sich je Mandant
+Der dritte betrifft die Zustellgarantie. Der Ausgangszustand stellt höchstens einmal zu, der Prototyp führt ein
+Skript nach einem Absturz von Worker oder Sandbox ein zweites Mal aus (\autoref{sec:zuteilung}). Beides ließe sich je Mandant
 oder je Skript anbieten, mit einer Startmarke je Nachricht für nicht idempotente Skripte. Welcher Standard gilt und ob
 die Startmarke den zusätzlichen Redis-Zugriff auf dem Anfragepfad rechtfertigt, ist mit Produkt und Mandanten zu
 entscheiden und danach zu messen.
@@ -166,6 +166,6 @@ Für die Fallstudie stehen zwei Schritte an. Der erste ist die stufenweise Einf�
 Pfad aus \autoref{sec:diffusion:prinzipien}, mit dem Knative-Service als Rückweg. Der zweite ist der Wechsel der Kunden
 der AWS-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen Knative-Service. Daten und Ausführung eines
 Mandanten, also Skripte, Versionen, Variablen und auslösende Ereignisse, wechseln deshalb in einem Schritt, und die
-AWS-native Variante bleibt der Rückweg, bis seine Stufe gehalten hat. Auf dem AWS-Cluster der \ac{DDP} muss vorher gVisor
+AWS-native Variante bleibt der Rückweg, bis seine Stufe stabil läuft. Auf dem AWS-Cluster der \ac{DDP} muss vorher gVisor
 bereitstehen, weil M3 nur damit gilt. Die Last dieser Kunden ist das Lastprofil der Evaluation, die Stufen prüfen damit
 den vorläufigen Wert für S4 (\autoref{sec:durchsatz}) im Betrieb nach.

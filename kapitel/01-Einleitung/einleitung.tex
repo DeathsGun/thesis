@@ -52,8 +52,8 @@ Aufruf bedient. Mandanten, deren Webhooks selten ausgelöst werden, zahlen diese
 jedem Aufruf. Unter Last kommt hinzu, dass ein Runner Aufrufe nacheinander abarbeitet. Beides
 hat zu Supportfällen und einem internen Störungsfall geführt
 \autocites{intern_supportfaelle_otc_2026}{intern_stoerungsfall_2026}, deren Kernaussagen \ref{anh:intern} wiedergibt, und war der Anlass für diese Arbeit. Der zweite Punkt ist
-der Betrieb. Jedes rollierende Update der Clusterknoten, im Jahr etwa vier \autocite{intern_ddp_updates_2026}, trifft die gerade
-warmen Runner, die sich nicht übergeben lassen, und die Scripting-Engine kann in dieser Zeit für
+der Betrieb. Jedes Rolling Update der Clusterknoten, im Jahr etwa vier \autocite{intern_ddp_updates_2026}, trifft die gerade
+warmen Runner, die sich nicht auf einen anderen Knoten verschieben lassen, und die Scripting-Engine kann in dieser Zeit für
 die betroffenen Mandanten nicht ausführungsfähig sein. Die geringe Wartbarkeit des heutigen Runners bleibt als Maßstab außen vor, weil sie sich nicht wie Startzeit und
 Verfügbarkeit messen lässt.
 
@@ -111,7 +111,7 @@ Die Oberfrage wird dazu über fünf Unterfragen bearbeitet.
     Isolation und der Zustandsfreiheit ein, wenn es mit Prüffällen konfrontiert wird, die aus
     dem Bedrohungsmodell abgeleitet sind?
 
-  \item[U4] \label{rq:u4} Welche Kaltstartlatenz, welche warme Latenz im 50., 90., 95. und 99. Perzentil (P50 bis P99), welchen Durchsatz und welchen Speicherbedarf je Instanz erreicht der
+  \item[U4] \label{rq:u4} Welche Kaltstartlatenz, welche Warmstart-Latenz im 50., 90., 95. und 99. Perzentil (P50 bis P99), welchen Durchsatz und welchen Speicherbedarf je Instanz erreicht der
     Prototyp im Webhook-Profil im Vergleich zum gemessenen Ausgangszustand und im Agentenprofil, das keinen Ausgangswert hat, als Richtwert?
 
   \item[U5] \label{rq:u5} Welche über die Fallstudie hinaus übertragbaren Designprinzipien und
@@ -123,7 +123,7 @@ Messgrößen zählen, wie sie in Punkte eingehen und dass der Prototyp bei Kalts
 Ausgangszustand unterbieten muss. Der Ausgangszustand wird erst in \autoref{sec:Evaluation} unter denselben
 Lastprofilen gemessen. Gewichte, Skala und Zielwerte stehen vor dem Entwurf fest, die Messvorschriften von S3 und S6 wurden während der
 Evaluation präzisiert (\autoref{sec:kriterienkatalog}), und die Parameter des Prototyps wurden bis zum 28.\ Oktober
-abgestimmt. Ein dokumentiertes Verfehlen ist
+eingestellt. Ein dokumentiertes Verfehlen ist
 ein gültiges Ergebnis.
 
 Nicht als Forschungsfrage geführt wird der Vergleich der bekannten Isolationstechnologien untereinander, ihre
@@ -133,7 +133,7 @@ in die Vorauswahl in \autoref{sec:vorauswahl} ein. Die Vorauswahl fällt enger a
 weil der Ausgangszustand mit gVisor bereits einen User-Space-Kernel einsetzt (\autoref{sec:systemkontext}), diese
 Technologiefamilie gehört damit zur Referenz. Ausgeklammert bleiben eine erschöpfende Sicherheitsauditierung der
 Laufzeitumgebungen, die Prüffälle aus U3 ersetzen keine systematische Schwachstellensuche, sowie die Qualität und
-Korrektheit des erzeugten Codes und Maßnahmen, die das Modell selbst gegen Beeinflussung über seine Eingaben härten
+Korrektheit des erzeugten Codes und Maßnahmen, die das Sprachmodell selbst gegen Prompt Injection härten
 \autocite[S.~79]{greshake_not_2023}. Gegenstand ist allein, wie die Ausführung dieses Codes sicher und schnell
 erfolgen kann, unabhängig davon, wie er zustande kam.
 
@@ -151,7 +151,7 @@ Kriterienkatalog festgelegt, in \autoref{sec:Entwurf} wird das Artefakt entworfe
 
 Die Anforderungen stammen aus Betriebsdaten statt aus Interviews. Supportfälle, ein Störungsfall und die Auswertung
 der Mandanten bilden die Sicht der Nutzer quantitativ ab, und die Fragestellung ist technisch. Bewertet wird das fertige Artefakt gegen Kriterien, die vor dem Entwurf
-feststanden, und zwar im Labor statt im laufenden Betrieb. Nur dort lassen sich beide Modelle auf demselben Cluster in verschränkter Reihenfolge messen, Pods unter Last löschen
+feststanden, und zwar im Labor statt im laufenden Betrieb. Nur dort lassen sich beide Modelle auf demselben Cluster abwechselnd messen, Pods unter Last löschen
 und Angriffe ausführen, die im Betrieb echte Mandanten träfen. Das entspricht den Richtlinien von
 \textcite[S.~83]{hevner_design_2004}.
 
