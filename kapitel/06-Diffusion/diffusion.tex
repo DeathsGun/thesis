@@ -129,8 +129,9 @@ zurückgenommen, wenn die Fehlerrate die des Prototyps im Lastprofil übersteigt
 brauchen, erhalten die mandantenweite Freischaltung vor ihrer Stufe. Mandanten mit externen Zielen erhalten ihre Regeln,
 bevor der Proxy enforce durchsetzt. Ein Mandant, dessen Prüfskripte \texttt{child\_process} ausführen, bleibt bewusst auf
 dem bisherigen Betrieb. Vor der ersten Stufe sind die
-offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands, der Standardwert der
-Socket-Freischaltung und die Regeln, die das Agentenprofil erhält, das keinen Bestand hat, den sie brechen könnten. Hinzu kommen
+offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands. Festzulegen
+sind auch der Standardwert der Socket-Freischaltung und die Regeln für das Agentenprofil, das keinen Bestand hat, den sie
+brechen könnten. Hinzu kommen
 die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, denn M3
 gilt nur dort. Festzulegen ist außerdem, welche Zustellgarantie als Standard gilt
 (\autoref{sec:diffusion:ausblick}).

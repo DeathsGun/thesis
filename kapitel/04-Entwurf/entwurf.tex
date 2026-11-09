@@ -520,7 +520,7 @@ Welche Bindings eine Ausführung erhält, bestimmen ihr Profil und die Konfigura
 Skripts. Das Webhook-Profil erhält \texttt{fetch}, eine abgefangene Konsole und die Node-Globals \texttt{process},
 \texttt{global} und \texttt{require}, also das, was nach \autoref{sec:bestandsanalyse} fast jedes gespeicherte Skript
 braucht. Rohe Sockets samt \ac{TLS}, die nur die zehnmal kleinere Socket-Gruppe des Bestands benötigt, sind eine mandantenweit
-freigeschaltete Fähigkeit (\autoref{sec:betriebsplanung}). Das Agentenprofil erhält \texttt{fetch} und Web-Globals wie Timer,
+freigeschaltete Fähigkeit. Das Agentenprofil erhält \texttt{fetch} und Web-Globals wie Timer,
 \texttt{URL} und \texttt{Buffer}, aber weder \texttt{require} noch Konsole noch Modul-Loader. In beiden Profilen
 löscht der Worker nach der Initialisierung das \texttt{Deno}-Objekt und die Reste des Bootstraps, über die ein
 Skript die rohen Ops erreichen könnte. Die Prüfung der Ziele liegt im Proxy, in den Ops nur im Fallback ohne Proxy. Eine
@@ -829,9 +829,7 @@ DDP-Teams voraus, bis dahin gelten dort die gemeinsamen Zugangsdaten, auch in al
 Eine fünfte Einschränkung betrifft die Rotation. Sie entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur
 vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Nachfrage am höchsten ist.
 
-Weitere Maßnahmen sind im Quellcode markiert. Die mandantenweite Pflege der Regeln fehlt, solange die Skriptverwaltung
-keine hält, der Prototyp gibt sie fest vor. Die mandantenweite Freischaltung des Socket-Bindings ist nicht umgesetzt,
-ihr Standardwert und die Egress-Regeln des Agentenprofils sind offen. Welche Ziele der Bestand braucht, ist nicht erhoben, denn
+Welche Ziele der Bestand braucht, ist nicht erhoben, denn
 die Bestandsanalyse wertet Pakete aus, keine Hosts und Ports. Bis dahin stehen S6 und S7 unter dem Vorbehalt aus
 \autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für synchrone und Hintergrundläufe sollen verhindern, dass
 lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) ist nicht
