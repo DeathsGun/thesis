@@ -49,7 +49,8 @@ eigene System (beide \autoref{sec:faehigkeitsmodell}) kamen nach allen Messungen
 Für die Schnittmenge und die Standardregel gibt es keinen Lauf. \autoref{tab:stand} im Anhang ordnet
 die Belege den Ständen und Commits zu, die früheren Läufe vom 6.\ bis 28.\ Oktober stehen dort ebenfalls.
 
-Der Ausgangszustand wurde während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Der Runner führt jedes Skript
+Der Verfasser hat den Ausgangszustand während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Die
+Umstellungen gehören nicht zum Artefakt, der Prototyp wird also mit dem verbesserten Ausgangszustand verglichen. Der Runner führt jedes Skript
 seither in einem eigenen, verworfenen Worker-Thread aus und trägt seit dem 17.\ Oktober statt 100\,m ein
 \ac{CPU}-Limit von zwei Kernen. Der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster
 von 6 und 60 Sekunden Scale-Down-Delay. Alle Läufe ab dem 28.\ Oktober messen diesen Stand, die Prüffälle vom 19.\ Oktober, Lauf 18 und
