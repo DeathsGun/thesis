@@ -758,7 +758,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \texttt{seccompProfile} & \texttt{RuntimeDefault} & \texttt{RuntimeDefault} & gleich \\
     \texttt{automountServiceAccountToken} & \texttt{false} & \texttt{false} & gleich \\
     \texttt{hostNetwork}, \texttt{hostPID}, \texttt{hostIPC} & nicht gesetzt & nicht gesetzt & gleich \\
-    \texttt{enableServiceLinks} & \texttt{false} & \texttt{true} & lockerer, Umgebung im Pod, nicht Kernel-Oberfläche \\
+    \texttt{enableServiceLinks} & \texttt{false} & \texttt{true} & lockerer, Umgebung im Pod, nicht Angriffsfläche des Kernels \\
     \texttt{readOnlyRootFilesystem} & nicht gesetzt & \texttt{true} & strenger \\
     \texttt{runAsNonRoot} & nicht gesetzt & \texttt{true} & strenger \\
     \hline

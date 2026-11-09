@@ -391,7 +391,7 @@ Der Konfigurationsvergleich für M3 (\autoref{tab:m3} im Anhang) stellt die Feld
 zugängliche Angriffsfläche des Kernels bestimmen. Sie stammen aus laufenden Pods auf
 hyper-int-otc vom 20.\ Oktober 2026, am 29.\ Oktober am Endstand bestätigt, aus dem Container, der den Gastcode ausführt, und stimmen mit der Pod-Spezifikation im
 Quellcode überein. Der Vergleich gilt für hyper-int-otc, wo gVisor bereitsteht (\autoref{sec:betriebsplanung}).
-In keiner Zeile der Kernel-Oberfläche ist der Prototyp lockerer als der Ausgangszustand: Sechs Felder sind
+In keiner Zeile zur Angriffsfläche des Kernels ist der Prototyp lockerer als der Ausgangszustand: Sechs Felder sind
 gleich, zwei sind zusätzlich gesetzt. Sie beschränken, was der Prozess im Container verändern kann, nicht die
 Systemaufrufe, die gVisor annimmt. Nur \texttt{enableServiceLinks} ist im Worker-Pod gesetzt und im Runner nicht, was
 Umgebungsvariablen im Pod betrifft, die das Skript nicht sieht (T8). M3 ist damit auf Clustern mit gVisor erfüllt.
