@@ -27,8 +27,8 @@ Anfragepfad fern und entkoppelt die Poolgröße von der Zahl der Mandanten (\aut
 
 U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Der Prototyp besteht die neun Prüffälle in beiden
 Profilen, der Ausgangszustand vom 30.\ Oktober sieben. Er scheitert an T7 und T9 und gibt bei T8 23
-Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Die Zustandsfreiheit hat er während der Arbeit selbst
-hergestellt, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und Dateisystem. M3 gilt auf Clustern mit
+Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Zustandsfrei ist er seit einer Umstellung während
+der Arbeit, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und Dateisystem. M3 gilt auf Clustern mit
 gVisor (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp M1 bis M5, weil ohne Auth Callout
 ein doppelter Ausbruch die gemeinsamen NATS-Zugangsdaten erreicht. Nach der Regel aus \autoref{sec:kriterienkatalog}
 ist damit der Entwurf die Lösung, sobald der Callout eingerichtet ist, und der Nutzwert gilt unter diesem Vorbehalt.

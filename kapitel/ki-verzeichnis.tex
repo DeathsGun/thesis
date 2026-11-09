@@ -1,37 +1,43 @@
 % KI-Verzeichnis nach dem Leitfaden im Nachspann hinter dem Literaturverzeichnis.
-% Kein Prompt-Verzeichnis (Vorgabe des Betreuers im Milestone-Gespräch vom 4. November 2026).
-% TODO Verfasser: Version und Zeitraum prüfen; ergänzen, ob und wofür KI beim Programmieren des Prototyps half.
+% Kein Prompt-Verzeichnis (Vorgabe des Betreuers im Milestone-Gespräch vom 4. November 2026, hat Vorrang vor dem Leitfaden).
+% Verfasser: Modellversionen und Zeitraum ggf. ergänzen, z. B. "Claude Opus 4.x, Juli bis November 2026".
 \section*{KI-Verzeichnis}
 \addcontentsline{toc}{section}{KI-Verzeichnis}
 
 Anthropic. (2026). Claude Opus [Großes Sprachmodell]. https://claude.ai
 
+Anthropic. (2026). Claude Code [KI-Programmierassistent]. https://claude.com/claude-code
+
 \medskip
-\noindent Das Werkzeug war in keinem Fall Quelle einer Aussage. Jede Aussage der Arbeit stützt sich auf eine im
-Literaturverzeichnis genannte Quelle, eine eigene Messung oder den Quellcode des Prototyps. Personenbezogene oder
-vertrauliche Daten wurden nicht eingegeben. Die Vorgaben der FOM, die Leitlinien der Deutschen Forschungsgemeinschaft
-zur Sicherung guter wissenschaftlicher Praxis (Kodex 2023) und die Datenschutz-Grundverordnung wurden eingehalten.
+\noindent Fragestellung, Analyse, Entwurfsentscheidungen, Messungen und Schlussfolgerungen stammen vom Verfasser. Die
+Werkzeuge setzten seine Vorgaben in Code um, überarbeiteten seinen Text und halfen bei der Prüfung von Quellen und
+Zwischenständen. Sie waren in keinem Fall Quelle einer Aussage. Jede Aussage der Arbeit stützt sich auf eine im
+Literaturverzeichnis genannte Quelle, eine eigene Messung oder den Quellcode des Prototyps. Personenbezogene Daten
+wurden nicht eingegeben. Die Vorgaben der FOM, die Leitlinien der Deutschen Forschungsgemeinschaft zur Sicherung guter
+wissenschaftlicher Praxis (Kodex 2023) und die Datenschutz-Grundverordnung wurden eingehalten.
 
 \begin{table}[H]
   \caption{Eingesetzte KI-Werkzeuge nach Aufgabe}
   \label{tab:ki-verzeichnis}
   \small
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.27\textwidth} >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.30\textwidth}@{}}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.20\textwidth} >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.36\textwidth}@{}}
     \hline
-    Aufgabe & Umfang & Prüfung durch den Verfasser \\
+    Aufgabe & Umfang & Anteil und Prüfung des Verfassers \\
     \hline
-    Formulierung und Textstruktur & Vorschläge für Satzbau, Kürzungen und Gliederung einzelner Abschnitte &
-      Inhalt und Aussage jedes übernommenen Satzes gegen Messdaten und Quellen geprüft \\
-    Titel und Forschungsfragen & Varianten von Titel, Oberfrage und Unterfragen zur Auswahl & Auswahl und
-      Endfassung durch den Verfasser \\
-    Recherche und Literaturprüfung & Suche nach Kandidaten für Quellen, Abgleich von Zitaten und Seitenangaben mit den
-      Volltexten & Auswahl und Prüfung jeder zitierten Quelle durch den Verfasser, nicht auffindbare Vorschläge verworfen \\
-    Abbildungen & Umsetzung der Abbildungen in \LaTeX{} und Diagrammcode nach Vorgaben des Verfassers &
-      Inhalt der Abbildungen gegen Entwurf und Messdaten geprüft \\
-    Simulierte Gutachten & Gutachten aus mehreren Perspektiven zu Zwischenständen der Arbeit & Befunde einzeln
-      bewertet, übernommen, abgelehnt oder umformuliert \\
-    Sprachliche und formale Prüfung & Rechtschreibung, Zeichensetzung, Konsistenz von Zahlen und Verweisen &
-      Jede Änderung einzeln angenommen oder verworfen \\
+    Programmierung & Implementierung der Dienste, der Kompatibilitätsschicht, des Scanners, der Prüffälle und der
+      Lastskripte nach Vorgaben des Verfassers & Architektur, Schnittstellen und Sicherheitsvorgaben selbst festgelegt,
+      Code geprüft, angepasst und mit Prüffällen, Differenztest und Lastläufen getestet \\
+    Überarbeitung des Textes & Kürzen, Umformulieren und Umstellen vom Verfasser geschriebener Abschnitte, nach
+      Gutachten auch Neufassung einzelner Absätze aus seinen Inhalten, Rechtschreibung, Konsistenz von Zahlen und
+      Verweisen & Inhalt, Gliederung, Titel und Forschungsfragen vom Verfasser, jede Änderung einzeln angenommen,
+      angepasst oder verworfen \\
+    Literaturprüfung & Suche nach Kandidaten für Quellen, Abgleich von Zitaten und Seitenangaben mit den Volltexten,
+      Ergänzung bibliografischer Angaben & Auswahl und Lektüre jeder zitierten Quelle, nicht auffindbare Vorschläge
+      verworfen \\
+    Abbildungen & Umsetzung in \LaTeX{} und Diagrammcode nach Vorgaben des Verfassers & Inhalt aus Entwurf und
+      Messdaten des Verfassers, Ergebnis gegen beide geprüft \\
+    Rückmeldung zu Zwischenständen & Simulierte Gutachten aus mehreren Perspektiven & Jeden Befund bewertet und über
+      Übernahme oder Ablehnung selbst entschieden \\
     \hline
   \end{tabularx}
 \end{table}

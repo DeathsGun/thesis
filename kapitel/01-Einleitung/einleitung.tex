@@ -59,7 +59,7 @@ Verfügbarkeit messen lässt.
 
 Ein Wechsel des Ausführungsmodells darf dabei nicht hinter die heutige Sicherheit zurückfallen,
 und für das Agentenprofil reicht sie nicht einmal aus. Alle Ausführungen eines Mandanten teilten
-sich bei Beginn der Arbeit einen Node.js-Prozess, sodass Zustand eine Ausführung überdauerte. Das hat der Ausgangszustand während der Arbeit selbst
+sich bei Beginn der Arbeit einen Node.js-Prozess, sodass Zustand eine Ausführung überdauerte. Das wurde während der Arbeit im Ausgangszustand
 behoben (\autoref{sec:messaufbau}), Umgebung, Dateisystem und Netz des Prozesses bleiben dem Skript aber offen. Stammt der Code von
 einem Agenten, dessen Eingaben Dritte beeinflussen können, wird daraus ein Vertraulichkeitsproblem
 innerhalb des Mandanten.
@@ -195,28 +195,34 @@ identifiziert \autoref{sec:Einleitung} das Problem, \autoref{sec:bedrohungsmodel
 Kriterienkatalog fest, \autoref{sec:Entwurf} entwirft und entwickelt, \autoref{sec:Evaluation} demonstriert und
 evaluiert auf dem Cluster der Fallstudie, und die Arbeit selbst ist die Kommunikation.
 
+Alle vier Phasen sind Eigenleistung des Verfassers. In der Analyse sind das die Bestandsanalyse der 1.718 Mandanten mit
+einem eigenen Scanner, das Angreifermodell und der Kriterienkatalog mit seinen Gewichten. Im Entwurf sind es die
+Vorauswahl der Kandidaten und die Entscheidungen, die das Modell ausmachen: ein Isolate je Ausführung, der Pool
+vorgewärmter Pods, die Trennung von Transport und Sandbox, der Egress-Proxy mit Freigabeliste, die virtuelle Uhr und
+das Speicherbudget. Für die Evaluation hat der Verfasser Messaufbau, Prüffälle, Lastläufe und Differenztest entworfen,
+die Läufe durchgeführt und ausgewertet. Prinzipien und Migrationspfad der Diffusion leitet er aus diesen Ergebnissen ab.
+
+Den Code der fünf Dienste (\autoref{sec:bausteine}), der Kompatibilitätsschicht, des Scanners, der Prüffälle und der
+Lastskripte hat der Verfasser mit einem KI-Programmierassistenten umgesetzt. Architektur, Schnittstellen und
+Sicherheitsvorgaben legte er fest, den erzeugten Code hat er geprüft, angepasst und mit Prüffällen, Differenztest und
+Lastläufen getestet. Welche Werkzeuge wofür dienten, nennt das KI-Verzeichnis. Vorhanden waren die Plattform mit NATS,
+Redis, Objektspeicher und Skriptdienst sowie der Ausgangszustand. Auch dessen Umstellungen während der Arbeit
+(\autoref{sec:messaufbau}) hat der Verfasser vorgenommen. Sie gehören nicht zum Artefakt, die Messung vergleicht den
+Prototyp deshalb mit dem bereits verbesserten Ausgangszustand.
+
 Die Anforderungen stammen aus Betriebsdaten statt aus Interviews. Supportfälle, ein Störungsfall und die Auswertung
-von 1.718 Mandanten bilden die Sicht der Nutzer quantitativ ab, und die Fragestellung ist technisch. Nach der
-Einteilung von \textcite[S.~80--81]{venable_feds_2016} ist die Evaluation summativ, weil sie das fertige Artefakt gegen
-vorab festgelegte Kriterien beurteilt, und artifiziell, weil sie im Laborexperiment unter nachgespieltem Lastprofil
-misst und nicht im laufenden Betrieb. Das Labor ist hier keine Notlösung. Nur dort lassen sich beide Modelle auf
-demselben Cluster in verschränkter Reihenfolge messen, Pods unter Last löschen und Prüffälle ausführen, die im Betrieb
-einen Mandanten angriffen. Das entspricht den Richtlinien von \textcite[S.~83]{hevner_design_2004}.
+der Mandanten bilden die Sicht der Nutzer quantitativ ab, und die Fragestellung ist technisch. Nach
+\textcite[S.~80--81]{venable_feds_2016} ist die Evaluation summativ, weil sie das fertige Artefakt gegen vorab
+festgelegte Kriterien beurteilt, und artifiziell, weil sie im Laborexperiment unter nachgespieltem Lastprofil misst. Nur
+im Labor lassen sich beide Modelle auf demselben Cluster in verschränkter Reihenfolge messen, Pods unter Last löschen
+und Angriffe ausführen, die im Betrieb echte Mandanten träfen. Das entspricht den Richtlinien von
+\textcite[S.~83]{hevner_design_2004}.
 
-Das Memorandum nennt für die Evaluation neben dem Laborexperiment die Pilotierung eines Prototyps
-\autocite[S.~668]{osterle_memorandum_2010}. Sie entfällt hier, ebenso die Diffusion im Sinne einer Einführung beim
-Anwender. Beides setzt Freigaben voraus, die außerhalb der Arbeit liegen, den Auth Callout und gVisor auf jedem
-Ziel-Cluster durch das Plattformteam (\autoref{sec:betriebsplanung}), und ein Rollout über Monate passt nicht in den
-Zeitrahmen. Die Diffusion beschränkt sich deshalb auf übertragbare Designprinzipien und einen Migrationspfad, der die
-Pilotierung als erste Stufe vorbereitet (\autoref{sec:diffusion:prinzipien}).
-
-% TODO Verfasser: prüfen, wer die Umstellungen des Ausgangszustands vorgenommen hat und ob sie auf Hinweise aus der Arbeit
-% zurückgehen; ggf. ergänzen, ob KI beim Programmieren half (dann auch im KI-Verzeichnis).
-Vom Verfasser stammen Entwurf und Umsetzung der fünf Dienste des Modells (\autoref{sec:bausteine}), die
-Kompatibilitätsschicht, die Bestandsanalyse mit ihrem Scanner, der Differenztest, die Prüffälle und die Lastskripte.
-Vorhanden waren die Plattform mit NATS, Redis, Objektspeicher und Skriptdienst sowie der Ausgangszustand. Dessen
-Umstellungen während der Arbeit (\autoref{sec:messaufbau}) gehören nicht zum Artefakt und gehen nur als veränderter
-Vergleichsstand in die Messung ein.
+Pilotierung und Einführung beim Anwender, die das Memorandum ebenfalls vorsieht
+\autocite[S.~668]{osterle_memorandum_2010}, liegen außerhalb der Arbeit. Sie setzen Freigaben des Plattformteams voraus,
+den Auth Callout und gVisor auf jedem Ziel-Cluster (\autoref{sec:betriebsplanung}), und ein Rollout dauert Monate. Die
+Diffusion besteht deshalb aus übertragbaren Designprinzipien und einem Migrationspfad, dessen erste Stufe die
+Pilotierung ist (\autoref{sec:diffusion:prinzipien}).
 
 \subsection{Aufbau der Arbeit}
 \label{sec:einleitung:aufbau}
