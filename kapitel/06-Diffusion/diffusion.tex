@@ -128,8 +128,8 @@ schrittweise über ein Feature-Flag, zuerst ein Prozent der Mandanten, dann in S
 zurückgenommen, wenn die Fehlerrate die des Prototyps im Lastprofil übersteigt. Mandanten, deren Skripte rohe Sockets
 brauchen, erhalten die mandantenweite Freischaltung vor ihrer Stufe. Mandanten mit externen Zielen erhalten ihre Regeln,
 bevor der Proxy enforce durchsetzt. Ein Mandant, dessen Prüfskripte \texttt{child\_process} ausführen, bleibt bewusst auf
-dem bisherigen Betrieb. Vor der ersten Stufe sind die
-offenen Maßnahmen aus \autoref{sec:betriebsplanung} zu entscheiden, vor allem die Erhebung der Ziele des Bestands. Festzulegen
+dem bisherigen Betrieb. Vor der ersten Stufe ist zu
+erheben, welche Ziele der Bestand braucht (\autoref{sec:betriebsplanung}). Festzulegen
 sind auch der Standardwert der Socket-Freischaltung und die Regeln für das Agentenprofil, das keinen Bestand hat, den sie
 brechen könnten. Hinzu kommen
 die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, denn M3
@@ -139,11 +139,14 @@ gilt nur dort. Festzulegen ist außerdem, welche Zustellgarantie als Standard gi
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
 
-Offen für spätere Arbeiten sind vier Punkte, hinzu kommt ein Restrisiko, das zur Entscheidung vorliegt.
+Offen für spätere Arbeiten sind fünf Punkte, hinzu kommt ein Restrisiko, das zur Entscheidung vorliegt.
 
 Der erste betrifft die Engine. Eine nach WebAssembly kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ist nicht
 dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf wäre
-unter demselben Lastprofil zu messen.
+unter demselben Lastprofil zu messen. Offen ist auch die Speichersandbox von V8. Sie erfordert einen vollständigen
+Build, der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Für M1 bis M6 ist sie nicht
+erforderlich, weil Mandanten über die Pod-Grenze getrennt sind. Würde sie tragfähig, wäre die Regel aus
+\autoref{sec:ebenen}, einen Pod nie einem zweiten Mandanten zu geben, keine Sicherheits-, sondern eine Kostenfrage.
 
 Der zweite betrifft die Einbettung. Weil \texttt{deno\_core} als auslaufend gilt (\autoref{sec:betriebsplanung}), ist der
 Aufwand zu prüfen, die rund 30 Quelldateien der Einbettungsschicht direkt auf \texttt{rusty\_v8} umzustellen. Event
@@ -158,6 +161,11 @@ entscheiden und danach zu messen.
 Der vierte betrifft die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}). Sie ist umgesetzt, alle Läufe nutzten
 aber die feste Zielgröße vierzig. Ob sie die Ruhekosten senkt, ohne die Kaltstarts zur vollen Stunde zu verlängern,
 zeigt erst ein Lauf über mehrere Wochen.
+
+Der fünfte betrifft die Zuteilung. Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der
+Kaltstarts ohne Pool (\autoref{sec:kaltstart}). Ein Vorladen der zuletzt aufgerufenen Bundles bei der Zuweisung
+(\autoref{sec:zustellung}) nähme auch dem ersten Aufruf den Abruf ab. Getrennte Slots für synchrone und
+Hintergrundläufe verhinderten, dass lange Läufe kurze verdrängen.
 
 Zur Entscheidung vorgelegt ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen (\autoref{sec:betriebsplanung}).
 Ein Slot je Pod schlösse ihn im selben Pod für bis zu 52\,\% mehr Speicher unter Last. Ob eine Trennung nach Person

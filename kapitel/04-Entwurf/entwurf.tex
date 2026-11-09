@@ -377,7 +377,7 @@ Ausführung einen eigenen Betriebssystem-Thread mit eigener Event Loop, begrenzt
 Hinzu kommt ein Watchdog-Thread, weil ein Skript in einer Schleife ohne Ein- und Ausgabe die Event Loop nie erreicht und nur
 ein Thread außerhalb des Isolates die Terminierung auslösen kann. Der Thread trägt keine Trennung, alle Threads eines
 Prozesses teilen Adressraum und cgroup. Beide Profile schöpfen aus demselben Vorrat an Slots, lange Hintergrundläufe
-können synchrone verdrängen (\autoref{sec:betriebsplanung}).
+können synchrone verdrängen (\autoref{sec:diffusion:ausblick}).
 
 Die Isolate-Grenze je Ausführung erfüllt M2, und das Isolate liegt seit dem 29.\ Oktober warm vor dem Aufruf
 (\autoref{sec:warm}). Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
@@ -714,7 +714,7 @@ bis zu 151 gebündelte Versionen. Verdrängt wird der am längsten nicht genutzt
 Budget nicht abgezogen (\autoref{sec:ressourcenbegrenzung}).
 
 Der Cache nimmt dem zweiten Aufruf den Abruf ab, dem ersten nicht. Ein Vorladen der zuletzt aufgerufenen Bundles bei
-der Zuweisung folgte derselben Regel wie der Pool, ist aber nicht umgesetzt (\autoref{sec:betriebsplanung}). Ein
+der Zuweisung folgte derselben Regel wie der Pool, ist aber nicht umgesetzt (\autoref{sec:diffusion:ausblick}). Ein
 gemeinsamer Cache für alle Pods eines Knotens würde mehr sparen, wird aber verworfen, weil er von den Pods mehrerer
 Mandanten erreichbar wäre und über seine Antwortzeit verriete, ob ein anderer Mandant dasselbe Bundle hält. Dass
 solche Treffer vorkämen, belegt die Bestandsanalyse, in der dieselbe Skriptkennung bei mehreren Mandanten auftritt.
@@ -777,7 +777,7 @@ Ressource führt dafür eine Abbruchmöglichkeit mit, die beim Schließen ausgel
 Leseoperation die Ausführung über deren Ende hinaus (T1, T5). Ein Abbruch von außen beim Entzug der Zuweisung nutzt denselben Weg, SIGTERM dagegen bricht nichts ab
 (\autoref{sec:zuteilung}).
 
-\subsection{Betrieb und offene Maßnahmen}
+\subsection{Betrieb und Einschränkungen}
 \label{sec:betriebsplanung}
 
 Die Härtung des Worker-Pods ist Teil des Codes der Control Plane und keine Konfiguration. Sie setzt denselben
@@ -796,21 +796,15 @@ verschärft. Am 9.\,Oktober 2026 kündigte Deno an, dass das gesamte Team zu Clo
 \texttt{rusty\_v8}, um es in workerd zu integrieren \autocite{noauthor_deno_2026}. \texttt{deno\_core} nennt die
 Ankündigung nicht und gilt für die Planung vorsorglich als auslaufend. Übernommen ist nur seine Kernschicht in einer
 exakten Version, der übernommene Node-Code ist auf einen Commit festgelegt, den der Differenztest bei jedem Update
-prüft. Fällt \texttt{deno\_core} weg, wäre die Einbettungsschicht in rund 30 Quelldateien auf \texttt{rusty\_v8}
-umzustellen (\autoref{sec:diffusion:ausblick}).
+prüft. Der Umstieg auf \texttt{rusty\_v8} ist im Ausblick beschrieben (\autoref{sec:diffusion:ausblick}).
 
-Eine zweite offene Maßnahme betrifft die Härtung der Engine. Die Speichersandbox von V8 erfordert einen vollständigen
-Build, der Prototyp verwendet das vorgefertigte Artefakt mit Pointer Compression. Für M1 bis M6 ist sie nicht
-erforderlich, weil Mandanten über die Pod-Grenze getrennt sind. Würde sie tragfähig, wäre die Regel aus
-\autoref{sec:ebenen}, einen Pod nie einem zweiten Mandanten zu geben, keine Sicherheits-, sondern eine Kostenfrage.
-
-Eine dritte Einschränkung betrifft gleichzeitige Ausführungen im Agentenprofil. Dort vertrauen sich Ausführungen
+Offen bleibt die Trennung gleichzeitiger Ausführungen im Agentenprofil. Dort vertrauen sich Ausführungen
 desselben Mandanten nach V2 nicht, und zwischen bis zu vier gleichzeitigen im selben Prozess liegt allein die
 Isolate-Grenze. M2 und die Prüffälle betreffen aufeinanderfolgende Ausführungen. Drei Wege sind zu trennen. Ein
 \emph{verdeckter Kanal} braucht einen mitwirkenden Sender: Eine beeinflusste Ausführung, die Daten einer Person
 verarbeitet, aber kein freigegebenes Ziel erreicht, moduliert die \ac{CPU}, und eine gleichzeitige mit freigegebenem
 Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitwirkung des Opfers aus (A2). Ein
-\emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox die Heaps der gleichzeitigen Isolates. Gemessen
+\emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox von V8, die der Prototyp nicht nutzt, die Heaps der gleichzeitigen Isolates. Gemessen
 ist nur der erste Weg (\autoref{sec:pruefung-isolation}). Seit der virtuellen Uhr aus
 \autoref{sec:kompatibilitaetsschicht} braucht er eine Zeitquelle außerhalb der Sandbox. Diese erreicht ein Skript nur über die Regeln aus
 \autoref{sec:faehigkeitsmodell}, doch jedes freigegebene Ziel kann Zeitstempel liefern, mindestens das eigene System
@@ -821,17 +815,14 @@ das Modell mehr Pods, Speicher und \ac{CPU} (\autoref{sec:durchsatz}), und der P
 gleichzeitige Ausführungen. Der Entwurf behält deshalb mehrere Slots. Ob ein Slot im Agentenprofil diesen Preis wert ist und ob die Anfragen je Zeit zu begrenzen
 sind, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor.
 
-Eine vierte Einschränkung betrifft die Zugangsdaten und damit M6. Zunächst trugen alle Worker-Pods dieselben
+Die Zugangsdaten (M6) sind auf der Plattform noch nicht getrennt. Zunächst trugen alle Worker-Pods dieselben
 Zugangsdaten für NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth
 Callout (\autoref{sec:bausteine}) und hat die Kette lokal erprobt. Auf der Plattform setzt der Callout Anpassungen des
 DDP-Teams voraus, bis dahin gelten dort die gemeinsamen Zugangsdaten, auch in allen Messungen.
 
-Eine fünfte Einschränkung betrifft die Rotation. Sie entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur
+Die Rotation entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur
 vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Nachfrage am höchsten ist.
 
 Welche Ziele der Bestand braucht, ist nicht erhoben, denn
 die Bestandsanalyse wertet Pakete aus, keine Hosts und Ports. Bis dahin stehen S6 und S7 unter dem Vorbehalt aus
-\autoref{sec:pruefung-kompatibilitaet}. Getrennte Slots für synchrone und Hintergrundläufe sollen verhindern, dass
-lange Läufe kurze verdrängen. Das Vorladen der Bundles bei der Zuweisung (\autoref{sec:zustellung}) ist nicht
-umgesetzt. Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der
-Kaltstarts ohne Pool (\autoref{sec:kaltstart}).
+\autoref{sec:pruefung-kompatibilitaet}.

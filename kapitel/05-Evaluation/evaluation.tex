@@ -151,7 +151,7 @@ stammt damit aus dem Pool und nicht aus einem schnelleren Startmechanismus. Ohne
 Aufrufe gelingen. Der Tail im verteilten Lauf ist mit 6,6 bis 8,2 Sekunden im 95.\ Perzentil länger als bei Knative.
 Nach den Logs der Control Plane liegt das daran, dass ein wartender Mandant den nächsten bereiten Pod nimmt, nicht den für
 ihn angelegten.
-Die Vergabe an den am längsten wartenden Mandanten steht in \autoref{sec:betriebsplanung} als offene Maßnahme.
+Die Vergabe an den am längsten wartenden Mandanten ist als Erweiterung vorgesehen (\autoref{sec:diffusion:ausblick}).
 
 Für das Agentenprofil gibt es keinen Ausgangswert, weil Knative keinen Endpunkt dafür hat. Verglichen wird es mit dem Webhook-Profil
 auf demselben Prototyp (Stand vom 2.\ November, ein Snippet, das nur einen Wert zurückgibt). Der Erstaufruf von 30 Mandanten ohne Aufruf seit dem
@@ -388,7 +388,7 @@ Ausgangszustand geben 12 davon Information über den echten Host preis, und fün
 zwei, die Zeitzone und eine Rechenschleife.
 
 Der Konfigurationsvergleich für M3 (\autoref{tab:m3} im Anhang) stellt die Felder gegenüber, die die dem Gastcode
-zugängliche Kernel-Oberfläche bestimmen. Sie stammen aus laufenden Pods auf
+zugängliche Angriffsfläche des Kernels bestimmen. Sie stammen aus laufenden Pods auf
 hyper-int-otc vom 20.\ Oktober 2026, am 29.\ Oktober am Endstand bestätigt, aus dem Container, der den Gastcode ausführt, und stimmen mit der Pod-Spezifikation im
 Quellcode überein. Der Vergleich gilt für hyper-int-otc, wo gVisor bereitsteht (\autoref{sec:betriebsplanung}).
 In keiner Zeile der Kernel-Oberfläche ist der Prototyp lockerer als der Ausgangszustand: Sechs Felder sind
