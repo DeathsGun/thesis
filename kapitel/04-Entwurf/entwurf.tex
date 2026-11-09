@@ -283,8 +283,8 @@ Callback-\ac{URL} zu, die das Gateway auf einen Pfad unterhalb der Basisadresse 
 bricht nach einer längeren Frist ab. Beide Fristen entsprechen denen des Ausgangszustands
 (\autoref{tab:parameter}).
 
-Daneben verläuft der Steuerpfad. Dass ein Worker bereit ist, entnimmt die Control Plane dem Informer, ihrem
-Spiegel der Pod-Objekte, den die Kubernetes-\ac{API} bei jeder Änderung nachführt. Zuweisung und Entzug schickt sie als \ac{HTTP}-Kommando an den Transport des Pods. Die
+Daneben verläuft der Steuerpfad. Ob ein Worker bereit ist, erfährt die Control Plane über einen Informer. Er hält
+eine lokale Kopie der Pod-Objekte und bekommt von der Kubernetes-\ac{API} jede Änderung mitgeteilt. Zuweisung und Entzug schickt die Control Plane als \ac{HTTP}-Kommando an den Transport des Pods. Die
 Netzwerkrichtlinie lässt diesen Port nur von der Control Plane zu. Der Transport lehnt Kommandos aus dem eigenen
 Pod ab, damit Code, der die Sandbox verlässt, sich keinen Mandanten zuweisen kann (\autoref{lst:eigener-pod}). Die
 Zuweisung trägt das Token, mit dem der Transport sich erst jetzt mit NATS verbindet. Drei Vertrauensgrenzen liegen auf
