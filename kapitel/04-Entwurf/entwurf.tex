@@ -205,7 +205,7 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
                   align=center, font=\scriptsize},
     own/.style  ={svc, thick},
     infra/.style={svc, fill=black!6},
-    lbl/.style  ={font=\tiny, fill=white, inner sep=1pt, align=center},
+    lbl/.style  ={font=\tiny, inner sep=2.5pt, align=center},
     req/.style  ={->, thick},
     ctl/.style  ={->, dashed},
   ]
@@ -220,7 +220,7 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
 
     \begin{pgfonlayer}{lpod}
       \node[draw, dashed, rounded corners=3pt, inner sep=5pt, fit=(w1)(w2),
-            label={[font=\tiny]above:Pods: Pool und je Mandant ein bis zehn}] (pool) {};
+            label={[font=\tiny, anchor=south east]north east:Pods: Pool und je Mandant ein bis zehn}] (pool) {};
     \end{pgfonlayer}
     \node[infra] (sapp)   at (3.2,-2.3)  {Skriptdienst\\(Bestand)};
     \node[own]   (cp)     at (7.3,-2.3)  {Control Plane};
@@ -246,8 +246,8 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
     \draw[ctl,<->] (cp) -- node[lbl,below=5pt]{Zuteilungs-\\zustand} (redis);
     \draw[ctl] (cp) -- node[lbl,right]{Pods anlegen,\\löschen, Bereitschaft\\beobachten} (k8s);
 
-    \draw[req] (-1.1,-2.0) -- node[lbl,right,xshift=4pt]{Anfragepfad} ++(0.8,0);
-    \draw[ctl] (-1.1,-2.6) -- node[lbl,right,xshift=4pt]{Steuerpfad} ++(0.8,0);
+    \draw[req] (-1.1,-2.0) -- ++(0.8,0) node[lbl,right]{Anfragepfad};
+    \draw[ctl] (-1.1,-2.6) -- ++(0.8,0) node[lbl,right]{Steuerpfad};
   \end{tikzpicture}
   \caption{Bausteine des Ausführungsmodells}
   \label{fig:bausteine}
