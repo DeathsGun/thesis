@@ -11,27 +11,26 @@ Bindings und Egress-Proxy. Eine Kompatibilitätsschicht bildet die Node-Schnitts
 Latenzvorsprung im Webhook-Profil trägt der Pool, nicht die Engine, den Sicherheitsgewinn die Fähigkeitsgrenze. Alle
 Vergleichszahlen stammen aus dem Webhook-Profil.
 
-U1 fragte nach den Anforderungen. Sie stammen aus Ausgangslage und Betrieb der Fallstudie und der
-Auswertung von 1.718 Mandanten mit 14.575 Skriptversionen. Der Kern des Problems ist die Verschiebung der Vertrauenseinheit vom Mandanten auf
-die einzelne Ausführung, sobald der Code von einem Agenten stammt. Daraus folgen sechs
+Die Anforderungen ergeben sich aus Ausgangslage und Betrieb der Fallstudie und aus der Auswertung von 1.718 Mandanten
+mit 14.575 Skriptversionen. Im Kern verschiebt sich die Vertrauenseinheit vom Mandanten auf die einzelne Ausführung,
+sobald der Code von einem Agenten stammt. Daraus folgen sechs
 Muss- und sechs gewichtete Soll-Kriterien (\autoref{sec:kriterienkatalog}).
 
-U2 fragte nach der Kombination aus Isolationsgrenze, Zuordnungsgranularität und Instanzverwaltung. Die Muss-Kriterien
-scheiden Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun und workerd aus, eine nach WebAssembly
+Bei der Isolationsgrenze scheiden die Muss-Kriterien Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun und workerd aus, eine nach WebAssembly
 kompilierte Engine ist zurückgestellt (\autoref{sec:vorauswahl}). Die Zuordnung ist grob bei der Sicherheitsgrenze, ein
 Pod je Mandant, und fein bei den Rechten, feste Bindings je Profil. Die Instanzverwaltung hält die Zuteilung vom
 Anfragepfad fern und entkoppelt die Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
 
-U3 fragte, ob das Modell Isolation und Zustandsfreiheit einhält. Der Prototyp besteht die neun Prüffälle in beiden
-Profilen, der Ausgangszustand vom 30.\ Oktober sieben. Er scheitert an T7 und T9 und gibt bei T8 23
+Auf den geprüften Angriffswegen hält der Prototyp Isolation und Zustandsfreiheit ein. Er besteht die neun Prüffälle in
+beiden Profilen, der Ausgangszustand vom 30.\ Oktober nur sieben. Dieser scheitert an T7 und T9 und gibt bei T8 23
 Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Zustandsfrei ist er seit einer Umstellung während
 der Arbeit, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und Dateisystem. M3 gilt auf Clustern mit
 gVisor (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp M1 bis M5, weil ohne Auth Callout
 ein doppelter Ausbruch die gemeinsamen NATS-Zugangsdaten erreicht. Nach der Regel aus \autoref{sec:kriterienkatalog}
 ist damit der Entwurf die Lösung, sobald der Callout eingerichtet ist, und der Nutzwert gilt unter diesem Vorbehalt.
 
-U4 fragte nach den Messgrößen im Vergleich zum Ausgangszustand. Auf demselben Cluster startet der Prototyp mit Pool
-im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden, für 3,0\,GiB und 1,0 Kerne Pool im Ruhezustand. Ohne Pool
+Mit Pool ist der Prototyp auf demselben Cluster schneller als der Ausgangszustand und braucht unter Last weniger als
+halb so viel Speicher. Er startet im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden, für 3,0\,GiB und 1,0 Kerne Pool im Ruhezustand. Ohne Pool
 liegt er auf dem Niveau des Ausgangszustands (\autoref{sec:kaltstart}). Dass ein heutiger Runner mit Pool ebenso schnell
 wäre, ist nicht gemessen und bleibt eine Hypothese. Der Overhead im Lastprofil liegt im Median bei 139 bis 145 statt 300
 bis 312\,ms, im 99.\ Perzentil bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden, jeweils mit den Begleitdiensten
