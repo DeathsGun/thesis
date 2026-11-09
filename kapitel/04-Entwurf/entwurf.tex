@@ -606,7 +606,7 @@ Umgebungsvariablen des Hosts bleiben leer, die Variablen des Mandanten erreichen
 der Workers-Plattform \autocite{cloudflare_security_2026}. Ein Timer rückt sie nur um seine eigene Verzögerung vor, gerechnet
 ab dem Stand beim Anlegen. Die echte Zeit zeigt sie erst beim Start und nach abgeschlossener Ein- und Ausgabe, auf 100\,ms
 abgerundet nach einem zufälligen Versatz aus der Zufallsquelle des Hosts. Ein Skript kann seine eigene Arbeit damit nicht in
-echten Millisekunden messen und sich nicht an der Wanduhr ausrichten. Eine Zeitquelle außerhalb der Sandbox umgeht die Uhr
+echten Millisekunden messen und sich nicht an der Systemzeit des Hosts ausrichten. Eine Zeitquelle außerhalb der Sandbox umgeht die Uhr
 \autocite{schwarzl_remote-timer-as--service_2026}, sofern die Regeln aus \autoref{sec:faehigkeitsmodell} sie erreichbar
 machen. Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
 
