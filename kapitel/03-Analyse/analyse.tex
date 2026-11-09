@@ -361,31 +361,33 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
   \end{tabularx}
 \end{table}
 
-Die Gewichte sind eine begründete Setzung und kein Messergebnis. Die Nutzwertanalyse hat bekannte Schwächen \autocite{keeney_decisions_1993}: Die Gewichte sind
-subjektiv, und ein guter Wert gleicht einen schlechten aus. Deshalb gilt für die Muss-Kriterien keine Kompensation, und
-\autoref{sec:nutzwert} prüft, ob die Rangfolge von den Gewichten abhängt. Ab Faktor zwei gibt es fünf Punkte, ein Faktor von
-1,9 und einer von 5 zählen daher fast gleich.  S1 erhält das höchste Gewicht,
-weil die Kaltstartzeit im Agentenprofil in die Wartezeit der anfragenden Person eingeht und sich
-über die Aufrufe einer Aufgabe summiert \autocite[S.~76]{dean_tail_2013}. S6 folgt darauf, weil \autoref{sec:bestandsanalyse} die
-Kompatibilität als stärkste Gegenkraft zu einem Wechsel des Ausführungsmodells ausweist. Die
-übrigen Kriterien wiegen leichter, weil sie entweder die Ausführung selbst betreffen, ohne die
-Wartezeit im gleichen Maß zu prägen wie S1, oder weil sie Restgrößen abdecken, deren Größenordnung
-bereits durch S6 begrenzt ist. Die Bewertung je Kriterium erfolgt auf einer Skala von null bis
-fünf, und der Nutzwert ist die mit den Gewichten gebildete Summe. Maßgeblich ist bei Kriterien mit
-Vergleichswert der Faktor, um den der Prototyp besser ist. Null Punkte gibt es beim Faktor null,
-drei bei gleichem Wert und fünf ab dem Faktor zwei, dazwischen jeweils linear. Ein Wert knapp unter dem des
-Ausgangszustands erhält damit knapp unter drei Punkte. Gerundet wird erst das Ergebnis je
-Kriterium auf ganze Punkte. S1 geht je zur Hälfte aus S1a und S1b ein, bei S1 zählt das 95.\ Perzentil, bei S2 der Median. S6 und S7 erhalten je angefangene zwanzig Prozent der
-Mandanten, die nicht schlechter laufen als im Ausgangszustand beziehungsweise keine Anpassung brauchen, einen Punkt. Die
-Zuordnung der Messwerte zu den Punkten legt \autoref{sec:Evaluation} offen, damit die Bewertung
-nicht von der Darstellung abhängt.
+Die Gewichte sind gesetzt, nicht gemessen. S1 wiegt am meisten, weil im Agentenprofil jeder Kaltstart in die Wartezeit
+der anfragenden Person eingeht und sich über die Aufrufe einer Aufgabe summiert \autocite[S.~76]{dean_tail_2013}. S6
+folgt, weil die Kompatibilität nach \autoref{sec:bestandsanalyse} am stärksten gegen einen Wechsel spricht. Die übrigen
+Kriterien prägen die Wartezeit weniger oder sind durch S6 bereits begrenzt.
 
-Der Zielwert ist für S1 und S2 der Wert des Ausgangszustands im selben Messaufbau, den der Prototyp unterbieten muss, bei S1 für das gewichtete Maß aus S1a und S1b.
-Eine Zahl wird nicht vorab gesetzt, weil der Ausgangszustand bisher nicht unter den Lastprofilen dieser Arbeit
-gemessen wurde. S3 und S4 werden dem Ausgangszustand gegenübergestellt, ohne dass ein Zielwert sie entscheidet. S6 und
-S7 haben keinen Vergleichswert, ihr Maßstab ist die Bestandsanalyse aus \autoref{sec:bestandsanalyse}. Die Messgrößen von S3 und S6 wurden
-während der Evaluation präzisiert, S3 misst nun unter dem Lastprofil statt im Kaltstartlauf, weil nur dort mehrere Ausführungen zugleich laufen,
-und S6 wird über Bestandsanalyse und Prüfungen der Kompatibilitätsschicht abgeleitet.
+Jedes Kriterium erhält null bis fünf Punkte, der Nutzwert ist die gewichtete Summe. Gerundet wird je Kriterium auf ganze
+Punkte, die Zuordnung der Messwerte legt \autoref{sec:Evaluation} offen.
+
+\begin{itemize}
+  \item \textbf{S1 bis S4} vergleichen den Prototyp mit dem Ausgangszustand im selben Messaufbau. Maßgeblich ist der
+    Faktor, um den der Prototyp besser ist. Faktor null ergibt null Punkte, gleicher Wert drei, ab Faktor zwei fünf,
+    dazwischen linear. S1 zählt das 95.\ Perzentil, je zur Hälfte aus S1a und S1b, S2 den Median.
+  \item \textbf{S6 und S7} geben je angefangene 20\,\% der Mandanten einen Punkt. S6 zählt die Mandanten, die nicht
+    schlechter laufen als im Ausgangszustand, S7 die, die keine Anpassung brauchen.
+\end{itemize}
+
+Bei S1 und S2 muss der Prototyp den Ausgangszustand unterbieten. Eine feste Zahl wird nicht vorab gesetzt, weil der
+Ausgangszustand unter den Lastprofilen dieser Arbeit noch nicht gemessen war. S3 und S4 haben keinen Zielwert.
+
+Die Nutzwertanalyse hat zwei bekannte Schwächen \autocite{keeney_decisions_1993}. Die Gewichte sind subjektiv, und ein
+guter Wert gleicht einen schlechten aus. Deshalb lassen sich Muss-Kriterien nicht ausgleichen, und \autoref{sec:nutzwert}
+prüft, ob die Rangfolge von den Gewichten abhängt. Außerdem unterscheidet die Skala oberhalb von Faktor zwei nicht mehr,
+1,9 und 5 zählen fast gleich.
+
+Zwei Messgrößen wurden während der Evaluation präzisiert. S3 wird unter dem Lastprofil gemessen statt im Kaltstartlauf,
+weil nur dort mehrere Ausführungen zugleich laufen. S6 wird aus der Bestandsanalyse und den Prüfungen der
+Kompatibilitätsschicht abgeleitet.
 
 \subsubsection{Prüffallkatalog}
 
