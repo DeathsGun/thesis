@@ -1,3 +1,25 @@
+\section{Rohdaten der Bestandsanalyse}
+\label{anh:rohdaten}
+
+Der Scanner schreibt je Skriptversion, je inhaltlich verschiedenem Skript und je Import einen Datensatz als Zeile im
+NDJSON-Format. \autoref{lst:rohdaten} zeigt die drei Zeilen einer Skriptversion, die nur \texttt{axios} importiert.
+Mandanten- und Skriptkennungen sind ersetzt, Hashwerte gekürzt, die Zeilen zur Lesbarkeit umbrochen.
+
+\begin{lstlisting}[numbers=none, caption={Rohdaten einer Skriptversion mit Import von \texttt{axios}}, label={lst:rohdaten}]
+{"type":"script","runId":"2026-09-07-1741f33f-...","tenantId":"<Mandant>",
+ "scriptId":"<Skript>","versionId":"<Version>","contentHash":"71b8d744...",
+ "bytes":8638,"dedup":"analysed"}
+{"type":"content","runId":"2026-09-07-1741f33f-...","contentHash":"71b8d744...",
+ "bytes":8638,"lines":194,"likelyMinified":false,"parsed":true,"pluginSet":"ts",
+ "recoveredErrors":0,"importCount":1,"dynamicCount":0,
+ "runtimeFeatures":["commonjs:module","commonjs:require"],"usesPackages":true,
+ "usesNodeBuiltins":false,"usesNodeGlobals":false,"usesDynamicCode":false,
+ "selfContained":false}
+{"type":"import","runId":"2026-09-07-1741f33f-...","contentHash":"71b8d744...",
+ "package":"axios","specifier":"axios","category":"bare","kind":"require",
+ "resolution":"static","count":1}
+\end{lstlisting}
+
 \section{Parameter des Prototyps}
 \label{anh:parameter}
 
