@@ -198,6 +198,25 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
 \subsubsection{Bausteine und Nachrichtenwege}
 \label{sec:bausteine}
 
+Das Modell besteht aus fünf eigenen Diensten und stützt sich im Übrigen auf Bausteine, die die Plattform bereits
+betreibt. In \autoref{fig:bausteine} sind die eigenen fett, die vorhandenen grau. Das \emph{Gateway} nimmt die \ac{HTTP}-Aufrufe entgegen, prüft Signatur, Mandant und Identität und bildet
+sie auf Ausführungsaufträge ab. Die \emph{Control Plane} verwaltet den Pool der Worker-Pods, die Zuordnung von
+Mandanten zu Pods und deren Consumer und stellt die Token aus, mit denen sich ein Worker bei NATS ausweist. Der
+\emph{Worker} ist ein Pod aus zwei Containern desselben Images: Der \emph{Transport} hält die Zugangsdaten zu NATS,
+bindet den Consumer des Mandanten, zieht die Aufträge, antwortet auf dem Stream und nimmt die Kommandos der Control
+Plane an. Mandantencode führt er nie aus. Das tut allein die \emph{Sandbox}, die die Isolates erzeugt, jede
+Ausführung vom Transport über eine Loopback-Verbindung erhält und weder NATS- noch Redis-Zugangsdaten besitzt. Der
+\emph{Auth Callout} entscheidet für den NATS-Server über jede Verbindung eines Workers und gibt ihr nur Rechte auf die
+Nachrichten des einen Mandanten, den das Token der Control Plane nennt
+\autocite{the_nats_authors_auth_callout_2026}. Der \emph{Egress-Proxy} ist der einzige Weg der Sandbox nach außen: Das Gateway
+registriert jeden Lauf mit Regeln und Grenzen. Die Sandbox schickt \texttt{fetch} und Sockets an den Proxy, der über
+jedes Ziel entscheidet (\autoref{sec:faehigkeitsmodell}). Die Nachrichten zwischen Gateway, Control Plane und Workern laufen über
+den vorhandenen JetStream-Stream von NATS, als Zustandsspeicher der Control Plane dient das vorhandene Redis, für
+Skriptbundles und Bodies der vorhandene Objektspeicher. Der bisherige Skriptdienst löst eine Skriptkennung in
+Bundle-\ac{URL}, Content-Hash, entschlüsselte Variablen und Log-Ziel auf und prüft dabei, ob die aufrufende Identität
+das Skript verwenden darf. Damit entsteht weder ein neues Messaging-System noch ein neuer Speicher noch eine neue
+Skriptverwaltung.
+
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[
@@ -220,7 +239,7 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
 
     \begin{pgfonlayer}{lpod}
       \node[draw, dashed, rounded corners=3pt, inner sep=5pt, fit=(w1)(w2),
-            label={[font=\tiny, anchor=south east]north east:Pods: Pool und je Mandant ein bis zehn}] (pool) {};
+            label={[font=\tiny, align=center]above:Pods: Pool und\\je Mandant ein bis zehn}] (pool) {};
     \end{pgfonlayer}
     \node[infra] (sapp)   at (3.2,-2.3)  {Skriptdienst\\(Bestand)};
     \node[own]   (cp)     at (7.3,-2.3)  {Control Plane};
@@ -252,25 +271,6 @@ zuerst die Entwurfsentscheidung und dann ihre Umsetzung im Prototyp.
   \caption{Bausteine des Ausführungsmodells}
   \label{fig:bausteine}
 \end{figure}
-
-Das Modell besteht aus fünf eigenen Diensten und stützt sich im Übrigen auf Bausteine, die die Plattform bereits
-betreibt. In \autoref{fig:bausteine} sind die eigenen fett, die vorhandenen grau. Das \emph{Gateway} nimmt die \ac{HTTP}-Aufrufe entgegen, prüft Signatur, Mandant und Identität und bildet
-sie auf Ausführungsaufträge ab. Die \emph{Control Plane} verwaltet den Pool der Worker-Pods, die Zuordnung von
-Mandanten zu Pods und deren Consumer und stellt die Token aus, mit denen sich ein Worker bei NATS ausweist. Der
-\emph{Worker} ist ein Pod aus zwei Containern desselben Images: Der \emph{Transport} hält die Zugangsdaten zu NATS,
-bindet den Consumer des Mandanten, zieht die Aufträge, antwortet auf dem Stream und nimmt die Kommandos der Control
-Plane an. Mandantencode führt er nie aus. Das tut allein die \emph{Sandbox}, die die Isolates erzeugt, jede
-Ausführung vom Transport über eine Loopback-Verbindung erhält und weder NATS- noch Redis-Zugangsdaten besitzt. Der
-\emph{Auth Callout} entscheidet für den NATS-Server über jede Verbindung eines Workers und gibt ihr nur Rechte auf die
-Nachrichten des einen Mandanten, den das Token der Control Plane nennt
-\autocite{the_nats_authors_auth_callout_2026}. Der \emph{Egress-Proxy} ist der einzige Weg der Sandbox nach außen: Das Gateway
-registriert jeden Lauf mit Regeln und Grenzen. Die Sandbox schickt \texttt{fetch} und Sockets an den Proxy, der über
-jedes Ziel entscheidet (\autoref{sec:faehigkeitsmodell}). Die Nachrichten zwischen Gateway, Control Plane und Workern laufen über
-den vorhandenen JetStream-Stream von NATS, als Zustandsspeicher der Control Plane dient das vorhandene Redis, für
-Skriptbundles und Bodies der vorhandene Objektspeicher. Der bisherige Skriptdienst löst eine Skriptkennung in
-Bundle-\ac{URL}, Content-Hash, entschlüsselte Variablen und Log-Ziel auf und prüft dabei, ob die aufrufende Identität
-das Skript verwenden darf. Damit entsteht weder ein neues Messaging-System noch ein neuer Speicher noch eine neue
-Skriptverwaltung.
 
 Eine synchrone Ausführung nimmt folgenden Weg. Das Gateway lässt die Skriptkennung auflösen, legt einen Request-Body
 über 64\,KiB im Objektspeicher ab und veröffentlicht den Auftrag als Request-Reply-Nachricht auf einem Subject, das
