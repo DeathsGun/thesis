@@ -43,10 +43,7 @@ Auf dem Endstand liefen S1 bis S4, M5, die Zustellung, T1 bis T9, SandboxEval un
 Isolates und eine Pool-Zielgröße von vierzig. Der Auth Callout fehlte, weil er auf der Plattform noch nicht eingerichtet
 ist.
 Danach kamen die Proxy-Abmeldung im Hintergrund, eine Korrektur der Wartezeit auf den Consumer-Leader und ein
-größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. Erst nach den übrigen Messungen kamen die virtuelle Uhr (\autoref{sec:kompatibilitaetsschicht}), die Schnittmenge der
-Regeln und die Standardregel für das eigene System (beide \autoref{sec:faehigkeitsmodell}) hinzu. Gemessen ist davon nur
-die virtuelle Uhr, im zweiten Lauf zum verdeckten Kanal (\autoref{sec:pruefung-isolation}). Schnittmenge und
-Standardregel wurden nicht gemessen. \autoref{tab:stand} im Anhang ordnet
+größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. \autoref{tab:stand} im Anhang ordnet
 die Belege den Ständen, Daten und Commits zu, auch die früheren Läufe.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Der Runner führt jedes Skript
@@ -364,8 +361,8 @@ Polarität aus den Daten gewählt wird, entspricht Raten einer Bitfehlerrate von
 selben Pod in fünf Läufen bei 0,30 bis 0,39, zwischen den Pods bei 0,38 bis 0,48. Unter Allocation-Last, die den Garbage
 Collector häufig auslöst, lag sie in beiden Fällen bei 0,25 bis 0,44, und ein Pod je Ausführung schlösse diesen Weg nicht. Mit dem
 späteren Executor-Stand, dessen Uhr bei Timern virtuell läuft (\autoref{sec:kompatibilitaetsschicht}), erreichte
-kein Lauf mehr seine Fenster. Eine externe Zeitquelle über eine Regel aus dem Aufruf, wie sie der Stand ohne Schnittmenge
-zuließ (\autoref{sec:faehigkeitsmodell}), öffnete den Kanal im selben Pod wieder. Er war unzuverlässig, mit 0,08 bis 0,50
+kein Lauf mehr seine Fenster. Eine externe Zeitquelle, erreichbar über eine Regel aus dem Aufruf
+(\autoref{sec:faehigkeitsmodell}), öffnete den Kanal im selben Pod wieder. Er war unzuverlässig, mit 0,08 bis 0,50
 in sieben Läufen bei 16 Bits und 500-ms-Fenstern, ohne Wahl der Polarität gegen 0,5 für Raten. Zwischen den Pods lag er bis auf einen
 Lauf (0,31) auf Zufallsniveau. Die Läufe sind wenige, die Richtung bei \ac{CPU}-Last ist einheitlich, die Größe nicht belastbar.
 
@@ -373,8 +370,7 @@ T7 und T9 wurden gegen den Egress-Proxy mit beiden Profilen in enforce wiederhol
 example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen das eigene System und die
 Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, TCP zu 1.1.1.1:53, die Testregel auf Port 80,
 \texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil
-kam eine Regel aus dem Aufruf hinzu (example.net, GET), die der damalige Stand ohne Schnittmenge übernahm
-(\autoref{sec:faehigkeitsmodell}). Das eigene System, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
+kam eine Regel aus dem Aufruf hinzu (example.net, GET). Das eigene System, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
 dieselbe Regel mit POST, example.com, das System eines fremden Mandanten, 1.1.1.1 und die internen Ziele. Das Anfrageprotokoll führt alle
 Versuche.
 Beide Profile bestehen, es wirken also die Regeln, nicht nur der Proxy. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
