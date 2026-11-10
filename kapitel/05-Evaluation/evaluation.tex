@@ -84,8 +84,9 @@ Rechner über das Internet. Konstruktbedingt nähert der Overhead die Warmstart-
 
 Für S1, S2 und M5 liefen je Modell drei Läufe abwechselnd (Prototyp, Ausgangszustand, Prototyp ...), je
 Lauf mit vorher geprüfter Route. Sie heißen P1 bis P3 für den Prototyp und K1 bis K3 für den Ausgangszustand auf
-Knative. Angegeben ist die Spannweite der drei Läufe. Sie ersetzt kein Konfidenzintervall
-\autocite[S.~4]{hoefler_scientific_2015}, zeigt aber, ob ein Unterschied größer ist als die Streuung. Die Perzentile
+Knative. Angegeben ist die Spannweite der drei Läufe, also der kleinste und der größte Wert. Überlappen
+sich die Spannweiten beider Modelle nicht, ist der Unterschied größer als die Schwankung zwischen den Läufen. Ein
+Konfidenzintervall nach \textcite[S.~4]{hoefler_scientific_2015} ist das nicht. Die Perzentile
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
 berichten \autocites[S.~6]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}.
 Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung, die Prüffälle und der Noisy-Neighbour-Test haben je einen Lauf. Innerhalb eines Laufs geben
