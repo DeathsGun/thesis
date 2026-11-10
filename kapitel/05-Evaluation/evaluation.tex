@@ -266,10 +266,10 @@ langlebigen Verbindungen, deren Ursache offen ist. Im letzten liefen Skripte 111
 der Aufrufer längst aufgegeben hatte. Solche Nachrichten verwirft der Worker, ohne sie auszuführen, gemessen ist das
 nicht.
 
-Auf dem Endstand liefen die Szenarien 06 bis 08, 01 bis 05 bräuchten
-Konfigurationsänderungen. Szenario 08 liefert 41.026 Aufrufe ohne Fehler und 33 Zuweisungen für 33 Mandanten. In Szenario 06 kommen alle 386
-Aufrufe an.
-Szenario 07 zeigt erst der Absturz: Unter Last, mit Prober und langen Aufrufen, wurden fünf Worker eines Knotens
+Auf dem Endstand liefen zwei Lastläufe aus der Wahl der Parameter erneut (\autoref{tab:kaltstart-verlauf} im
+Anhang). Mit 33 Mandanten und 40 gleichzeitigen Aufrufern über drei Minuten kommen 41.026 Aufrufe ohne Fehler an, bei
+33 Zuweisungen für 33 Mandanten. Mit 33 ruhigen Mandanten, die nur alle 70 bis 120 Sekunden aufrufen, kommen alle 386
+Aufrufe an. Einen Absturz zeigt ein eigener Lauf: Unter Last, mit Prober und langen Aufrufen, wurden fünf Worker eines Knotens
 mit \texttt{-{}-grace-period=0} gelöscht. Die Control Plane räumte sie binnen 0,1 Sekunden ab und wies einen der betroffenen Mandanten
 neu zu. Es gab keinen Fehler, die längste Lücke des Probers beträgt 0,30 Sekunden. Die langen Aufrufe der beiden getroffenen
 Mandanten dauerten 44,2 und 44,3 statt 25,2 Sekunden, weil die Nachricht nach fünf Sekunden Ack-Wait neu zugestellt und
