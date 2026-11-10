@@ -43,9 +43,10 @@ Auf dem Endstand liefen S1 bis S4, M5, die Zustellung, T1 bis T9, SandboxEval un
 Isolates und eine Pool-Zielgröße von vierzig. Der Auth Callout fehlte, weil er auf der Plattform noch nicht eingerichtet
 ist.
 Danach kamen die Proxy-Abmeldung im Hintergrund, eine Korrektur der Wartezeit auf den Consumer-Leader und ein
-größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. Die virtuelle Uhr (\autoref{sec:kompatibilitaetsschicht}), die Schnittmenge der Regeln und die Standardregel für das
-eigene System (beide \autoref{sec:faehigkeitsmodell}) kamen nach allen Messungen hinzu. Nur der zweite Lauf zum verdeckten Kanal in \autoref{sec:pruefung-isolation} lief mit der neuen Uhr.
-Für die Schnittmenge und die Standardregel gibt es keinen Lauf. \autoref{tab:stand} im Anhang ordnet
+größeres Speicherlimit der Control Plane hinzu. Spätere Läufe nennen ihren Stand. Erst nach den übrigen Messungen kamen die virtuelle Uhr (\autoref{sec:kompatibilitaetsschicht}), die Schnittmenge der
+Regeln und die Standardregel für das eigene System (beide \autoref{sec:faehigkeitsmodell}) hinzu. Gemessen ist davon nur
+die virtuelle Uhr, im zweiten Lauf zum verdeckten Kanal (\autoref{sec:pruefung-isolation}). Schnittmenge und
+Standardregel wurden nicht gemessen. \autoref{tab:stand} im Anhang ordnet
 die Belege den Ständen, Daten und Commits zu, auch die früheren Läufe.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt, zuletzt in den letzten Messschritten. Der Runner führt jedes Skript
