@@ -256,8 +256,8 @@ pub fn for_profile(profile: Profile) -> Self {
     S1a, S1b, S2, S3, S4, M5, Zustellung 06 bis 08 und Absturz, T1 bis T9, SandboxEval, M1 und M3 & 29.\ und 30.\ Oktober & Endstand: Gateway \texttt{b2aa8e7}, Executor \texttt{5db344b}, Control Plane \texttt{55331df} \\
     Noisy Neighbour, Lauf P1 und K1 & 2.\ November, morgens & wie Endstand \\
     Noisy Neighbour, Läufe P2 bis K3, Proxy-Abmeldung im Hintergrund, Mikrobenchmarks, Prozessstart unter gVisor, reale Bundles & 2.\ November & Gateway \texttt{e52c21d}, Executor \texttt{5276a03}, Control Plane 256\,MiB \\
-    S1a und S2 vor dem Endstand, M5 mit Prober, T7 und T9 & 26.\ bis 28.\ Oktober & ohne Worker-ID in der Antwort, ab 26.\ Oktober mit Transport und Sandbox, ab 28.\ Oktober Proxy in enforce \\
-    Kaltstartverlauf, S1b und S2 Läufe 28 und 30, Pod-Ressourcen & bis 15.\ Oktober & vor der Trennung in Transport und Sandbox \\
+    T7 und T9 vor dem Endstand & 28.\ Oktober & Proxy in enforce \\
+    Kaltstartverlauf, S1b & bis 15.\ Oktober & vor der Trennung in Transport und Sandbox \\
     T10 & 28.\ Oktober, lokal & mit Auth Callout \\
     Ein Slot je Pod (\autoref{tab:ein-slot}) & 30.\ Oktober & Endstand, Slots für beide Profile auf eins \\
     Verdeckter Kanal mit \texttt{setTimeout(0)} als Uhr & 2.\ November & Executor \texttt{84a05f4} \\
@@ -295,27 +295,6 @@ pub fn for_profile(profile: Profile) -> Self {
     P0-1 Pool 0 & 6,55\,s & 11,3\,s & 12,5\,s & 12,6\,s & 0 & 0 \\
     P0-2 Pool 0 & 7,23\,s & 11,5\,s & 12,6\,s & 14,5\,s & 0 & 0 \\
     P0-3 Pool 0 & 7,65\,s & 11,9\,s & 13,1\,s & 13,9\,s & 0 & 0 \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-\begin{table}[H]
-  \caption{Overhead im Lastprofil bis zum 28.\ Oktober, in Millisekunden}
-  \label{tab:overhead-verlauf}
-  \footnotesize
-  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
-    \hline
-    Lauf & Modell, Modus & Aufrufe & Fehler & P50 & P90 & P95 & P99 & Max \\
-    \hline
-    18 & Ausgangszustand, Profil & 56.976 & 408 & 259 & 1.190 & 2.310 & 4.570 & 50.530 \\
-    20 & Prototyp, Wide & 68.881 & 1 (client) & 131 & 257 & 306 & 373 & 3.960 \\
-    28 & Prototyp, Profil & 57.001 & 0 & 127 & 164 & 180 & 268 & 15.460 \\
-        30 & Prototyp, Profil, mit Reconnect & 57.001 & 8 (7 client) & 127 & 163 & 178 & 276 & 5.580 \\
-    26.10. & Prototyp nach der Trennung in Transport und Sandbox, Profil & 57.001 & 0 & 128 & 165 & 183 & 434 & 3.404 \\
-        26.10. & Prototyp, Control Plane beendet den Leerlauf, Profil & 57.001 & 14 (502) & 138 & 239 & 293 & 405 & 3.443 \\
-    28.10. & Ausgangszustand, Profil, Ingress-Limit angehoben & 56.989 & 6 (502) & 301 & 490 & 746 & 3.410 & 16.500 \\
-    28.10. & Prototyp mit Egress-Proxy, Profil & 57.001 & 0 & 155 & 253 & 296 & 399 & 12.260 \\
-
     \hline
   \end{tabularx}
 \end{table}
@@ -647,44 +626,6 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     Anmeldung, Zuweisung, erste Ausführung & 0,3\,s \\
     Summe, fünf von sieben Pods & 3,3 bis 3,6\,s \\
     Ausreißer: Image-Pull auf einem Knoten ohne Worker & 7,8\,s \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-\begin{table}[H]
-  \caption{Ressourcen auf hyper-int-otc während der Kaltstartmessung, Pod-Ebene unter gVisor}
-  \label{tab:ressourcen-vergleich}
-  \footnotesize
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r@{}}
-    \hline
-     & Ausgang & Pool 40 & Pool 0 \\
-    \hline
-    Neue Runtime-Pods im Fenster & 191 & 188 & 188 \\
-    Speicher-Spitze je Pod, Median / P90 / Max, MiB & 89,7 / 92,6 / 104 & 45,8 / 48,8 / 53 & 45,8 / 48,2 / 52 \\
-    \acs{CPU} je Pod über die Lebensdauer, Kerne & 0,017 & 0,020 & 0,022 \\
-    Lebensdauer eines neuen Pods, Median & 78\,s & 190\,s & 88\,s \\
-    Requests \acs{CPU} / Speicher & 10\,m + 25\,m / 128\,Mi & 10\,m / 32\,Mi & 10\,m / 32\,Mi \\
-    Limits \acs{CPU} / Speicher & 100\,m / 512\,Mi & -- / 512\,Mi & -- / 512\,Mi \\
-    Runtime-Pods, Spitze & 162 & 216 & 185 \\
-    Runtime-Speicher, Spitze & 13,7\,GiB & 9,7\,GiB & 8,2\,GiB \\
-    Runtime-Speicher vor dem Test & rund 0 & 1,9\,GiB & 0,3\,GiB \\
-    Steuerung und Routing, Pods & 7 & 2 bis 3 & 2 bis 3 \\
-    Steuerung und Routing, Speicher & 1,35 bis 1,38\,GiB & 113 bis 167\,MiB & 116 bis 167\,MiB \\
-    Steuerung und Routing, \acs{CPU} & bis 0,14 Kerne & bis 0,05 Kerne & bis 0,04 Kerne \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-\begin{table}[H]
-  \caption{Speicher auf hyper-int-otc nach der Trennung in Transport und Sandbox, 26.\ Oktober}
-  \label{tab:ressourcen-trennung}
-  \footnotesize
-  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
-    \hline
-     & Pool 40 & Pool 0 \\
-    \hline
-    Speicher-Spitze je neuem Pod, Median / P90 / Max, MiB & 58,9 / 64,2 / 68,5 & 59,9 / 63,3 / 67,2 \\
-    Control Plane und Gateway, Spitze & 161\,MiB & -- \\
     \hline
   \end{tabularx}
 \end{table}

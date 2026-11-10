@@ -379,7 +379,7 @@ ein Thread außerhalb des Isolates die Terminierung auslösen kann. Der Thread t
 Prozesses teilen Adressraum und cgroup. Beide Profile schöpfen aus demselben Vorrat an Slots, lange Hintergrundläufe
 können synchrone verdrängen (\autoref{sec:diffusion:ausblick}).
 
-Die Isolate-Grenze je Ausführung erfüllt M2, und das Isolate liegt im Endstand warm vor dem Aufruf
+Die Isolate-Grenze je Ausführung erfüllt M2, und das Isolate liegt warm vor dem Aufruf
 (\autoref{sec:warm}). Ein frischer Context im bestehenden Isolate wäre billiger, stellt Zustandsfreiheit
 aber nicht her, weil Heap-Limit, Abbruch und Host-Zustand je Isolate wirken, nicht je Context. Ein Zurücksetzen des Prozesses auf einen Snapshot zwischen
 zwei Ausführungen, wie \textcite[S.~1]{alzayat_groundhog_2023} es für Container beschreiben, setzt voraus, dass ein
@@ -392,8 +392,8 @@ Der Ausgangszustand überlässt die Instanzverwaltung dem Autoscaler von Knative
 der letzten Anfrage auf null skaliert (\autoref{sec:grundlagen:bausteine}). Dagegen sprechen drei Dinge. Eine
 Ausführung hängt am gerade warmen Pod, der sich beim Drain eines Knotens nicht verschieben lässt. Das ist die Herkunft
 von M5. Eine Untergrenze von einer Instanz je Revision bedeutete bei über 1.700 meist inaktiven Mandanten über tausend
-leerlaufende Pods. Und eine Zwischeniteration, in der das Gateway je Anfrage synchron bei der Control Plane die
-Adresse des Workers erfragte, koppelte die Skalierung an den Anfragepfad und wurde verworfen. Daraus folgt die Regel:
+leerlaufende Pods. Und fragte das Gateway je Anfrage synchron bei der Control Plane die Adresse des Workers ab,
+hinge die Skalierung am Anfragepfad. Daraus folgt die Regel:
 Die Zuteilung liegt nie auf dem Anfragepfad, und die Größe des Pools ist von der Zahl der Mandanten entkoppelt.
 
 Das Gateway veröffentlicht einen Auftrag auf ein Subject der Form
@@ -545,8 +545,7 @@ betrifft vor allem Agentenläufe, deren Aufrufer nach V2 beeinflussbar ist und s
 Zeitquelle für den Kanal aus \autoref{sec:pruefung-isolation}. Unabhängig von den Regeln verwirft der Proxy private, Loopback-,
 Link-Local- und Metadaten-Adressen und die Adressbereiche des Clusters. Einen Treffer außerhalb der Regeln lehnt er im
 Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Proxy wertet Agentenläufe ohne Angabe in enforce.
-Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. Er registrierte beide Profile in audit,
-und ein Skript erreichte jede öffentliche Adresse. In der Messumgebung stehen beide Profile inzwischen in
+Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. In der Messumgebung stehen beide Profile in
 enforce, mit einer Testregel und dem eigenen System je Lauf (T7, \autoref{sec:pruefung-isolation}). Jeder Zugriff steht
 im Protokoll, und verwehrt bleiben stets die internen Bereiche. Den Token der Person setzt der Proxy bei Agentenläufen selbst
 ein, er gelangt nie in die Sandbox. Lauschende Ports sind in beiden Profilen verwehrt.
@@ -617,8 +616,8 @@ Abweichung verschwindet. Integrationstests sprechen über \texttt{http}, \texttt
 einem rohen Socket mit echten Gegenstellen und prüfen Backpressure, Redirects, Abbrüche und die Allowlist. Der dritte
 Weg prüft den Bestand gegen die Schicht. Ein Scanner bündelt jede gespeicherte Skriptversion mit esbuild wie der
 Builder der Plattform. Dann prüft er jeden Import und jeden freien Bezeichner gegen eine Liste dessen, was ein
-laufendes Isolate des Prototyps bereitstellt. Ein früher Lauf war die Arbeitsliste für die zweite Schicht. Weil er auch Bezeichner in nie ausgeführten
-Zweigen zählt, liefert er nur eine Obergrenze der Blocker (\autoref{sec:pruefung-kompatibilitaet}).
+laufendes Isolate des Prototyps bereitstellt. Er diente als Arbeitsliste für die zweite Schicht. Weil er auch Bezeichner in nie ausgeführten
+Zweigen zählt, liefert er nur eine Obergrenze der Blocker.
 
 \subsubsection{Begrenzung der Ressourcen}
 \label{sec:ressourcenbegrenzung}
@@ -654,7 +653,7 @@ weniger als das Minimum von 64\,MB. Der Entwurf nimmt diese Überbuchung in Kauf
 greift vor den Mechanismen des Isolates die cgroup und beendet die Sandbox mit allen laufenden Ausführungen. Deren
 Nachrichten stellt der Consumer nach der Ack-Wait neu zu, und sie laufen ein zweites Mal (\autoref{sec:zuverlaessigkeit}).
 T6 prüft eine einzelne Ausführung, die den Speicher erschöpft, nicht eine neben drei laufenden. Der Pod erhält ein Speicherlimit, aber kein
-\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand trug anfangs eines (100\,m, \autoref{tab:ressourcen-vergleich}), eine Fehlkonfiguration, inzwischen zwei Kerne. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
+\ac{CPU}-Limit, weil die Clusterrichtlinie das untersagt. Der Ausgangszustand hat ein \ac{CPU}-Limit von zwei Kernen. Rechenzeit begrenzt allein der Watchdog, was in die Bewertung
 von S4 eingeht (\autoref{tab:parameter}). Die Mechanismen auf Ebene des Isolates liefern damit die Attribution und
 einen im Skript abfangbaren Fehler, die cgroup die Garantie. Ihre Belastbarkeit wird in \autoref{sec:Evaluation}
 anhand der Prüffälle aus \autoref{tab:prueffaelle} geprüft.
@@ -815,10 +814,9 @@ das Modell mehr Pods, Speicher und \ac{CPU} (\autoref{sec:durchsatz}), und der P
 gleichzeitige Ausführungen. Der Entwurf behält deshalb mehrere Slots. Ob ein Slot im Agentenprofil diesen Preis wert ist und ob die Anfragen je Zeit zu begrenzen
 sind, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor.
 
-Die Zugangsdaten (M6) sind auf der Plattform noch nicht getrennt. Zunächst trugen alle Worker-Pods dieselben
-Zugangsdaten für NATS und Redis. Der Prototyp schließt das durch die Trennung von Transport und Sandbox und den Auth
-Callout (\autoref{sec:bausteine}) und hat die Kette lokal erprobt. Auf der Plattform setzt der Callout Anpassungen des
-DDP-Teams voraus, bis dahin gelten dort die gemeinsamen Zugangsdaten, auch in allen Messungen.
+Die Zugangsdaten (M6) sind auf der Plattform noch nicht getrennt. Die Trennung von Transport und Sandbox und der Auth
+Callout (\autoref{sec:bausteine}) sind lokal erprobt, der Callout setzt auf der Plattform Anpassungen des DDP-Teams
+voraus. Bis dahin tragen dort alle Worker-Pods dieselben Zugangsdaten, auch in allen Messungen.
 
 Die Rotation entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur
 vollen Stunde zugewiesene Pods zur nächsten vollen Stunde ablaufen, wenn die Nachfrage am höchsten ist.
