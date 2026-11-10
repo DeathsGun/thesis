@@ -137,8 +137,7 @@ fast ganz aus dem Kaltstart des Runners. Im Burst bekommen genau vierzig Mandant
 Sekunden, die Zielgröße des Pools. Die übrigen fünfzig warten auf neue Pods, und dort müssen beide Modelle Pods starten.
 Der Prototyp bleibt auch dort schneller und ohne Fehler. Die acht Fehler
 des Ausgangszustands in zwei Läufen sind 502 mit \enquote{no route to host} zum Queue-Proxy eines Runner-Pods. Das deutet darauf hin,
-dass Knative frische Pods anspricht, bevor ihr Netz erreichbar ist, belegt ist das nicht. Der Egress-Proxy ist in allen
-Läufen des Prototyps enthalten, einen Lauf ohne ihn gibt es nicht.
+dass Knative frische Pods anspricht, bevor ihr Netz erreichbar ist, belegt ist das nicht.
 
 Ohne vorgehaltene Pods liegt der Prototyp im verteilten Lauf so hoch wie der Ausgangszustand und im Burst etwas
 darunter. Der Vorsprung
