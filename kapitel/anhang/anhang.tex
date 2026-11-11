@@ -327,14 +327,14 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     Spitzenspeicher je Pod, Median / P90 / Maximum, MiB & 70,5 / 81,7 / 103 & 82,7 / 103 / 133 \\
     Steuerung und Routing, Spitze, MiB & 267 & 2.299 \\
-    Pool im Ruhezustand, 40 Worker zu 78,7\,MiB, MiB & 3.111 & 0 \\
+    Pool im Ruhezustand, 40 Worker, MiB & 3.111 & 0 \\
     Pool im Ruhezustand, Kerne & 1,02 & 0 \\
     \hline
   \end{tabularx}
 \end{table}
 
 \begin{table}[H]
-  \caption{Ein Slot je Worker-Pod gegen vier, 30.\ Oktober}
+  \caption{Ein Slot je Worker-Pod (30.\ Oktober) gegen vier (erster Lauf, 29.\ Oktober)}
   \label{tab:ein-slot}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
@@ -690,7 +690,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
 \end{table}
 
 \begin{table}[H]
-  \caption{SandboxEval, 21.\ Oktober}
+  \caption{SandboxEval, 30.\ Oktober}
   \label{tab:sandboxeval}
   \small
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r@{}}
@@ -829,7 +829,7 @@ ob sie mehrere Mandanten bedienen und welche Geheimnisse sie halten (\autoref{se
       der Anfragen, beides in Redis bis zum Ablauf der Registrierung \\
     Transport im Worker & holt Aufträge ab, führt keinen Mandantencode aus & nein, ein Mandant & NATS-Verbindung des
       Mandanten, Identitäts-Secret des Pods \\
-    Sandbox im Worker & nicht vertrauenswürdig, führt den Gastcode aus & nein, ein Mandant & keine \\
+    Sandbox im Worker & nicht vertrauenswürdig, führt den Gastcode aus & nein, ein Mandant & keine dauerhaften, nur die Kennungen der laufenden Ausführungen \\
     \multicolumn{4}{@{}l}{\emph{Ausgangszustand}} \\
     Knative Serving & Ingress und Controller, die Runner anlegen und Anfragen leiten & ja & Rechte auf Pods im
       Namespace \\
@@ -844,7 +844,7 @@ ob sie mehrere Mandanten bedienen und welche Geheimnisse sie halten (\autoref{se
 \section{Interne Quellen}
 \label{anh:intern}
 
-Vier Quellen der Arbeit sind interne, nicht veröffentlichte Unterlagen der d.velop AG. Die Tabelle nennt je Quelle
+Fünf Quellen der Arbeit sind interne, nicht veröffentlichte Unterlagen der d.velop AG. Die Tabelle nennt je Quelle
 anonymisiert die Aussage, auf die sich der Text stützt. Die Unterlagen selbst werden auf Anfrage geliefert.
 
 \begin{table}[H]
@@ -863,6 +863,8 @@ anonymisiert die Aussage, auf die sich der Text stützt. Die Unterlagen selbst w
     Änderungsvorgang, April 2026 \autocite{intern_runner_ersatz_2026} & Runner-Pods werden nach 24 Stunden ersetzt, weil
       minütlich ausgelöste Funktionen nie auf null skalieren und ein Speicherleck einen Runner unbrauchbar machte &
       \autoref{sec:angreifermodell} \\
+    Roadmap-Eintrag, November 2026 \autocite{intern_code_mode_2026} & Agenten sollen Skripte direkt in der isolierten
+      Umgebung der Skript-App ausführen, nur das Ergebnis fließt zurück & \autoref{sec:einleitung:motivation} \\
     Besprechung mit dem Plattformteam, 21.\ September 2026 \autocite{intern_ddp_updates_2026} & Die Clusterknoten
       erhalten etwa vier Rolling Updates im Jahr, laufende Runner lassen sich dabei nicht verschieben &
       \autoref{sec:einleitung:problemstellung} \\

@@ -51,7 +51,7 @@ und dem JavaScript-Code, der sie dem Skript in der gewohnten Form anbietet.
 Eine sprachbasierte Grenze hält, was die Engine prüft, nicht aber, was die Hardware preisgibt. Ein \emph{Seitenkanal}
 verrät Daten über ein Merkmal, das nicht als Ausgabe gedacht ist, etwa über die Dauer eines Speicherzugriffs. Spectre
 nutzt dafür die spekulative Ausführung des Prozessors und liest so Speicher, den die sprachbasierte Grenze schützt
-\autocite[S.~1]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Origins im selben Prozess aufgegeben und
+\autocite[S.~1]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Sites im selben Prozess aufgegeben und
 durch eine Prozessgrenze ersetzt \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Ein
 \emph{verdeckter Kanal} ist ein Übertragungsweg, über den ein Prozess Informationen entgegen der Sicherheitsrichtlinie
 weitergibt \autocite[S.~107]{dod_trusted_1985}, etwa indem ein Sender den Prozessor belastet und ein Empfänger seine
@@ -114,7 +114,11 @@ Ausführungen hinweg wiederverwendet, um Kaltstarts zu sparen.
 Die Anbieter serverloser Plattformen haben ihre Ausführungsmodelle beschrieben und gegen die Anforderungen des eigenen
 Betriebs begründet, etwa Amazon Web Services mit Firecracker \autocite[S.~419]{agache_firecracker_2020} oder Cloudflare
 mit dem Isolationsmodell der Workers-Plattform \autocites{bloom_cloud_2018}{cloudflare_security_2026}. Daneben stehen
-Forschungsprototypen, die je einen Teil des Problems bearbeiten. \autoref{tab:verwandt} ordnet die nächsten Arbeiten
+Forschungsprototypen, die je einen Teil des Problems bearbeiten. Gesucht wurde in IEEE Xplore, der ACM Digital Library, bei USENIX, SpringerLink,
+Google Scholar und arXiv sowie in der Dokumentation von Firecracker, gVisor, V8, Cloudflare Workers,
+WebAssembly-Laufzeiten und Knative, mit Kombinationen von Begriffen zu Mandantentrennung, Sandbox-Techniken,
+Serverless und Sicherheit oder Kaltstart, für Agenten zusätzlich nach Code-Interpretern und Indirect Prompt Injection.
+Die Suche erhebt keinen Anspruch auf Vollständigkeit. \autoref{tab:verwandt} ordnet die nächsten Arbeiten
 nach ihrer Isolationseinheit und nennt ihren Schwerpunkt und ihre Grenze für das in \autoref{sec:einleitung:problemstellung} gestellte Problem.
 
 \begin{table}[H]
@@ -134,8 +138,8 @@ nach ihrer Isolationseinheit und nennt ihren Schwerpunkt und ihre Grenze für da
       \autoref{sec:wasm-zurueckgestellt} \\
     SAND \autocite[S.~923]{akkus_sand_2018} & Container je Anwendung, Prozess je Funktion & trennt Anwendungen, nicht
       Mandanten \\
-    Faastlane \autocite[S.~805]{kotni_faastlane_2021} & Threads eines Prozesses je Workflow & Ziel ist die
-      Beschleunigung von Workflows \\
+    Faastlane \autocite[S.~805]{kotni_faastlane_2021} & Threads eines Prozesses je Workflow, getrennt über Memory
+      Protection Keys & beschleunigt Workflows einer Anwendung, trennt keine Mandanten \\
     Groundhog \autocite[S.~1]{alzayat_groundhog_2023} & Container, Snapshot zwischen Aufrufen & Zustandsfreiheit durch
       Zurücksetzen, eine Ausführung je Container \\
     Photons, Catalyzer \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020} & Laufzeit je

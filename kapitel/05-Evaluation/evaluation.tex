@@ -40,7 +40,8 @@ das Agentenprofil hat im Ausgangszustand kein Gegenstück. Die Prüffälle laufe
 Der Ausgangszustand wurde während der Arbeit umgestellt. Der Runner führt jedes Skript
 in einem eigenen, verworfenen Worker-Thread aus und trägt statt 100\,m ein
 \ac{CPU}-Limit von zwei Kernen. Der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster
-von 6 und 60 Sekunden Scale-Down-Delay. Alle Vergleichsläufe messen diesen Stand.
+von 6 und 60 Sekunden Scale-Down-Delay. Diese Konfiguration entspricht der Produktion, und alle Vergleichsläufe messen
+diesen Stand.
 
 Lastgenerator ist k6 \autocite{grafana_labs_k6_2026} auf einem Arbeitsplatzrechner, dessen Aufrufe wie echte
 Webhooks über Internet und Edge-Proxy der Plattform laufen. Sie gehen an Testmandanten, deren Skripte jeder Lauf
@@ -62,10 +63,11 @@ Die Perzentile stammen aus k6 und sind exakt über alle Aufrufe eines Laufs bere
 Speicher und \ac{CPU} stammen aus Prometheus, dem Metriksystem des Clusters, das die Container-Werte von cAdvisor
 sammelt. Die Zerlegung einzelner Aufrufe stammt aus den Traces, die Gateway, Control Plane und Worker an Tempo senden. Fehler mit Status 0, also
 Verbindungs- und Lesefehler auf dem Weg zum Edge-Proxy, haben die Plattform nie erreicht und werden ausgewiesen,
-aber nicht als Fehler der Plattform gezählt.
+aber nicht als Fehler der Plattform gezählt. Lastskripte und Rohdaten sind auf Anfrage einsehbar, soweit sie keine
+sicherheitsrelevanten Details der Plattform enthalten.
 
-Drei Bedrohungen der Validität gelten für alle Zahlen. Intern lief der Ausgangszustand mit dem alten Skriptdienst und
-dem Node.js-Runner, der Prototyp mit dem neuen Skriptdienst und dem Rust-Executor, sodass der
+Drei Bedrohungen der Validität gelten für alle Zahlen. Intern lief der Ausgangszustand mit dem Node.js-Runner, der
+Prototyp mit Gateway, Rust-Executor und einer neuen Resolve-Funktion des bisherigen Skriptdienstes, sodass der
 Vergleich zwei Modelle samt ihrer Begleitdienste misst. Der Prototyp wurde über viele Läufe abgestimmt, der Ausgangszustand
 einmal. Hinzu kommt, dass alle Läufe ohne Auth Callout liefen. Der Callout prüft jede NATS-Verbindung eines Workers, und
 der Transport baut sie bei der Zuweisung auf (\autoref{sec:zuteilung}). Er liegt damit auf dem Pfad, den S1a misst, und
@@ -79,15 +81,15 @@ sich die Spannweiten beider Modelle nicht, ist der Unterschied größer als die 
 Konfidenzintervall nach \textcite[S.~4]{hoefler_scientific_2015} ist das nicht. Die Perzentile
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
 berichten \autocites[S.~6]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}.
-Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung und die Prüffälle haben je einen Lauf. Innerhalb eines Laufs geben
+Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S4, die Zustellung und die Prüffälle haben je einen Lauf. Innerhalb eines Laufs geben
 \autoref{tab:kaltstart-ki} (S1) und \autoref{tab:konfidenz} (S2) im Anhang Intervalle für die Vergleichsläufe an.
 
 \subsection{Kaltstartlatenz (S1)}
 \label{sec:kaltstart}
 
 Der Kaltstart des Prototyps hängt an der Instanzverwaltung, nicht an der Engine. Erst ein Pool von vierzig Pods nimmt
-den Pod-Start vom Anfragepfad (\autoref{tab:kaltstart-verlauf} im Anhang). S1b, der Erstkontakt bei leerem Pool,
-kostet 3,3 bis 3,6 Sekunden je Pod mit Image auf dem Knoten und 5 bis 8 Sekunden, wenn es erst gezogen wird
+den Pod-Start vom Anfragepfad (\autoref{tab:kaltstart-verlauf} im Anhang). S1b, der Erstkontakt bei leerem Pool, ist in den
+Läufen mit Pool null gemessen. Ein neuer Pod braucht bis zur ersten Ausführung 3,3 bis 3,6 Sekunden mit Image auf dem Knoten und 5 bis 8 Sekunden, wenn es erst gezogen wird
 (\autoref{tab:podstart}).
 
 Der Vergleich mit dem Ausgangszustand lief auf hyper-int-otc, wo beide Modelle unter gVisor
@@ -366,7 +368,9 @@ Ein Rolling Update der Knoten verdrängt die Pods eines Knotens über \texttt{ku
 \autocite{the_kubernetes_authors_safely_2026}. Auf dem geteilten Integrationscluster steht das nicht zur Verfügung.
 Deshalb löscht der Ersatz unter Last alle Worker-Pods eines Knotens im Namespace, sodass jeder wie bei einer Eviction
 SIGTERM und seine Grace Period erhält. Nicht abgebildet
-ist, dass ein Drain auch Control Plane, Gateway und NATS-Server verdrängt, die als Deployments mit Replikas nicht Gegenstand von M5 sind. Erhoben werden je Mandant die Zeit von der Löschung bis zur ersten danach
+ist, dass ein Drain auch Control Plane, Gateway und NATS-Server verdrängt. M5 gilt damit für Worker-Pods bei laufender
+Control Plane. Diese läuft mit einer Replik ohne Leader Election (\autoref{sec:zuteilung}). Trifft ein Drain ihren
+Knoten, erhalten Mandanten ohne Pod bis zu ihrem Neustart keinen, Mandanten mit Pod laufen weiter. Erhoben werden je Mandant die Zeit von der Löschung bis zur ersten danach
 begonnenen erfolgreichen Ausführung, die Zahl der verlorenen Aufträge und ob eine Ausführung, die die Löschung
 überspannt, zu Ende läuft. Der Ausgangszustand wird mit demselben Ersatz gemessen, indem der Runner-Pod des Mandanten
 gelöscht wird. Seine Zeit ohne Ausführungsfähigkeit ist der Zielwert aus \autoref{sec:kriterienkatalog}. Je Mandant läuft ein Prober ohne
@@ -402,9 +406,10 @@ Damit laufen bis zu 1.717 von 1.718 Mandanten, 99,9 Prozent, nicht schlechter al
 Mandanten, deren Lauffähigkeit allein auf der Schicht beruht, pessimistisch als Ausfall gezählt, bleiben 1.053, also 61,3
 Prozent. Das ist die Untergrenze und ergibt vier statt fünf Punkte. Die Obergrenze gilt unter zwei Annahmen: Die Schicht
 hält für die übrigen Pakete, was Differenztest und Treiber-Prüfung für einen Treiber zeigen, und die Ziele der Skripte
-sind erreichbar. Unter enforce lässt der Egress-Proxy nur das eigene System und die Ziele der Regeln durch (T7), und wie
-viele Mandanten eine Regel brauchen, ist nicht erhoben. S7, der Aufwand für den Rest, ist für 64 der 65 Mandanten null,
-weil keine Anpassung am Skript nötig ist, und für den letzten nicht gewollt. Der Aufwand für Regeln steht darin nicht.
+sind erreichbar. Das ist gegeben, weil Bestandsmandanten offene Egress-Regeln erhalten und nur neue Mandanten von
+Beginn an eingeschränkte. Wie Bestandsmandanten auf eingeschränkte Regeln wechseln, ist nicht Teil der Arbeit. S7, der
+Aufwand für den Rest, ist für 64 der 65 Mandanten null, weil keine Anpassung am Skript nötig ist, und für den letzten
+nicht gewollt.
 
 \subsection{Zusammenführung}
 \label{sec:nutzwert}
@@ -433,9 +438,9 @@ S1 mittelt S1a mit zweimal fünf und S1b mit 1,2 und 3,7 Punkten zu 3,7, gerunde
   \end{tabularx}
 \end{table}
 
-Der Nutzwert liegt bei 4,25 bis 4,5 gegen 3,7, je nachdem, ob S6 mit seiner Unter- oder Obergrenze eingeht. Mit der
+Der Nutzwert liegt bei 4,25 bis 4,5 gegen 3,7, den Bezugswert des Ausgangszustands im Schema, je nachdem, ob S6 mit seiner Unter- oder Obergrenze eingeht. Mit der
 Obergrenze erreicht der Prototyp auf vier der sechs Kriterien die Höchstpunktzahl, bei S1 vier und bei S3 drei Punkte.
 Dann ist er bei S3, S6 und S7 gleichauf und bei den übrigen besser, und die Rangfolge hängt nicht von den Gewichten ab.
-Mit der Untergrenze liegt er bei S6 einen Punkt zurück, und der Vorsprung sinkt von 0,8 auf 0,55. Er kehrte sich erst
-um, wenn S6 mehr als das Dreifache seines Gewichts erhielte. S6 hängt unter enforce von den Regeln ab: Bei zwei
-Punkten, also höchstens 40\,\% der Mandanten, läge der Prototyp mit 3,75 knapp vor 3,7, bei einem mit 3,5 dahinter. Die Vorbehalte der Zuordnung stehen in \autoref{sec:messaufbau}.
+Mit der Untergrenze liegt er bei S6 einen Punkt zurück, und der Vorsprung sinkt von 0,8 auf 0,55. Bei auf eins
+normierten Gewichten kehrte er sich erst um, wenn S6 mehr als 0,52 statt 0,25 wöge. Der Vorsprung hält, solange S6
+mindestens drei Punkte erreicht, bei zwei Punkten läge der Prototyp mit 3,75 nur noch knapp vor 3,7. Die Vorbehalte der Zuordnung stehen in \autoref{sec:messaufbau}.

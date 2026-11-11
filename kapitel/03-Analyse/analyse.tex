@@ -66,7 +66,7 @@ geprüfte Modell messen lassen muss. So war der Stand bei der Analyse. In den le
 
 Aus diesem Konzept folgen die Schutzziele. \emph{Vertraulichkeit} und \emph{Integrität}
 verlangen die Mandantenisolation aus \autoref{sec:grundlagen:eigenschaften}. Die \emph{Verfügbarkeit} verlangt das
-Modell an zwei Stellen: Eine Ausführung darf die folgenden desselben Mandanten nicht unbrauchbar machen (A1, T6), und
+Modell an zwei Stellen: Eine Ausführung darf die folgenden desselben Mandanten nicht unbrauchbar machen (\autoref{sec:angreifermodell}), und
 ein Knotenupdate darf die Ausführung nicht unterbrechen (M5). Den Speicher eines Mandanten begrenzt das cgroup seines
 Pods. Dass ein Mandant die Rechenzeit eines anderen nicht schmälert, ist dagegen kein Ziel des Modells. Die \ac{CPU}
 der Knoten teilt der Cluster nach seinen Richtlinien, die das Modell nicht ändert, und in \autoref{sec:pruefung-isolation}
@@ -103,7 +103,8 @@ Die Vertrauensannahmen lauten wie folgt.
     empirisch belegt \autocite[S.~106191]{guo_redcode_2024}.
 
   \item[V3: Die Plattform ist vertrauenswürdig.] Host-Kernel, gVisor, Container-Orchestrierung,
-    Runtime-Binary und Execution Service gelten als korrekt und nicht kompromittiert.
+    Runtime-Binary und Execution Service bilden die \ac{TCB} und gelten als nicht kompromittiert. Ausbrüche des
+    Gastcodes aus Engine und Sandbox behandelt \autoref{sec:angreifermodell}.
     Angriffe, die diese Bestandteile auf anderem Weg unterwandern, etwa über die
     Control Plane von Kubernetes, liegen außerhalb der Betrachtung. Ein neues Ausführungsmodell fügt dieser Menge eigene
     Dienste hinzu, die damit ebenfalls vertrauenswürdig sein müssen (\autoref{tab:tcb}). Das codeerzeugende Sprachmodell
@@ -250,7 +251,7 @@ unterhalb der Softwareebene nicht abfängt. Cloudflare hat einen solchen Angriff
 mit V8 Isolates selbst vorgeführt. Über einen Remote Timer ließ sich aus einem Worker auf demselben Server ein
 \ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
 von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
-demselben Grund die Trennung von Origins im gemeinsamen Prozess aufgegeben
+demselben Grund die Trennung von Sites im gemeinsamen Prozess aufgegeben
 (\autoref{sec:grundlagen:isolation}), und Cloudflare benennt die Restrisiken für V8 Isolates ausdrücklich
 \autocite{cloudflare_security_2026}. Eine sprachbasierte Grenze allein bildet damit keine hinreichende
 Mandantengrenze.

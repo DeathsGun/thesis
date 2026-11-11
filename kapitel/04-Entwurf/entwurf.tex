@@ -14,7 +14,7 @@ betrachteten.
 Die zweite ist die bereits eingesetzte Sandbox-Laufzeit. M3 untersagt, die dem Gastcode zugängliche Oberfläche des
 Host-Kernels gegenüber dem Ausgangszustand zu vergrößern. Die äußere Grenze ist damit keine Entwurfsvariable mehr. Ihr
 Aufwand ist in die Entscheidung des Ausgangszustands bereits eingegangen \autocite[S.~3]{young_true_2019}. Ein
-Ausbruch aus der V8-Sandbox endet damit in einer gVisor-Sandbox und nicht auf dem Host-Kernel. Hardwareseitige
+Ausbruch aus der Isolate-Grenze endet damit in einer gVisor-Sandbox und nicht auf dem Host-Kernel. Hardwareseitige
 Seitenkanäle bleiben offen, und der Sentry gehört selbst zur \ac{TCB} (\autoref{sec:grundlagen:isolation}).
 
 Die dritte betrifft die Granularität der Ressourcenlimits. Kubernetes vergibt sie je Container
@@ -46,7 +46,7 @@ spart, zeigen \textcite[S.~645--646]{boucher_putting_2018} für sprachbasierte I
 von rund 39 Mikrosekunden gegenüber knapp 3 Millisekunden für einen frischen Prozess. Für V8 und Node.js liegen beide
 Werte höher und näher beieinander (\autoref{tab:prozessstart}). Offen sind daher zwei andere Fragen, ob zusätzlich eine innere Grenze eingezogen wird und wie viele Ausführungseinheiten sich eine Grenze teilen.
 
-Für M1 lässt sich das auflösen. Die Anbieter ziehen die Mandantengrenze durchgehend außen. Chrome trennt Origins seit
+Für M1 lässt sich das auflösen. Die Anbieter ziehen die Mandantengrenze durchgehend außen. Chrome trennt Sites seit
 Spectre durch Prozesse (\autoref{sec:grundlagen:isolation}). \textcite{cloudflare_security_2026} ergänzt die eigene
 Isolate-Plattform um eine Prozesssandbox mit Namespaces und \texttt{seccomp}.
 \textcite{deno_land_inc_how_2026} beschreibt für die eigene Plattform einen Prozess je Deployment, Namespaces,
@@ -80,7 +80,9 @@ sich nicht als Bibliothek einbinden, sodass ein Host keine Isolates erzeugen, be
 workerd scheitert an M2. Gesondert geprüft wird es, weil das Deno-Team zu Cloudflare wechselt
 \autocite{noauthor_deno_2026}. workerd erzeugt je Worker ein Isolate, das über alle Anfragen bestehen bleibt.
 Globale Variablen und Callbacks einer Ausführung sind damit für die folgende erreichbar, genau der Zustand, den T1 und T2
-prüfen. Die quelloffene Fassung setzt keine Ressourcenlimits durch. Dass es sich nicht als gehärtete Sandbox
+prüfen. Über den Worker Loader lassen sich zwar zur Laufzeit Worker mit neuer Kennung je Ausführung anlegen
+\autocite{cloudflare_worker_2026}, die quelloffene Fassung setzt aber keine Ressourcenlimits durch, sodass eine
+Ausführung, die den Speicher erschöpft, die folgenden trifft (T6). Dass es sich nicht als gehärtete Sandbox
 versteht \autocite{cloudflare_workerd_2026}, schließt es nicht aus, denn M1 verläuft nach \autoref{sec:zwei-grenzen} an
 der Pod-Grenze. Bei M4 ist workerd dem gewählten Entwurf eher voraus.
 
@@ -106,7 +108,8 @@ WebAssembly und führt sie in einer Wasm-Sandbox aus. Deren Ziel ist die sichere
 Beide erfüllen M1 bis M4. Verglichen wird deshalb entlang der
 Soll-Kriterien, ohne Gewichtung und ohne Messung, denn gebaut wurde nur der erste Weg.
 
-Beim Sicherheitsgewinn zeigt sich kein Vorsprung. WebAssembly erlaubt keine Erzeugung von Maschinencode zur Laufzeit
+Beim Sicherheitsgewinn zeigt sich kein klarer Vorsprung. Eine Wasm-Sandbox um die Engine wäre eine zweite Schicht
+gegen Speicherfehler der Engine, gegen Seitenkanäle wie Spectre hilft sie nicht. WebAssembly erlaubt keine Erzeugung von Maschinencode zur Laufzeit
 \autocite[S.~187]{haas_bringing_2017}. Im linearen Speicher fehlen aber \ac{ASLR}, Guard Pages und Stack Canaries
 \autocite[S.~218, 221]{lehmann_everything_2020}, und Ausbrüche aus der Wasm-Laufzeit sind dokumentiert
 \autocite{bytecode_alliance_wasmtimes_2026}. Beide Wege laufen zudem in derselben gVisor-Sandbox. Bei S1 entscheidet
@@ -161,15 +164,16 @@ M5 und M6 sind nur am Prototyp geprüft und für die übrigen Kandidaten offen. 
 an einem Isolate je Ausführung in einem Node.js-Host, verletzt aber M4, weil das Skript Umgebung, Netz und das echte
 Dateisystem des Containers sieht.
 
-Ein frischer Node-Prozess je Ausführung erfüllt M2, scheitert aber ebenso an M4. Auch mit Egress-Proxy, dem Dienst,
-über den jede ausgehende Verbindung läuft, und Netzwerkrichtlinie vermittelte er nur das Netz. Dateisystem, Umgebung
-und Identität des Hosts blieben dem Skript offen. Zustandsfreiheit und vermittelter Zugriff sind zwei verschiedene
+Ein frischer Node-Prozess je Ausführung erfüllt M2, scheitert aber ebenso an M4. Mit Egress-Proxy, dem Dienst, über
+den jede ausgehende Verbindung läuft, und Netzwerkrichtlinie vermittelte er nur das Netz. Ohne weitere Härtung blieben
+Dateisystem, Umgebung und Identität des Hosts dem Skript offen. Zustandsfreiheit und vermittelter Zugriff sind zwei verschiedene
 Eigenschaften. Für zur Laufzeit erzeugte Skripte ist das nach V2 die Lücke, denn ein über seine Eingaben
 beeinflusstes Skript kann Daten abfließen lassen, auf die es ohnehin zugreifen darf
 \autocite[S.~82]{greshake_not_2023}. Bei workerd liegt es umgekehrt, der Zugriff ist vermittelt, aber das Isolate
 überdauert die Ausführung. Beide Eigenschaften zugleich erfüllt ein Isolate je Ausführung mit vermittelten
-Bindings. Ein gehärteter
-Node-Prozess je Ausführung mit Egress allein über den Proxy ist nicht gemessen.
+Bindings. Gehärtet, mit schreibgeschütztem Dateisystem, leerer Umgebung und Egress allein über den Proxy, käme ein
+Node-Prozess je Ausführung M4 nahe, behielte aber die vollständige Node-Schnittstelle im Prozess des Skripts. Diese
+Variante ist nicht gemessen, ihr Ausschluss folgt aus M4, das vermittelte Bindings verlangt.
 
 Offen bleibt, auf welcher Ebene die Engine eingebettet wird. Der Binding Layer \texttt{rusty\_v8} stellt Isolate,
 Context, Skript und Scopes bereit. Event Loop, Modulauflösung und ein Mechanismus, über den der Host Funktionen in das
@@ -332,8 +336,9 @@ Ausgangszustands \autocite{the_knative_authors_configuring_2026} wird durch eine
 Ein Pod trägt die Ausführungen genau eines Mandanten, wie im Ausgangszustand. Ein Mandant ist umgekehrt nicht auf
 einen Pod beschränkt, bei Last erhält er bis zu zehn Pods aus dem Pool (\autoref{sec:zuteilung}). Die zwei Container
 des Pods teilen Pod-Netzwerk und unter gVisor den Kernel der Sandbox. Für die Zugangsdaten reicht das als zweite Hürde, nicht als
-Grenze: Der Sandbox-Container trägt keine. Ein Ausbruch aus der Engine erbeutet also keine, erst ein zweiter aus der
-Containergrenze erreicht den Transport. Hinter dieser schwächeren Hürde begrenzt der Auth Callout den Gewinn auf die
+Grenze: Der Sandbox-Container trägt keine dauerhaften, nur die Kennungen der laufenden Ausführungen, die gegenüber dem
+Egress-Proxy für die Dauer ihrer Registrierung gelten (\autoref{sec:faehigkeitsmodell}). Ein Ausbruch aus der Engine
+erbeutet also keine NATS-Zugangsdaten, erst ein zweiter aus der Containergrenze erreicht den Transport. Hinter dieser schwächeren Hürde begrenzt der Auth Callout den Gewinn auf die
 Consumer des eigenen Mandanten und die Laufzeit des Tokens.
 
 Die Zuordnung eines Pods zu einem Mandanten ist endgültig. Ein einmal zugewiesener Pod endet durch eine von drei
@@ -764,16 +769,18 @@ Isolate-Grenze. M2 und die Prüffälle betreffen aufeinanderfolgende Ausführung
 \emph{verdeckter Kanal} braucht einen mitwirkenden Sender: Eine beeinflusste Ausführung, die Daten einer Person
 verarbeitet, aber kein freigegebenes Ziel erreicht, moduliert die \ac{CPU}, und eine gleichzeitige mit freigegebenem
 Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitwirkung des Opfers aus (A2). Ein
-\emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox von V8, die der Prototyp nicht nutzt, die Heaps der gleichzeitigen Isolates. Gemessen
-ist nur der erste Weg (\autoref{sec:pruefung-isolation}). Seit der virtuellen Uhr braucht er eine Zeitquelle außerhalb
-der Sandbox, und die liefert jedes freigegebene Ziel, mindestens das eigene System mit seinem \texttt{Date}-Header.
+\emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox von V8, die der Prototyp nicht nutzt, die Heaps der gleichzeitigen Isolates. Ein Speicherfehler
+erreicht dabei auch die Ausführungskennungen der gleichzeitigen Läufe und damit im Agentenprofil Anfragen mit dem Token
+einer anderen Person desselben Mandanten. Gemessen ist nur der verdeckte Kanal (\autoref{sec:pruefung-isolation}).
+Seit der virtuellen Uhr braucht er eine Zeitquelle außerhalb der Sandbox, und die steht immer bereit, etwa der
+\texttt{Date}-Header des eigenen Systems oder die auf 100\,ms gerundete echte Zeit nach jeder Ein- und Ausgabe.
 
 Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber einen Kanal zwischen Pods auf demselben Knoten. Dafür braucht
-das Modell mehr Pods, Speicher und \ac{CPU} (\autoref{sec:durchsatz}), und der Pool deckt nur noch 40 statt 160
-gleichzeitige Ausführungen. Die Verantwortlichen der Fallstudie tragen den Kanal deshalb als Restrisiko, mit mehreren
-Slots je Pod auch im Agentenprofil und ohne Begrenzung der Anfragen je Zeit. Der Kanal braucht einen mitwirkenden
-Sender im selben Pod, die Zeitquelle ist nur über ein freigegebenes Ziel erreichbar, dessen Regeln ein Aufruf nicht
-erweitern kann, und gemessen überträgt er unzuverlässig (\autoref{sec:pruefung-isolation}).
+das Modell unter Last 64\,\% mehr Pods und 52\,\% mehr Speicher (\autoref{sec:durchsatz}), und der Pool deckt nur noch
+40 statt 160 gleichzeitige Ausführungen. Die Verantwortlichen der Fallstudie tragen deshalb alle drei Wege als
+Restrisiko, mit mehreren Slots je Pod auch im Agentenprofil und ohne Begrenzung der Anfragen je Zeit. Im selben Pod
+betreffen sie nur gleichzeitige Ausführungen desselben Mandanten, der Kanal braucht zudem einen mitwirkenden Sender,
+und gemessen lag seine Bitfehlerrate im selben Pod bei 0,08 bis 0,50 über 16 Bit (\autoref{tab:kanal}).
 
 Die Zugangsdaten (M6) sind auf der Plattform noch nicht getrennt. Die Trennung von Transport und Sandbox und der Auth
 Callout (\autoref{sec:bausteine}) sind lokal erprobt, der Callout setzt auf der Plattform Anpassungen des \acs{DDP}-Teams
