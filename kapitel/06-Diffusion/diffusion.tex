@@ -150,10 +150,6 @@ Kaltstarts ohne Pool (\autoref{sec:kaltstart}). Ein Vorladen der zuletzt aufgeru
 (\autoref{sec:zustellung}) nähme auch dem ersten Aufruf den Abruf ab. Getrennte Slots für synchrone und
 Hintergrundläufe verhinderten, dass lange Läufe kurze verdrängen.
 
-Den verdeckten Kanal zwischen gleichzeitigen Agentenläufen trägt die Fallstudie als Restrisiko
-(\autoref{sec:betriebsplanung}). Ob eine Trennung nach Person statt nach Mandant nötig wird, zeigt sich erst im Betrieb
-mit Agenten.
-
 Für die Fallstudie stehen zwei Schritte an. Der erste ist die stufenweise Einführung für die Kunden der \ac{OTC} nach dem
 Pfad aus \autoref{sec:diffusion:prinzipien}, mit dem Knative-Service als Rückweg. Der zweite ist der Wechsel der Kunden
 der \acs{AWS}-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen Knative-Service. Daten und Ausführung eines
