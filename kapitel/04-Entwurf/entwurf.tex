@@ -469,7 +469,7 @@ stutzt ihn zurück. Dabei zählen nur lebende Pods auf dem aktuellen Image, soda
 rollt. Bekommt ein Pod einen \texttt{DeletionTimestamp}, meldet ein Informer der Kubernetes-\ac{API} das innerhalb
 von Sekunden. Die Control Plane streicht ihn aus der Menge des Mandanten, ohne sein Ende abzuwarten, ohne ihn
 erneut zu löschen und ohne ein \emph{unassign}-Kommando. War es sein letzter Pod und warten bereits Aufträge, weist
-sie den Mandanten sofort neu zu. Die Zustände eines Pods führt \autoref{tab:podzustaende}.
+sie den Mandanten sofort neu zu. Die Zustände eines Pods zeigt \autoref{fig:podzustaende} im Anhang.
 
 Beim Drain eines Knotens für M5 erhalten die Pods SIGTERM. Ein Worker hört auf, Aufträge abzuholen, lehnt neue
 Zuweisungen ab und lässt laufende Ausführungen in der Grace Period zu Ende kommen. Der Durable Consumer bleibt mit seinem

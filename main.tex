@@ -100,7 +100,7 @@
 % Muss nach xcolor stehen, da tikz xcolor selbst nachlädt und das
 % sonst mit der hier gesetzten Option [table] kollidiert.
 \usepackage{tikz}
-\usetikzlibrary{fit,positioning,backgrounds}
+\usetikzlibrary{fit,positioning,backgrounds,calc}
 % Eigene Zeichenebenen, damit umschließende Kästen die inneren nicht überdecken.
 \pgfdeclarelayer{lproc}\pgfdeclarelayer{lpod}\pgfdeclarelayer{lnode}
 \pgfsetlayers{lnode,lpod,lproc,main}

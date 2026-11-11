@@ -98,7 +98,7 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
 \label{anh:header-zustaende}
 
 \autoref{tab:header} nennt die Header, die der Worker nach \autoref{sec:bausteine} vor dem Skript
-verbirgt oder aus dessen Antwort entfernt. \autoref{tab:podzustaende} führt die Zustände eines
+verbirgt oder aus dessen Antwort entfernt. \autoref{fig:podzustaende} führt die Zustände eines
 Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
 
 \begin{table}[H]
@@ -120,32 +120,35 @@ Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
   \end{tabularx}
 \end{table}
 
-\begin{table}[H]
-  \caption{Zustände eines Worker-Pods und ihre Übergänge}
-  \label{tab:podzustaende}
-  \small
-  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X
-    >{\RaggedRight\arraybackslash}X@{}}
-    \hline
-    Zustand & Bedeutung & Übergänge \\
-    \hline
-    angelegt & über die Kubernetes-\acs{API} erzeugt, noch nicht bereit, in keiner der drei
-      Mengen & bei Bereitschaft \emph{frei}, ohne Bereitschaft nach der Schonfrist aus
-      \autoref{tab:parameter} gelöscht \\[2pt]
-    frei & bereit, im Pool & beim Erstkontakt in einem atomaren Schritt nach
-      \emph{reserviert} \\[2pt]
-    reserviert & Zuweisung läuft, Kommando über \ac{HTTP}, Antwort innerhalb der Frist & bei
-      Bestätigung \emph{zugewiesen}, bei einem fehlgeschlagenen Schritt zurück nach \emph{frei} \\[2pt]
-    zugewiesen & genau einem Mandanten zugeordnet, nie wieder im Pool & Rotation nach Ablauf
-      der Zuweisungsdauer, Rückzug ohne Auftrag oder Drain des Knotens, jeweils nach
-      \emph{beendet}, nie zurück nach \emph{frei} \\[2pt]
-    beendet & Pod hat einen \texttt{DeletionTimestamp} bekommen oder ist gestorben, ein Informer
-      meldet es & aus jedem Zustand. War es der letzte Pod
-      eines Mandanten und warten Aufträge, Neuzuweisung sofort, Wiederholung mit wachsendem
-      Abstand nach \autoref{tab:parameter} \\
-    \hline
-  \end{tabularx}
-\end{table}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+    st/.style ={draw, rounded corners=2pt, fill=white, minimum height=0.8cm, minimum width=2.3cm,
+                align=center, font=\scriptsize},
+    lbl/.style={font=\tiny, inner sep=2pt, align=center},
+    tr/.style ={->, >=latex},
+  ]
+    \node[st] (ang) at (0,0)    {angelegt};
+    \node[st] (fre) at (3.8,0)  {frei};
+    \node[st] (res) at (7.6,0)  {reserviert};
+    \node[st] (zug) at (11.4,0) {zugewiesen};
+    \node[st, minimum width=5.2cm] (end) at (5.7,-2.9)
+      {beendet\\[1pt]{\tiny \texttt{DeletionTimestamp} oder gestorben, vom Informer gemeldet}};
+    \draw[tr] (res.south west) to[bend left=28] node[lbl, below] (fail) {Schritt\\fehlgeschlagen} (fre.south east);
+    \node[draw, dashed, rounded corners=3pt, inner sep=5pt, fit=(fre)(res)(zug)(fail)] (redis) {};
+    \node[lbl, anchor=south east] at (redis.north east) {in Redis geführt};
+
+    \draw[tr] (ang) -- node[lbl, above]{bereit} (fre);
+    \draw[tr] (fre) -- node[lbl, above]{Erstkontakt,\\atomar} (res);
+    \draw[tr] (res) -- node[lbl, above]{bestätigt} (zug);
+    \draw[tr] (ang.south) |- node[lbl, pos=0.36, left]{nicht bereit\\nach Schonfrist} (end.west);
+    \draw[tr] (zug.south) |- node[lbl, pos=0.36, right]{Rotation, Rückzug\\oder Drain} (end.east);
+    \draw[tr, dashed] (fre.south) -- ($(end.north)+(-1.9,0)$);
+    \draw[tr, dashed] (res.south) -- ($(end.north)+(1.9,0)$);
+  \end{tikzpicture}
+  \caption{Zustände eines Worker-Pods}
+  \label{fig:podzustaende}
+\end{figure}
 
 Nach einem Neustart liest die Control Plane den Zustand aus Redis zurück, entfernt zuerst Pods, die
 es nicht mehr gibt, und wiederholt offene Zuweisungen. Das ist möglich, weil der Worker eine
@@ -433,37 +436,6 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     Erstaufruf, Client, P50 / P95 / Maximum & 546 / 647 / 954 & -- \\
     Erstaufruf, Gateway, P50 / P95 / P99 & 157 / 852 / 1.074 & -- \\
     Warme Aufrufe danach, Client, P50 / P95 / Maximum & 84 / 121 / 174 & -- \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-\begin{table}[H]
-  \caption{Agentenprofil, Größe von Ein- und Ausgabe, in Millisekunden}
-  \label{tab:agent-groesse}
-  \footnotesize
-  \setlength{\tabcolsep}{3pt}
-  \begin{tabularx}{\textwidth}{@{}l r r r r r r r@{}}
-    \hline
-     & 1\,KiB & 32\,KiB & 63\,KiB & 65\,KiB & 256\,KiB & 1\,MiB & 4\,MiB \\
-    \hline
-    Eingabe & 105 / 124 & 100 / 156 & 134 / 177 & 237 / 392 & 371 / 549 & 510 / 1.127 & 1.102 / 1.937 \\
-    Ausgabe & 85 / 118 & 91 / 131 & 102 / 138 & 155 / 337 & 231 / 393 & 335 / 611 & 843 / 1.392 \\
-    \hline
-  \end{tabularx}
-\end{table}
-
-\begin{table}[H]
-  \caption{Agentenprofil, ausgehende Anfragen über den Proxy, in Millisekunden}
-  \label{tab:agent-egress}
-  \footnotesize
-  \begin{tabularx}{\textwidth}{@{}r r r r@{}}
-    \hline
-    Anfragen je Lauf & Client P50 / P95 & Skript P50 & je Anfrage laut Proxy P50 / P95 \\
-    \hline
-    0 & 81 / 126 & 1 & -- \\
-    1 & 176 / 240 & 95 & 75 / 108 \\
-    5 & 544 / 599 & 454 & 74 / 110 \\
-    10 & 981 / 1.098 & 882 & 74 / 109 \\
     \hline
   \end{tabularx}
 \end{table}
