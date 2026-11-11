@@ -141,8 +141,8 @@ Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
     \draw[tr] (ang) -- node[lbl, above]{bereit} (fre);
     \draw[tr] (fre) -- node[lbl, above]{Erstkontakt,\\atomar} (res);
     \draw[tr] (res) -- node[lbl, above]{bestätigt} (zug);
-    \draw[tr] (ang.south) |- node[lbl, pos=0.36, left]{nicht bereit\\nach Schonfrist} (end.west);
-    \draw[tr] (zug.south) |- node[lbl, pos=0.36, right]{Rotation, Rückzug\\oder Drain} (end.east);
+    \draw[tr, rounded corners=6pt] (ang.south) |- node[lbl, pos=0.36, left]{nicht bereit\\nach Schonfrist} (end.west);
+    \draw[tr, rounded corners=6pt] (zug.south) |- node[lbl, pos=0.36, right]{Rotation, Rückzug\\oder Drain} (end.east);
     \draw[tr, dashed] (fre.south) -- ($(end.north)+(-1.9,0)$);
     \draw[tr, dashed] (res.south) -- ($(end.north)+(1.9,0)$);
   \end{tikzpicture}
