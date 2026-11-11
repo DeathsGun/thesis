@@ -13,7 +13,7 @@ innere Grenze, nicht die einzig mögliche.
 
 Der Geschwindigkeitsgewinn ist kein Verdienst der Engine. Mit vorgehaltenen Pods ist der Prototyp im 95.\ Perzentil
 des Kaltstarts 6,1-mal schneller, wenn die Mandanten verteilt eintreffen, und 2,0-mal im Burst. Ohne Pool startet er im
-Median so schnell wie der Ausgangszustand, mit längerem Tail. Das deckt sich mit \textcite[S.~1]{lin_mitigating_2019},
+verteilten Lauf im Median so schnell wie der Ausgangszustand, mit längerem Tail. Das deckt sich mit \textcite[S.~1]{lin_mitigating_2019},
 bei denen ein Pool vorgehaltener Instanzen auf Knative das 99.\ Perzentil der Antwortzeit um 85\,\% senkte. Von der Zahl
 der Mandanten hängt der Pool nicht ab, weil ein Pod erst beim ersten Auftrag einem Mandanten zugewiesen wird. Ob ein
 heutiger Runner mit Pool ebenso schnell wäre, ist nicht gemessen.
@@ -39,7 +39,7 @@ Seitenkanäle sind ausgenommen. Zwischen gleichzeitigen Agentenläufen eines Pod
 ein Speicherfehler in der Engine fremde Heaps und Ausführungskennungen erreicht. Diesen Weg trägt die Fallstudie wie
 den verdeckten Kanal als Restrisiko. Offen bleiben die zweite Ausführung nach einem Absturz, die nicht begrenzte
 \ac{CPU} und die einzelne Replik der Control Plane. Der Vorsprung im Nutzwert hängt an S6, das abgeleitet statt
-gemessen ist.
+gemessen ist, und hält, solange S6 mindestens drei Punkte erreicht.
 
 \subsection{Designprinzipien und Migrationspfad}
 \label{sec:diffusion:prinzipien}
@@ -122,7 +122,7 @@ brauchen, erhalten die mandantenweite Freischaltung vor ihrer Stufe. Bestandsman
 Egress-Regeln, neue Mandanten von Beginn an eingeschränkte. Ein Mandant, dessen Prüfskripte \texttt{child\_process}
 ausführen, bleibt bewusst auf dem bisherigen Betrieb. Festzulegen
 sind auch der Standardwert der Socket-Freischaltung und die Regeln für das Agentenprofil, das keinen Bestand hat, den sie
-brechen könnten. Hinzu kommen
+brechen könnten, auch für seinen Zugriff auf die SystemBaseUri mit Pfaden, Methoden und Umfang des Tokens. Hinzu kommen
 die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster. Festzulegen ist außerdem, welche Zustellgarantie als Standard gilt
 (\autoref{sec:diffusion:ausblick}).
 

@@ -772,7 +772,7 @@ Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitw
 \emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox von V8, die der Prototyp nicht nutzt, die Heaps der gleichzeitigen Isolates. Ein Speicherfehler
 erreicht dabei auch die Ausführungskennungen der gleichzeitigen Läufe und damit im Agentenprofil Anfragen mit dem Token
 einer anderen Person desselben Mandanten. Gemessen ist nur der verdeckte Kanal (\autoref{sec:pruefung-isolation}).
-Seit der virtuellen Uhr braucht er eine Zeitquelle außerhalb der Sandbox, und die steht immer bereit, etwa der
+Seit der virtuellen Uhr braucht er eine echte Zeitquelle, und die steht immer bereit, etwa der
 \texttt{Date}-Header des eigenen Systems oder die auf 100\,ms gerundete echte Zeit nach jeder Ein- und Ausgabe.
 
 Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber einen Kanal zwischen Pods auf demselben Knoten. Dafür braucht
