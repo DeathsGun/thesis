@@ -83,8 +83,8 @@ seine Kosten sind in keinem Wert enthalten. Extern wurde auf einem Cluster der I
 Rechner über das Internet. Konstruktbedingt nähert der Overhead die Warmstart-Latenz an, und die Pod-Löschung ersetzt bei M5 ein Drain.
 
 Für S1, S2 und M5 liefen je Modell drei Läufe abwechselnd (Prototyp, Ausgangszustand, Prototyp ...), je
-Lauf mit vorher geprüfter Route. Sie heißen P1 bis P3 für den Prototyp und K1 bis K3 für den Ausgangszustand auf
-Knative. Angegeben ist die Spannweite der drei Läufe, also der kleinste und der größte Wert. Überlappen
+Lauf mit vorher geprüfter Route.
+ Angegeben ist die Spannweite der drei Läufe, also der kleinste und der größte Wert. Überlappen
 sich die Spannweiten beider Modelle nicht, ist der Unterschied größer als die Schwankung zwischen den Läufen. Ein
 Konfidenzintervall nach \textcite[S.~4]{hoefler_scientific_2015} ist das nicht. Die Perzentile
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
@@ -165,16 +165,16 @@ kleinen Anteil Erstkontakte.
   \caption{Overhead im Lastprofil in Millisekunden}
   \label{tab:overhead}
   \footnotesize
-  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X r r r r r r r@{}}
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r r r r r@{}}
     \hline
-    Lauf & Modell & Aufrufe & Fehler & P50 & P90 & P95 & P99 & Max \\
+    Modell & Lauf & Aufrufe & Fehler & P50 & P90 & P95 & P99 & Max \\
     \hline
-    K1 & Ausgangszustand & 56.983 & 28 & 308 & 494 & 739 & 3.710 & 28.500 \\
-    K2 & Ausgangszustand & 56.974 & 18 & 312 & 513 & 745 & 3.500 & 38.200 \\
-    K3 & Ausgangszustand & 56.992 & 39 & 300 & 461 & 720 & 3.510 & 53.100 \\
-    P1 & Prototyp & 57.001 & 3 & 145 & 239 & 291 & 361 & 2.370 \\
-    P2 & Prototyp & 57.001 & 3 & 139 & 182 & 220 & 313 & 2.360 \\
-    P3 & Prototyp & 57.001 & 7 & 144 & 206 & 255 & 338 & 3.310 \\
+    Ausgangszustand & 1 & 56.983 & 28 & 308 & 494 & 739 & 3.710 & 28.500 \\
+    Ausgangszustand & 2 & 56.974 & 18 & 312 & 513 & 745 & 3.500 & 38.200 \\
+    Ausgangszustand & 3 & 56.992 & 39 & 300 & 461 & 720 & 3.510 & 53.100 \\
+    Prototyp & 1 & 57.001 & 3 & 145 & 239 & 291 & 361 & 2.370 \\
+    Prototyp & 2 & 57.001 & 3 & 139 & 182 & 220 & 313 & 2.360 \\
+    Prototyp & 3 & 57.001 & 7 & 144 & 206 & 255 & 338 & 3.310 \\
     \hline
   \end{tabularx}
 \end{table}
@@ -192,7 +192,7 @@ sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter eine
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
 zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht.
-Das 504 im Lauf P3 geht auf einen inzwischen behobenen Fehler im Executor zurück. Die übrigen Fehler des Prototyps sind clientseitige Abbrüche, im Ausgangszustand sind 51 von 85 Fehlern 502 \enquote{no route to host} und zwölf 504, dazu 9 bis 27 ausgelassene Iterationen.
+Das 504 im dritten Lauf des Prototyps geht auf einen inzwischen behobenen Fehler im Executor zurück. Die übrigen Fehler des Prototyps sind clientseitige Abbrüche, im Ausgangszustand sind 51 von 85 Fehlern 502 \enquote{no route to host} und zwölf 504, dazu 9 bis 27 ausgelassene Iterationen.
 
 Der Egress-Proxy kostet je Aufruf rund 16\,ms, je 8,2\,ms für Anmeldung und Abmeldung im Median (95.\ Perzentil 21 bis
 22\,ms). Das ist knapp ein Drittel des serverseitigen Overheads von 51 bis 52\,ms (Gateway-Zeit abzüglich \texttt{run\_script}) und rund ein Achtel des Overheads
