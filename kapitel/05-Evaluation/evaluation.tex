@@ -1,8 +1,7 @@
 \clearpage
 \section{Evaluation} \label{sec:Evaluation}
 
-Dieses Kapitel prüft das Artefakt aus \autoref{sec:Entwurf} gegen den Kriterienkatalog aus
-\autoref{sec:kriterienkatalog}. S1 bis S4 und M5 werden gemessen, M1 bis M4 und M6 über den
+S1 bis S4 und M5 werden gemessen, M1 bis M4 und M6 über den
 Prüffallkatalog und die Architekturprüfung geprüft. Den
 Vergleich mit dem Ausgangszustand tragen allein die Läufe auf hyper-int-otc, die übrigen Läufe dienten der Wahl der
 Entwurfsparameter.
@@ -32,18 +31,11 @@ Produktivbetrieb der \acs{AWS}-nativen Variante und ist nur Quelle des Lastprofi
   \end{tabularx}
 \end{table}
 
-Der Prototyp lief in der Konfiguration aus \autoref{tab:parameter}, mit einer Pool-Zielgröße von vierzig und einer
-Skalierungsschwelle von drei Vierteln, beide aus den ersten Läufen. Alle Lastläufe nutzen das Webhook-Profil mit
-synchroner Antwort. Das Agentenprofil hat keinen Vergleichswert, weil es im Ausgangszustand nicht existiert.
-\autoref{sec:kaltstart} nennt Messwerte gegen das Webhook-Profil. Die Prüffälle aus \autoref{sec:pruefung-isolation} laufen in beiden
-Profilen.
-
-Auf dem Endstand liefen S1 bis S4, M5, die Zustellung, T1 bis T9, SandboxEval und M3. Er enthielt die Trennung in Transport und Sandbox aus \autoref{sec:bausteine}, den Egress-Proxy aus
-\autoref{sec:faehigkeitsmodell} in enforce für beide Profile, bis zu vier Zustellungen (\autoref{sec:zuteilung}), warme
-Isolates und eine Pool-Zielgröße von vierzig. Der Auth Callout fehlte, weil er auf der Plattform noch nicht eingerichtet
-ist.
-\autoref{tab:stand} im Anhang ordnet
-die Belege den Ständen, Daten und Commits zu, auch die früheren Läufe.
+Der Prototyp lief in der Konfiguration aus \autoref{tab:parameter} mit der Trennung in Transport und Sandbox
+(\autoref{sec:bausteine}), dem Egress-Proxy in enforce für beide Profile (\autoref{sec:faehigkeitsmodell}), bis zu vier
+Zustellungen (\autoref{sec:zuteilung}), warmen Isolates und einer Pool-Zielgröße von vierzig. \autoref{tab:stand} im
+Anhang ordnet die Belege den Ständen und Commits zu. Alle Lastläufe nutzen das Webhook-Profil mit synchroner Antwort,
+das Agentenprofil hat im Ausgangszustand kein Gegenstück. Die Prüffälle laufen in beiden Profilen.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt. Der Runner führt jedes Skript
 in einem eigenen, verworfenen Worker-Thread aus und trägt statt 100\,m ein
@@ -51,14 +43,12 @@ in einem eigenen, verworfenen Worker-Thread aus und trägt statt 100\,m ein
 von 6 und 60 Sekunden Scale-Down-Delay. Alle Vergleichsläufe messen diesen Stand.
 
 Lastgenerator ist k6 \autocite{grafana_labs_k6_2026} auf einem Arbeitsplatzrechner, dessen Aufrufe wie echte
-Webhooks über Internet und Edge-Proxy der Plattform laufen. Sie gehen an 188 Testmandanten, deren Skripte jeder Lauf
+Webhooks über Internet und Edge-Proxy der Plattform laufen. Sie gehen an Testmandanten, deren Skripte jeder Lauf
 anlegt und wieder löscht. Das \emph{Kaltstart-Skript} verteilt \acp{VU} über eine Zahl von Mandanten, der erste
-Aufruf je \ac{VU} und Mandant zählt als kalt. Das \emph{Lastprofil} spielt den Tagesverlauf des Produktivbetriebs
-nach. Aus den Aufrufprotokollen einer Woche wurden je Stunde Median und 95.\ Perzentil der Aufrufe je Minute, der
-Anteil von 650 Mandanten und ihre mittlere Laufzeit bestimmt. In der Spitze sind es rund 2.160 Aufrufe je Minute bei 89
-bis 120 gleichzeitig aktiven Mandanten. Die Stunden 5 bis 15 \ac{UTC} sind auf je drei Minuten gestaucht.
-Jedes Skript wartet auf einen Timer, weil Laufzeit im Produktivbetrieb überwiegend Warten auf Ein- und Ausgabe
-ist. Im \emph{Wide-Modus} rufen zusätzlich 180 Mandanten zweimal pro Minute auf.
+Aufruf je \ac{VU} und Mandant zählt als kalt. Das \emph{Lastprofil} spielt den Tagesverlauf aus den
+Aufrufprotokollen einer Woche des Produktivbetriebs nach, mit rund 2.160 Aufrufen je Minute in der Spitze und jeder
+Stunde auf drei Minuten gestaucht. Jedes Skript wartet auf einen Timer, weil Laufzeit im Produktivbetrieb überwiegend
+Warten auf Ein- und Ausgabe ist.
 
 Für den Vergleich der Modelle wird nicht die Antwortzeit verwendet, sondern der
 \emph{Overhead}, die Antwortzeit abzüglich der vom Skript selbst angeforderten Laufzeit. Er umfasst
@@ -80,7 +70,7 @@ Vergleich zwei Modelle samt ihrer Begleitdienste misst. Der Prototyp wurde über
 einmal. Hinzu kommt, dass alle Läufe ohne Auth Callout liefen. Der Callout prüft jede NATS-Verbindung eines Workers, und
 der Transport baut sie bei der Zuweisung auf (\autoref{sec:zuteilung}). Er liegt damit auf dem Pfad, den S1a misst, und
 seine Kosten sind in keinem Wert enthalten. Extern wurde auf einem Cluster der Integrationsstufe mit nachgespieltem Lastprofil gemessen, von einem einzelnen
-Rechner über das Internet. Konstruktbedingt nähert der Overhead die Warmstart-Latenz an, und die Pod-Löschung ersetzt bei M5 ein Drain.
+Rechner über das Internet. Die Pod-Löschung ersetzt bei M5 ein Drain.
 
 Für S1, S2 und M5 liefen je Modell drei Läufe abwechselnd (Prototyp, Ausgangszustand, Prototyp ...), je
 Lauf mit vorher geprüfter Route.
@@ -89,19 +79,16 @@ sich die Spannweiten beider Modelle nicht, ist der Unterschied größer als die 
 Konfidenzintervall nach \textcite[S.~4]{hoefler_scientific_2015} ist das nicht. Die Perzentile
 folgen der Empfehlung, Latenzen nicht allein über Mittelwerte zu
 berichten \autocites[S.~6]{hoefler_scientific_2015}[Abschn.~6.5]{scheuner_function-as-a-service_2020}.
-Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung, die Prüffälle und der Noisy-Neighbour-Test haben je einen Lauf. Innerhalb eines Laufs geben
+Beim Overhead zählen nur erfolgreiche Aufrufe, sonst nennt die Tabelle es. S3, S4, die Zustellung und die Prüffälle haben je einen Lauf. Innerhalb eines Laufs geben
 \autoref{tab:kaltstart-ki} (S1) und \autoref{tab:konfidenz} (S2) im Anhang Intervalle für die Vergleichsläufe an.
 
 \subsection{Kaltstartlatenz (S1)}
 \label{sec:kaltstart}
 
-Der Kaltstart des Prototyps hängt an der Instanzverwaltung, nicht an der Engine (\autoref{tab:kaltstart-verlauf}
-im Anhang). Im Trace eines Mandanten, der auf einen neuen Pod wartet, entfallen von 8,2 Sekunden 7,9 auf die Zuteilung,
-die Ausführung dauert 26\,ms. Der Sidecar des Service Mesh kostet je Pod zwei bis drei Sekunden
-und ist deshalb abgeschaltet. Erst ein Pool von vierzig Pods nimmt den Pod-Start vom Anfragepfad, bei zehn warten noch
-23 von 33 Mandanten 7 bis 21 Sekunden. S1b, der Erstkontakt bei leerem Pool, kostet nach
-\autoref{tab:podstart} 3,3 bis 3,6 Sekunden je Pod mit Image auf dem Knoten und 5 bis 8 Sekunden, wenn es erst
-gezogen wird.
+Der Kaltstart des Prototyps hängt an der Instanzverwaltung, nicht an der Engine. Erst ein Pool von vierzig Pods nimmt
+den Pod-Start vom Anfragepfad (\autoref{tab:kaltstart-verlauf} im Anhang). S1b, der Erstkontakt bei leerem Pool,
+kostet 3,3 bis 3,6 Sekunden je Pod mit Image auf dem Knoten und 5 bis 8 Sekunden, wenn es erst gezogen wird
+(\autoref{tab:podstart}).
 
 Der Vergleich mit dem Ausgangszustand lief auf hyper-int-otc, wo beide Modelle unter gVisor
 laufen, dreimal je Modell im Wechsel und mit denselben Mandanten. Weil Knative einen Runner minutenlang warm hält und der Prototyp
@@ -109,8 +96,8 @@ einen Worker eine Minute, sendet das Kaltstart-Skript im Einmalmodus genau einen
 Lauf noch niemand gerufen hat. Jeder Lauf nutzt einen eigenen Block von neunzig Mandanten, nach einem Aufwärmlauf mit
 acht. Im \emph{verteilten} Lauf kommt je Sekunde ein neuer Mandant hinzu, was den Startmechanismus misst.
 Im \emph{Burst} rufen alle neunzig zugleich, wie Skripte zur vollen Stunde. Der Prototyp lief mit der
-Pool-Zielgröße vierzig und mit Pool null, damit der reine Startmechanismus beider Modelle vergleichbar wird.
-\autoref{tab:kaltstart-vergleich} zeigt die Spannweite der drei Läufe, \autoref{tab:s1-laeufe} im Anhang die Einzelwerte.
+Pool-Zielgröße vierzig und mit Pool null, damit der reine Startmechanismus beider Modelle vergleichbar wird. Die
+Einzelwerte stehen in \autoref{tab:s1-laeufe} im Anhang.
 
 \begin{table}[H]
   \caption{Kaltstart je Mandant, Spannweite dreier Läufe}
@@ -147,19 +134,16 @@ Nach den Logs der Control Plane liegt das daran, dass ein wartender Mandant den 
 ihn angelegten.
 Die Vergabe an den am längsten wartenden Mandanten ist als Erweiterung vorgesehen (\autoref{sec:diffusion:ausblick}).
 
-Für das Agentenprofil gibt es keinen Ausgangswert, weil Knative keinen Endpunkt dafür hat. Verglichen wird es mit dem Webhook-Profil
-auf demselben Prototyp (ein Snippet, das nur einen Wert zurückgibt). Der Erstaufruf von 30 Mandanten, die seit Tagen nicht
-aufgerufen wurden, braucht beim Client im Median 546\,ms, im 95.\ Perzentil 647\,ms, höchstens 954\,ms (\autoref{tab:agent-latenz} im Anhang). Warm liegt der
-Agent mit 85\,ms im Median und 122\,ms im 95.\ Perzentil unter dem Webhook mit 118 und 183\,ms, weil er den Quelltext mitbringt und die Auflösung
-des Skripts entfällt. Ein einzelner Mandant erreicht bis 64 gleichzeitige Aufrufe rund 510 Aufrufe je Sekunde ohne Fehler (\autoref{tab:agent-parallel}), eine
-ausgehende Anfrage über den Proxy kostet im Skript rund 88\,ms (\autoref{tab:agent-egress}), und die Größe von Ein- und Ausgabe zeigt \autoref{tab:agent-groesse}.
+Für das Agentenprofil gibt es keinen Ausgangswert, weil Knative keinen Endpunkt dafür hat. Auf demselben Prototyp
+braucht sein Erstaufruf nach Tagen ohne Aufruf im Median 546\,ms. Warm liegt er mit 85\,ms im Median unter dem
+Webhook-Profil mit 118\,ms, weil er den Quelltext mitbringt und die Auflösung des Skripts entfällt (Tabellen
+\ref{tab:agent-latenz} bis \ref{tab:agent-parallel} im Anhang).
 
 \subsection{Overhead und Warmstart-Latenz (S2)}
 \label{sec:warm}
 
-\autoref{tab:overhead} stellt die drei abwechselnd gemessenen Läufe je Modell mit dem Lastprofil gegenüber. Weil das Profil die
-Mandanten überwiegend aktiv hält, nähert der Overhead die Warmstart-Latenz an und enthält einen
-kleinen Anteil Erstkontakte.
+Weil das Lastprofil die Mandanten überwiegend aktiv hält, nähert der Overhead die Warmstart-Latenz an und enthält
+einen kleinen Anteil Erstkontakte (\autoref{tab:overhead}).
 
 \begin{table}[H]
   \caption{Overhead im Lastprofil in Millisekunden}
@@ -186,13 +170,14 @@ kleinen Anteil Erstkontakte.
   \label{fig:endstand}
 \end{figure}
 
-\autoref{fig:endstand} stellt Kaltstart und Overhead beider Modelle nach Perzentilen gegenüber. Gemessen an den
-mittleren Läufen ist der Prototyp mit Pool im 50., 90., 95.\ und 99.\ Perzentil 2,1-, 2,4-, 2,9- und 10-mal schneller. Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
+Gemessen an den mittleren Läufen ist der Prototyp mit Pool im 50., 90., 95.\ und 99.\ Perzentil 2,1-, 2,4-, 2,9-
+und 10-mal schneller (\autoref{fig:endstand}). Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
 sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
 zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht.
-Das 504 im dritten Lauf des Prototyps geht auf einen inzwischen behobenen Fehler im Executor zurück. Die übrigen Fehler des Prototyps sind clientseitige Abbrüche, im Ausgangszustand sind 51 von 85 Fehlern 502 \enquote{no route to host} und zwölf 504, dazu 9 bis 27 ausgelassene Iterationen.
+Die Fehler des Prototyps sind clientseitige Abbrüche und ein behobener Fehler im Executor, im Ausgangszustand
+überwiegend 502 \enquote{no route to host}.
 
 Der Egress-Proxy kostet je Aufruf rund 16\,ms, je 8,2\,ms für Anmeldung und Abmeldung im Median (95.\ Perzentil 21 bis
 22\,ms). Das ist knapp ein Drittel des serverseitigen Overheads von 51 bis 52\,ms (Gateway-Zeit abzüglich \texttt{run\_script}) und rund ein Achtel des Overheads
@@ -239,16 +224,12 @@ bestehenden App: Die Skriptauflösung braucht im Lauf höchstens 1,3 Kerne, das 
 breit und der Wert ist eine untere Schranke.
 
 S3 wird je Pod erhoben, weil der Ausgangszustand je Ausführung ohnehin einen ganzen Pod belegt und ein Worker-Pod
-mehrere Ausführungen zugleich trägt. Verglichen wird die Spitze je Pod in den Läufen mit dem Lastprofil, in denen beide
-Modelle unter gVisor laufen (\autoref{tab:ressourcen-endstand} und \autoref{tab:ressourcen-pod} im Anhang). Ein
-Runner-Pod belegt im Median 82,7\,MiB, ein Worker-Pod 70,5\,MiB, das 1,2-Fache. Im Ruhezustand liegt der Worker bei 78,7\,MiB, vermutlich wegen der warmen Isolates und
-der zwei Container, die cAdvisor unter gVisor nicht einzeln ausweist. Unter Last braucht der Prototyp wegen der geringeren
-Pod-Zahl (202 bis 207 gegen 376 bis 391) mit 14,4 bis 15,0\,GiB weniger als die Hälfte der 33,0 bis 34,1\,GiB. Die
-\ac{CPU} unterscheidet sich kaum. Bei der Steuerungsschicht ist der Unterschied größer. Knative Serving mit Kourier und dem
-Controller, der die Runner anlegt, hält unter Last 2,3\,GiB. Control Plane, Gateway und Egress-Proxy des Prototyps halten
-267\,MiB. Der Pool kostet im Ruhezustand 3,0\,GiB und 1,02 Kerne (40 Worker zu je 78,7\,MiB), gemessen und nicht mehr
-hochgerechnet. Der Ausgangszustand kostet dort nichts außer Knative Serving mit 1,9\,GiB im Ruhezustand. Mit diesen Ruhekosten erkauft der Pool die kurzen Kaltstarts. Unter Last spart der Prototyp damit mehr Speicher, als der Pool
-im Ruhezustand kostet. NATS ist dem Prototyp nicht zugerechnet.
+mehrere Ausführungen zugleich trägt. Im Lastprofil belegt ein Runner-Pod im Median 82,7\,MiB, ein Worker-Pod 70,5\,MiB
+(\autoref{tab:ressourcen-endstand} und \autoref{tab:ressourcen-pod} im Anhang). Weil der Prototyp etwa halb so viele Pods
+braucht, hält er unter Last 14,4 bis 15,0 statt 33,0 bis 34,1\,GiB, bei kaum unterschiedlicher \ac{CPU}. Seine Steuerung
+hält 267\,MiB, Knative Serving 2,3\,GiB. Der Pool kostet im Ruhezustand 3,0\,GiB und 1,02 Kerne, der Ausgangszustand dort
+nur 1,9\,GiB für Knative Serving. Unter Last spart der Prototyp mehr Speicher, als der Pool im Ruhezustand kostet. NATS
+ist dem Prototyp nicht zugerechnet.
 
 Mit einem Slot je Worker-Pod statt vier (\autoref{sec:betriebsplanung}) lief ein Lauf mit dem
 Lastprofil. Er brauchte 64\,\% mehr gleichzeitige Worker-Pods, 52\,\% mehr Speicher und 28\,\% mehr \ac{CPU}
@@ -262,9 +243,7 @@ Lastläufen gingen Aufrufe in sechs Fällen verloren oder liefen erst nach dem T
 Anhang). In drei davon gab der Worker einen Pull auf, in den der Server noch zustellen konnte, und die Nachricht war
 verloren. Der Prototyp stellt eine solche Nachricht deshalb nach fünf Sekunden erneut zu (\autoref{sec:zuteilung}).
 Zwei Fälle liegen außerhalb des Entwurfs: das Consumer-Limit des NATS-Accounts und ausbleibende Antworten auf
-langlebigen Verbindungen, deren Ursache offen ist. Im letzten liefen Skripte 111 bis 173 Sekunden nach dem Aufruf, als
-der Aufrufer längst aufgegeben hatte. Solche Nachrichten verwirft der Worker, ohne sie auszuführen, gemessen ist das
-nicht.
+langlebigen Verbindungen, deren Ursache offen ist.
 
 Auf dem Endstand liefen zwei Lastläufe aus der Wahl der Parameter erneut (\autoref{tab:kaltstart-verlauf} im
 Anhang). Mit 33 Mandanten und 40 gleichzeitigen Aufrufern über drei Minuten kommen 41.026 Aufrufe ohne Fehler an, bei
@@ -280,21 +259,13 @@ Aufrufer erhält 200 mit Verzögerung. Wie mit nicht idempotenten Skripten umzug
 \subsection{Isolation und Zustandsfreiheit (M1 bis M4, M6)}
 \label{sec:pruefung-isolation}
 
-M1 und M3 werden durch Architektur- und Konfigurationsvergleich geprüft, M1 über die Ebenen der Trennung aus
-\autoref{sec:ebenen}, M6 über den Prüffall T10, M3 über den Vergleich der Pod-Spezifikation des Workers mit der des Ausgangszustands. M2 und M4
-werden über die Prüffälle T1 bis T9 aus \autoref{tab:prueffaelle} geprüft, als Skripte gegen den Ausgangszustand und
-den Prototyp. Ein Prüffall gilt als bestanden, wenn der Zugriff scheitert oder der Zustand die nächste Ausführung
-nicht erreicht. Beide Varianten wurden auf hyper-int-otc mit demselben Mandanten geprüft, der für den
-Ausgangszustand über die App-\acs{URL} auf den Knative-Stack umgestellt und danach zurückgestellt wurde. Der Ausgangszustand wurde schon
-einmal vor der Umstellung seines Runners auf Worker-Threads geprüft (Spalte \enquote{Ausgang alt}). Jeder
-Prüffall ist ein eigenes Skript, das über die öffentliche Adresse des Mandanten aufgerufen wird, wie ein echter
-Webhook. T1 bis T5 rufen dasselbe Skript dreimal hintereinander auf. Jede Ausführung meldet, was sie von der vorigen
-vorfindet, und legt eigenen Zustand ab. Jeder Aufruf schreibt seine Ausführungs-ID mit, und die 15 Ausführungen von T1 bis T5 liefen
-belegt im selben Worker (Prototyp: Instanzkennung in den Spans, Ausgangszustand: Hostname des Pods). T4 liest die Datei als
-Positivkontrolle in derselben Ausführung zurück, T8 schreibt und liest eine eigene Datei in \texttt{os.tmpdir()}. T6 fordert Speicher an, bis die Laufzeit abbricht, und ruft danach fünfmal ein
-zweites Skript desselben Mandanten auf. T7 bis T9 laufen einmal und protokollieren je Zugriffsweg, ob er gelingt. T9
-überschreibt vorher jede Kopie der Mandantenidentität. Inhalte von Dateien oder Umgebungsvariablen werden nicht
-ausgelesen.
+M1 und M3 werden über Architektur und Konfiguration geprüft, M6 über T10, M2 und M4 über die Prüffälle T1 bis T9
+(\autoref{tab:prueffaelle}). Jeder Prüffall ist ein Skript, das wie ein echter Webhook über die öffentliche Adresse
+desselben Testmandanten aufgerufen wird, der für den Ausgangszustand auf den Knative-Stack umgestellt wird, dort einmal
+vor und einmal nach der Umstellung des Runners auf Worker-Threads. Ein Prüffall gilt als bestanden, wenn der Zugriff
+scheitert oder der Zustand die nächste Ausführung nicht erreicht. T1 bis T5 rufen dasselbe Skript dreimal belegt im
+selben Worker auf, T6 erschöpft den Speicher und ruft danach fünfmal ein zweites Skript desselben Mandanten auf, T7 bis T9
+protokollieren je Zugriffsweg, ob er gelingt. Inhalte von Dateien oder Umgebungsvariablen werden nicht ausgelesen.
 
 \begin{table}[tbp]
   \caption{Prüffälle T1 bis T9 gegen Ausgangszustand und Prototyp}
@@ -329,11 +300,11 @@ ausgelesen.
   \end{tabularx}
 \end{table}
 
-\autoref{tab:prueffaelle-ergebnis} zeigt, dass der Prototyp alle neun Prüffälle besteht und der
-Ausgangszustand nach der Umstellung zwei nicht, T7 und T9, und T8 nur mit Vorbehalt besteht, weil er Umgebungsvariablen preisgibt. Davor waren es sieben.
-Die Fehlschläge bei T1 bis T3, T5 und T6 gingen auf den gemeinsamen Node.js-Prozess zurück (\autoref{sec:angreifermodell})
-und sind behoben, seit der Runner jedes Skript in einem verworfenen Worker-Thread ausführt. Die Zustandsfreiheit hat der
-Ausgangszustand damit selbst hergestellt. Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem: T7 und T9 betreffen den Weg nach außen, Bei T8 sind die Pfade nicht lesbar, Umgebung und Dateisystem aber offen.
+Der Prototyp besteht alle neun Prüffälle (\autoref{tab:prueffaelle-ergebnis}). Der Ausgangszustand scheitert nach der
+Umstellung an T7 und T9 und besteht T8 nur mit Vorbehalt, davor scheiterte er an sieben. Die Fehlschläge bei T1 bis T3,
+T5 und T6 gingen auf den gemeinsamen Node.js-Prozess zurück (\autoref{sec:angreifermodell}), die Zustandsfreiheit hat
+der Ausgangszustand mit den Worker-Threads selbst hergestellt. Der Unterschied liegt bei M4: T7 und T9 betreffen den Weg
+nach außen, bei T8 sind die Pfade nicht lesbar, Umgebung und Dateisystem aber offen.
 
 Dieselben neun Prüffälle liefen auch im Agentenprofil des Prototyps, auf einem zweiten Testmandanten
 und als Snippets über den Endpunkt der Agentenausführungen. Die Fälle sind auf die Mittel des
@@ -343,27 +314,19 @@ keine gleichzeitige, über gemeinsamen Zustand. Module, Dateisystem und Betriebs
 \texttt{scriptExecutionOutOfMemory}, die fünf folgenden Ausführungen liefern 200.
 
 Ob gleichzeitige Ausführungen über die Zeit Daten austauschen, prüfte ein verdeckter Kanal im Agentenprofil
-auf hyper-int-otc. Ein Sender kennt 64 Zufallsbits und rechnet in einem Fenster von 40\,ms für eine 1 und wartet für eine 0.
-Ein Empfänger zählt je Fenster, wie oft eine feste Rechenschleife durchläuft, mit \texttt{await setTimeout(0)} als Uhr, die damals
-auf die echte Zeit sprang. Drei Sender liefen entweder im Worker des Empfängers oder als Ausführungen dreier anderer
-Mandanten, deren Worker auf demselben Knoten lagen. Die Platzierung jeder Ausführung ist aus den Logs geprüft. Weil die
-Polarität aus den Daten gewählt wird, entspricht Raten einer Bitfehlerrate von rund 0,45. Unter \ac{CPU}-Last lag sie im
-selben Pod in fünf Läufen bei 0,30 bis 0,39, zwischen den Pods bei 0,38 bis 0,48. Unter Allocation-Last, die den Garbage
-Collector häufig auslöst, lag sie in beiden Fällen bei 0,25 bis 0,44, und ein Pod je Ausführung schlösse diesen Weg nicht. Mit dem
-späteren Executor-Stand, dessen Uhr bei Timern virtuell läuft (\autoref{sec:kompatibilitaetsschicht}), erreichte
-kein Lauf mehr seine Fenster. Eine externe Zeitquelle, erreichbar über eine Regel aus dem Aufruf
-(\autoref{sec:faehigkeitsmodell}), öffnete den Kanal im selben Pod wieder. Er war unzuverlässig, mit 0,08 bis 0,50
-in sieben Läufen bei 16 Bits und 500-ms-Fenstern, ohne Wahl der Polarität gegen 0,5 für Raten. Zwischen den Pods lag er bis auf einen
-Lauf (0,31) auf Zufallsniveau. Die Läufe sind wenige, die Richtung bei \ac{CPU}-Last ist einheitlich, die Größe nicht belastbar.
+(\autoref{tab:kanal} im Anhang). Ein Sender rechnet in einem Zeitfenster für eine 1 und wartet für eine 0, ein
+Empfänger zählt je Fenster die Durchläufe einer Rechenschleife. Mit der echten Zeit als Uhr lag die Bitfehlerrate unter
+\ac{CPU}-Last im selben Pod unter dem Rateniveau, zwischen Pods nahe daran. Unter Allocation-Last, die den Garbage
+Collector häufig auslöst, lag sie in beiden Fällen darunter, und ein Pod je Ausführung schlösse diesen Weg nicht. Seit die
+Uhr bei Timern virtuell läuft (\autoref{sec:kompatibilitaetsschicht}), erreicht kein Lauf mehr seine Fenster. Eine
+externe Zeitquelle über eine Regel aus dem Aufruf öffnete den Kanal im selben Pod wieder, unzuverlässig und zwischen Pods
+fast auf Zufallsniveau. Die Läufe sind wenige, die Richtung ist einheitlich, die Größe nicht belastbar.
 
-T7 und T9 wurden gegen den Egress-Proxy mit beiden Profilen in enforce geprüft, mit der Testregel
-example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen das eigene System und die
-Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, \ac{TCP} zu 1.1.1.1:53, die Testregel auf Port 80,
-\texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil
-kam eine Regel aus dem Aufruf hinzu (example.net, GET). Das eigene System, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
-dieselbe Regel mit POST, example.com, das System eines fremden Mandanten, 1.1.1.1 und die internen Ziele. Das Anfrageprotokoll führt alle
-Versuche.
-Beide Profile bestehen, es wirken also die Regeln, nicht nur der Proxy. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
+T7 und T9 wurden gegen den Egress-Proxy mit beiden Profilen in enforce und der Testregel example.org:443 geprüft, im
+Agentenprofil zusätzlich mit einer Regel aus dem Aufruf für GET. Durch gehen nur das eigene System und die Regeln mit
+ihrem Host, Port und ihrer Methode. Abgewiesen werden andere Hosts, Ports und Methoden, rohe \ac{IP}-Adressen und \ac{TCP}, das
+System eines fremden Mandanten sowie Kubernetes-\acs{API}, Metadaten-Adresse, Loopback und NATS. Es wirken also die
+Regeln, nicht nur der Proxy. Geprüft ist eine feste Testregel, kein Regelwerk eines Mandanten.
 
 Ergänzend wurden die 51 Eigenschaften von SandboxEval \autocite[S.~1--2]{rabin_sandboxeval_2025} für JavaScript
 angepasst und auf dem Ausgangszustand und beiden Profilen des
@@ -373,37 +336,28 @@ Ausgangszustand geben 12 davon Information über den echten Host preis, und fün
 29 Fälle mit leeren oder nachgebildeten Werten, und keiner erreicht ein externes Ziel. Im Agentenprofil antworten
 zwei, die Zeitzone und eine Rechenschleife.
 
-Der Konfigurationsvergleich für M3 (\autoref{tab:m3} im Anhang) stellt die Felder gegenüber, die die dem Gastcode
-zugängliche Angriffsfläche des Kernels bestimmen. Sie stammen aus laufenden Pods auf
-hyper-int-otc, aus dem Container, der den Gastcode ausführt, und stimmen mit der Pod-Spezifikation im
-Quellcode überein. Der Vergleich gilt für hyper-int-otc, wo gVisor bereitsteht (\autoref{sec:betriebsplanung}).
-In keiner Zeile zur Angriffsfläche des Kernels ist der Prototyp lockerer als der Ausgangszustand: Sechs Felder sind
-gleich, zwei sind zusätzlich gesetzt. Sie beschränken, was der Prozess im Container verändern kann, nicht die
-Systemaufrufe, die gVisor annimmt. Nur \texttt{enableServiceLinks} ist im Worker-Pod gesetzt und im Runner nicht, was
-Umgebungsvariablen im Pod betrifft, die das Skript nicht sieht (T8). M3 ist damit auf Clustern mit gVisor erfüllt.
-M3 betrifft allein den Host-Kernel. Was der Prototyp innerhalb des Pods hinzufügt, den Transport mit seinem Kommando-Port und
-die Loopback-Verbindung zur Sandbox, gehört zu M1 und M6 und ist in \autoref{sec:ebenen} und über T10 bewertet. Die Aussage stützt sich auf die
-Konfiguration und sagt nichts über Lücken in gVisor selbst. M1 ist erfüllt, die Pod-Grenze je Mandant ist dieselbe wie im Ausgangszustand. M6 ist im Entwurf mit Auth Callout
-erfüllt (T10), im gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
-NATS-Zugangsdaten (\autoref{sec:betriebsplanung}). Die Pod-Spezifikation am Cluster zeigt drei Dinge. Die
-Container teilen keinen Prozess-Namespace. Die Sandbox hat keine Volumes. Identitäts-Secret und NATS-Zugangsdaten sind nur
-im Transport eingehängt, ohne Token des Service-Accounts. Das Netz teilen beide Container. Dass der Transport fremde
+Der Konfigurationsvergleich für M3 (\autoref{tab:m3} im Anhang) stellt die Felder laufender Pods auf hyper-int-otc
+gegenüber, die die dem Gastcode zugängliche Angriffsfläche des Kernels bestimmen. In keinem ist der Prototyp lockerer:
+Sechs Felder sind gleich, zwei zusätzlich gesetzt, und \texttt{enableServiceLinks} betrifft nur Umgebungsvariablen im
+Pod, die das Skript nicht sieht. M3 ist damit auf Clustern mit gVisor erfüllt, gestützt auf die Konfiguration und ohne
+Aussage über Lücken in gVisor selbst. Was der Prototyp innerhalb des Pods hinzufügt, gehört zu M1 und M6. M1 ist erfüllt,
+die Pod-Grenze je Mandant ist dieselbe wie im Ausgangszustand. M6 ist im Entwurf mit Auth Callout erfüllt (T10), im
+gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
+NATS-Zugangsdaten (\autoref{sec:betriebsplanung}). Am Cluster teilen die Container keinen Prozess-Namespace, die Sandbox
+hat keine Volumes, und Identitäts-Secret und NATS-Zugangsdaten sind nur im Transport eingehängt. Nur das Netz teilen
+beide. Dass der Transport fremde
 Kommandos abweist und NATS ohne Zugangsdaten nichts zulässt, ist nur lokal geprüft.
 
 Ein Skript erreicht das Netz nur über den Proxy (T7). Ob das auch nach einem Ausbruch aus dem Isolate gilt, ist nicht geprüft.
 
-Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noisy-Neighbour-Test, je Modell dreimal im Wechsel.
-Mandant A ruft mit 40 Aufrufern ein Skript auf, das zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein
-Skript von rund 150\,ms auf. Gewertet wird die Latenz von B nach der \ac{CPU}-Last des Knotens, auf dem der Aufruf lief
-(\autoref{tab:b6} und \autoref{tab:b6-zaehlung} im Anhang). Beide Modelle isolieren die \ac{CPU} nicht. Auf einem von A
-ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von 217 bis 236 auf 327 bis 421\,ms und das
-95.\ Perzentil von 268 bis 390 auf 422 bis 898\,ms. Die Ausführung im Worker verdoppelt sich. Im Ausgangszustand sind es 314 bis 352 auf 475 bis 506\,ms und
-620 bis 666\,ms im 95.\ Perzentil. Den Unterschied macht die Reichweite: Der Prototyp begrenzt A auf zehn Worker, die auf sieben Knoten liegen und einen
-bis zwei voll auslasten. Knative skaliert A auf rund fünfzig Pods und lastet sieben bis neun von zwölf Knoten aus, sodass fast
-jeder Mandant B auf einem belasteten Knoten liegt. Im Prototyp steigt das 95.\ Perzentil auch auf Knoten ohne Worker von A (305 bis
-440\,ms gegen 268 bis 390), weil Gateway und Egress-Proxy auf Knoten von A lagen. Die Ressourcenbegrenzung auf zwei
-Ebenen (\autoref{sec:ressourcenbegrenzung}) reicht damit nur bis zum Speicher: Die Garantie liefert die cgroup, die \ac{CPU} ist in keinem der Modelle je Mandant begrenzt.
-Der erhöhte Client-Anteil im ersten Lauf des Prototyps (95.\ Perzentil bis 898\,ms) kehrte nicht wieder und ist nicht erklärt.
+Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noisy-Neighbour-Test, je Modell dreimal im
+Wechsel (\autoref{tab:b6} und \autoref{tab:b6-zaehlung} im Anhang). Mandant A ruft mit 40 Aufrufern ein Skript auf, das
+zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein Skript von rund 150\,ms auf. Beide Modelle
+isolieren die \ac{CPU} nicht. Auf einem von A ausgelasteten Knoten steigt der Median von B im Prototyp von 217 bis 236 auf
+327 bis 421\,ms, im Ausgangszustand von 314 bis 352 auf 475 bis 506\,ms. Den Unterschied macht die Reichweite: Der
+Prototyp begrenzt A auf zehn Worker, die einen bis zwei Knoten voll auslasten. Knative skaliert A auf rund fünfzig Pods
+und lastet sieben bis neun von zwölf Knoten aus, sodass fast jeder Mandant B auf einem belasteten Knoten liegt. Die
+Ressourcenbegrenzung auf zwei Ebenen (\autoref{sec:ressourcenbegrenzung}) reicht damit nur bis zum Speicher.
 
 \subsection{Verfügbarkeit beim Drain eines Knotens (M5)}
 \label{sec:pruefung-m5}
@@ -434,67 +388,47 @@ Integrationscluster nicht messbar.
 \subsection{Kompatibilität des Bestands (S6, S7)}
 \label{sec:pruefung-kompatibilitaet}
 
-S6 wird aus der Bestandsanalyse in \autoref{sec:bestandsanalyse} und den Prüfungen der
-Kompatibilitätsschicht abgeleitet, nicht durch Ausführen des Bestands gemessen. \autoref{tab:s6} im Anhang leitet die Zahl her. Von den 1.718
-Mandanten brauchen 713 eine Schnittstelle, die eine sprachbasierte Laufzeit ohne vermitteltes
-Binding nicht bietet, und 648 davon scheitern allein an einem Netzwerk-Binding. Genau diese beiden
-Gruppen, \ac{HTTP} und rohe Sockets, bildet die Schicht nach, belegt durch den Differenztest mit
-757 Fällen, die Integrationstests und die Machbarkeitsprüfung am schwierigsten Vertreter. Die
-übrigen 65 Mandanten brauchen Dateisystem, Betriebssystemmodule oder Prozesse. 16 von ihnen nutzen
-laut Skript nur \texttt{http}, \texttt{https}, \texttt{net} oder \texttt{tls}, die die Schicht nachbildet. Die
-Skripte der übrigen 49 wurden gelesen und mit einem Probeskript auf dem
-Ausgangszustand und dem Prototyp geprüft. 34 schreiben Dateien in das erste Verzeichnis unter \texttt{/tmp}.
-Sie scheitern im Probelauf schon im Ausgangszustand, an der Skriptdatei als einzigem Eintrag in \texttt{/tmp}, im Prototyp
-am leeren Verzeichnis. Ob der Pfad in Produktion erreicht wird, ist nicht geprüft. Die übrigen 15 Skripte stehen in
-\autoref{tab:s6}, ebenso die Wertung der vier gebündelten, nicht unterstützten Skripte (1.713 von 1.718, 99,7 Prozent).
-Dass 38 Skripte schon im Ausgangszustand scheitern, ändert dessen fünf Punkte nicht, denn S6 misst den Anteil, der nicht
-schlechter läuft als dort. Damit laufen bis zu 1.717 von 1.718 Mandanten, 99,9 Prozent, nicht schlechter als im
-Ausgangszustand. Werden die 664 Mandanten, deren Lauffähigkeit allein auf der Schicht beruht, pessimistisch als Ausfall
-gezählt, bleiben 1.053, also 61,3 Prozent, mit den vier gebündelten 61,1 Prozent. Das ist die Untergrenze und ergibt vier
-statt fünf Punkte. Die Obergrenze gilt unter zwei Annahmen: Die
-Schicht hält für die übrigen Pakete, was Differenztest und Treiber-Prüfung für einen Treiber zeigen, und die Ziele der
-Skripte sind erreichbar. Das hängt am Egress-Proxy
-(\autoref{sec:faehigkeitsmodell}). Im Modus audit lässt er jede öffentliche Adresse und jeden Port durch, in enforce nur das eigene System und die Ziele der Regeln (T7). Ein Skript mit
-externen Zielen läuft dann erst mit einer Regel, und wie viele Mandanten das betrifft, ist nicht erhoben.
-S7, der Aufwand für den Rest, ist für 64 der 65 Mandanten null, weil keine Anpassung am Skript nötig
-ist, und für den letzten nicht gewollt. Der Aufwand für Regeln steht darin nicht, er fällt erst unter enforce an.
+S6 wird aus der Bestandsanalyse und den Prüfungen der Kompatibilitätsschicht abgeleitet, nicht durch Ausführen des
+Bestands gemessen (\autoref{tab:s6} im Anhang). Von den 1.718 Mandanten scheitern 648 allein an einem
+Netzwerk-Binding, 16 weitere nutzen nur Module, die die Schicht nachbildet. Für diese Gruppen belegen der Differenztest
+mit 757 Fällen, die 440 Tests des Executors und die Machbarkeitsprüfung an \texttt{tedious} die Schicht: Der unveränderte
+Treiber verbindet sich in drei Läufen über den Socket-Shim mit einer echten Datenbankinstanz, schaltet auf \ac{TLS} um und
+fragt ab, beide Negativkontrollen schlagen wie in Node fehl. Mit den vier häufigsten gebündelten Paketen des Bestands
+gelingen alle 525 Aufrufe (\autoref{tab:bundles} im Anhang). Die Skripte der übrigen 49 Mandanten wurden gelesen und auf
+beiden Modellen mit einem Probeskript geprüft. Bis auf einen und vier gebündelte, die nicht unterstützt sind, laufen
+sie im Prototyp nicht schlechter.
 
-Die Machbarkeitsprüfung an \texttt{tedious} aus \autoref{sec:kompatibilitaetsschicht} ist
-bestanden. Der unveränderte Treiber (20.3.8) verbindet sich in drei Läufen über den Socket-Shim mit einer
-echten Datenbankinstanz, stellt im \ac{TDS}-Datenstrom auf \ac{TLS} um und fragt ab. Beide Negativkontrollen schlagen wie
-in Node fehl.
-Auch der Differenztest mit 757 Fällen und die 440 Tests des Executors bestehen. Gebündelte Pakete laufen ebenfalls
-(\autoref{tab:bundles} im Anhang): Mit den vier häufigsten Paketen des Bestands, darunter \texttt{axios} und \texttt{@dvelop-sdk/dms}, und \enquote{Hello World} gelingen
-alle 525 Aufrufe im Prototyp, kalt in höchstens 1,4 Sekunden.
+Damit laufen bis zu 1.717 von 1.718 Mandanten, 99,9 Prozent, nicht schlechter als im Ausgangszustand. Werden die 664
+Mandanten, deren Lauffähigkeit allein auf der Schicht beruht, pessimistisch als Ausfall gezählt, bleiben 1.053, also 61,3
+Prozent. Das ist die Untergrenze und ergibt vier statt fünf Punkte. Die Obergrenze gilt unter zwei Annahmen: Die Schicht
+hält für die übrigen Pakete, was Differenztest und Treiber-Prüfung für einen Treiber zeigen, und die Ziele der Skripte
+sind erreichbar. Unter enforce lässt der Egress-Proxy nur das eigene System und die Ziele der Regeln durch (T7), und wie
+viele Mandanten eine Regel brauchen, ist nicht erhoben. S7, der Aufwand für den Rest, ist für 64 der 65 Mandanten null,
+weil keine Anpassung am Skript nötig ist, und für den letzten nicht gewollt. Der Aufwand für Regeln steht darin nicht.
 
 \subsection{Zusammenführung}
 \label{sec:nutzwert}
 
-\autoref{tab:nutzwert} sammelt die erhobenen Werte entlang der Soll-Kriterien. Die Fehlerrate
-geht nicht ein, sie liegt bei 3 bis 7 gegen 18 bis 39 von rund 57.000 Aufrufen. S6 ist abgeleitet statt gemessen, bei S7 bleibt der Regelaufwand unbewertet. Die Punkte folgen der
-Regel aus \autoref{sec:kriterienkatalog} und gelten für den Entwurf mit Auth Callout, weil der gemessene Stand M6 nicht
-erfüllt. Der Ausgangszustand erhält je bewertetem Kriterium drei
-Punkte, bei S6 und S7 nach derselben absoluten Regel fünf. Die Faktoren stammen aus dem Median der drei Läufe. S1a
-erreicht 6,1 im verteilten Lauf und 2,0 im Burst, beides fünf Punkte. S1b erreicht 0,41 und 1,33, also 1,2 und 3,7 Punkte,
-im Mittel 2,4. Zusammen mit S1a ergibt das 3,7, gerundet vier. S2 liegt im Median bei 2,1, S3 bei 1,17 (3,3 Punkte,
-gerundet drei) und S4 bei 2,0.
+\autoref{tab:nutzwert} bewertet die Soll-Kriterien nach der Regel aus \autoref{sec:kriterienkatalog}, mit Faktoren aus
+dem Median der drei Läufe. Die Punkte gelten für den Entwurf mit Auth Callout, weil der gemessene Stand M6 nicht erfüllt.
+S1 mittelt S1a mit zweimal fünf und S1b mit 1,2 und 3,7 Punkten zu 3,7, gerundet vier. Die Fehlerrate geht nicht ein.
 
 \begin{table}[tbp]
   \caption{Bewertung entlang der Soll-Kriterien}
   \label{tab:nutzwert}
   \footnotesize
-  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}p{0.12\textwidth} r r@{}}
+  \begin{tabularx}{\textwidth}{@{}l r >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X r r@{}}
     \hline
-    Nr. & Gewicht & Messwert Prototyp & Messwert Ausgangszustand & Herkunft & \multicolumn{2}{c@{}}{Punkte} \\
-     & & & & & Prototyp & Ausgang \\
+    Nr. & Gewicht & Faktor oder Anteil & Herkunft & \multicolumn{2}{c@{}}{Punkte} \\
+     & & & & Prototyp & Ausgang \\
     \hline
-    S1 & 0,30 & P95 verteilt 0,41 bis 0,53\,s, Burst 7,4 bis 8,6\,s & P95 verteilt 3,1 bis 3,3\,s, Burst 13,9 bis 16,5\,s & gemessen, ohne Callout & 4 & 3 \\
-    S6 & 0,25 & 61,3 bis 99,9\,\% der Mandanten & -- & abgeleitet, Regelbedarf nicht erhoben & 4 bis 5 & 5 \\
-    S2 & 0,15 & P50 139 bis 145\,ms, P95 220 bis 291\,ms, P99 313 bis 361\,ms & P50 300 bis 312\,ms, P95 720 bis 745\,ms, P99 3,5 bis 3,7\,s & gemessen & 5 & 3 \\
-    S3 & 0,10 & 70,5\,MiB je Pod & 82,7\,MiB je Pod & gemessen & 3 & 3 \\
-    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & -- & abgeleitet, ohne Regelaufwand & 5 & 5 \\
-    S4 & 0,10 & 400 Aufrufe/s, Stufe 300/s verfehlt & 200 Aufrufe/s & ein Lauf, vorläufig & 5 & 3 \\
-    Nutzwert & 1,00 & & & & 4,25 bis 4,5 & 3,7 \\
+    S1 & 0,30 & S1a 6,1 verteilt und 2,0 im Burst, S1b 0,41 und 1,33 & gemessen, ohne Callout & 4 & 3 \\
+    S6 & 0,25 & 61,3 bis 99,9\,\% der Mandanten & abgeleitet, Regelbedarf nicht erhoben & 4 bis 5 & 5 \\
+    S2 & 0,15 & 2,1 & gemessen & 5 & 3 \\
+    S3 & 0,10 & 1,17 & gemessen & 3 & 3 \\
+    S7 & 0,10 & 64 von 65 Mandanten ohne Änderung & abgeleitet, ohne Regelaufwand & 5 & 5 \\
+    S4 & 0,10 & 2,0, Stufe 300/s verfehlt & ein Lauf, vorläufig & 5 & 3 \\
+    Nutzwert & 1,00 & & & 4,25 bis 4,5 & 3,7 \\
     \hline
   \end{tabularx}
 \end{table}

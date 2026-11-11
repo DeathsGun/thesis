@@ -521,13 +521,14 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     Nur ein Netzwerk-Binding blockiert (HTTP 629, Sockets 63, beide 44) & 648 & läuft über die Schicht, Annahme \\
     Übrige, nur \texttt{http}, \texttt{https}, \texttt{net} oder \texttt{tls} & 16 & läuft über die Schicht, Annahme \\
     Übrige, Skripte gelesen und im Probelauf geprüft & 49 & \\
-    \quad schreiben nach \texttt{/tmp} & 34 & nicht schlechter, scheitert schon im Ausgangszustand \\
+    \quad schreiben nach \texttt{/tmp} & 34 & nicht schlechter, scheitert im Probelauf schon im Ausgangszustand, ob der Pfad in Produktion erreicht wird, ist nicht geprüft \\
     \quad lesen Windows-Pfade & 4 & nicht schlechter, ebenso \\
     \quad Import ungenutzt & 4 & läuft \\
     \quad schreiben nach \texttt{\_\_dirname} & 2 & läuft in beiden \\
     \quad \texttt{child\_process} & 1 & absichtlich blockiert, der eine nicht lauffähige Mandant \\
     \quad gebündelte Skripte & 4 & nicht unterstützt, nicht als Ausfall gezählt \\
     S6, bis zu & 1.717 von 1.718 & 99,9\,\%, mit den vier gebündelten als Ausfall 1.713, 99,7\,\% \\
+    S6, mindestens, ohne die 664 Mandanten, die allein auf der Schicht beruhen & 1.053 von 1.718 & 61,3\,\%, mit den vier gebündelten 61,1\,\% \\
     \hline
   \end{tabularx}
 \end{table}
@@ -587,6 +588,23 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces, 30.\ Oktober & ebenso \\
     Fehlerrate & fehlgeschlagene Aufrufe je Lauf, ohne clientseitige Netzfehler & drei Läufe am 29.\ Oktober \\
     Agentenprofil & k6 gegen den Agent-Endpunkt, 2.\ November: warm, Erstaufruf, Größe, ausgehende Anfragen, Parallelität & kein Endpunkt \\
+    \hline
+  \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+  \caption{Verdeckter Kanal im Agentenprofil, Bitfehlerrate. Drei Sender im Worker des Empfängers oder als Ausführungen
+    dreier Mandanten auf demselben Knoten, Platzierung aus den Logs geprüft}
+  \label{tab:kanal}
+  \footnotesize
+  \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X r r@{}}
+    \hline
+    Uhr und Aufbau & Last & selber Pod & zwischen Pods \\
+    \hline
+    \texttt{setTimeout(0)} auf echter Zeit, 64 Bits, 40-ms-Fenster, Polarität aus den Daten, Raten rund 0,45 & \acs{CPU} & 0,30--0,39 in fünf Läufen & 0,38--0,48 \\
+     & Allocation & 0,25--0,44 & 0,25--0,44 \\
+    virtuelle Uhr bei Timern & -- & \multicolumn{2}{r@{}}{kein Lauf erreicht seine Fenster} \\
+    externe Zeitquelle über eine Regel aus dem Aufruf, 16 Bits, 500-ms-Fenster, ohne Wahl der Polarität, Raten 0,5 & \acs{CPU} & 0,08--0,50 in sieben Läufen & Zufallsniveau, ein Lauf 0,31 \\
     \hline
   \end{tabularx}
 \end{table}
