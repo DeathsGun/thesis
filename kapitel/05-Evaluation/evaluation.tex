@@ -176,7 +176,8 @@ Gemessen an den mittleren Läufen ist der Prototyp mit Pool im 50., 90., 95.\ un
 und 10-mal schneller (\autoref{fig:endstand}). Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
 sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
-Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
+Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen in der Spitze 376 bis 391 Runner
+(\autoref{tab:ressourcen-endstand}), bis
 zu vierzig warten, und neue Runner werden vom Ingress zum Teil nicht erreicht.
 Die Fehler des Prototyps sind clientseitige Abbrüche und ein behobener Fehler im Executor, im Ausgangszustand
 überwiegend 502 \enquote{no route to host}.

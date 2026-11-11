@@ -334,7 +334,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Ein Slot je Worker-Pod (30.\ Oktober) gegen vier (erster Lauf, 29.\ Oktober)}
+  \caption{Ein Slot je Worker-Pod gegen vier}
   \label{tab:ein-slot}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r@{}}
@@ -348,6 +348,8 @@ pub fn for_profile(profile: Profile) -> Self {
     Overhead P50 / P95, ms & 150 / 533 & 145 / 291 \\
     Fehlgeschlagene Aufrufe & 27 & 3 \\
     Control Plane & dreimal OOMKilled bei 128\,Mi & 98\,Mi Spitze \\
+    \hline
+    \multicolumn{3}{@{}>{\RaggedRight\arraybackslash}p{\textwidth}@{}}{Ein Slot: Lauf vom 30.\ Oktober. Vier Slots: erster Lauf vom 29.\ Oktober, mit derselben Abfrage ausgewertet, daher weicht die \acs{CPU} von \autoref{tab:ressourcen-endstand} ab.} \\
     \hline
   \end{tabularx}
 \end{table}
