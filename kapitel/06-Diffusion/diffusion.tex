@@ -30,8 +30,8 @@ fremden oder von Agenten erzeugten Code auf Kubernetes ohne Hypervisor ausführe
 Prinzipien und Migrationspfad bereiten die Diffusion vor, die Übertragung selbst steht aus.
 
 Die Aussagen gelten mit Einschränkungen. Die Prüffälle sind aus dem eigenen Bedrohungsmodell abgeleitet und ersetzen
-keine Schwachstellensuche, Seitenkanäle sind ausgenommen. Offen bleiben der verdeckte Kanal zwischen gleichzeitigen
-Ausführungen, die zweite Ausführung nach einem Absturz und die nicht begrenzte \ac{CPU}. Der Vorsprung im Nutzwert von
+keine Schwachstellensuche, Seitenkanäle sind ausgenommen. Offen bleiben die zweite Ausführung nach einem Absturz und die
+nicht begrenzte \ac{CPU}, den verdeckten Kanal zwischen gleichzeitigen Ausführungen trägt die Fallstudie als Restrisiko. Der Vorsprung im Nutzwert von
 4,25 bis 4,5 gegen 3,7 hängt an S6, das abgeleitet statt gemessen ist.
 
 \subsection{Designprinzipien und Migrationspfad}
@@ -122,7 +122,7 @@ die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem 
 \subsection{Ausblick}
 \label{sec:diffusion:ausblick}
 
-Offen für spätere Arbeiten sind fünf Punkte, hinzu kommt ein Restrisiko, das zur Entscheidung vorliegt.
+Offen für spätere Arbeiten sind fünf Punkte.
 
 Der erste betrifft die Engine. Eine nach WebAssembly kompilierte Engine (\autoref{sec:wasm-zurueckgestellt}) ist nicht
 dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf wäre
@@ -150,9 +150,9 @@ Kaltstarts ohne Pool (\autoref{sec:kaltstart}). Ein Vorladen der zuletzt aufgeru
 (\autoref{sec:zustellung}) nähme auch dem ersten Aufruf den Abruf ab. Getrennte Slots für synchrone und
 Hintergrundläufe verhinderten, dass lange Läufe kurze verdrängen.
 
-Zur Entscheidung vorgelegt ist der verdeckte Kanal zwischen gleichzeitigen Agentenläufen (\autoref{sec:betriebsplanung}).
-Ein Slot je Pod schlösse ihn im selben Pod für bis zu 52\,\% mehr Speicher unter Last. Ob eine Trennung nach Person
-statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
+Den verdeckten Kanal zwischen gleichzeitigen Agentenläufen trägt die Fallstudie als Restrisiko
+(\autoref{sec:betriebsplanung}). Ob eine Trennung nach Person statt nach Mandant nötig wird, zeigt sich erst im Betrieb
+mit Agenten.
 
 Für die Fallstudie stehen zwei Schritte an. Der erste ist die stufenweise Einführung für die Kunden der \ac{OTC} nach dem
 Pfad aus \autoref{sec:diffusion:prinzipien}, mit dem Knative-Service als Rückweg. Der zweite ist der Wechsel der Kunden

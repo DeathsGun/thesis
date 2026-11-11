@@ -770,8 +770,10 @@ der Sandbox, und die liefert jedes freigegebene Ziel, mindestens das eigene Syst
 
 Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber einen Kanal zwischen Pods auf demselben Knoten. Dafür braucht
 das Modell mehr Pods, Speicher und \ac{CPU} (\autoref{sec:durchsatz}), und der Pool deckt nur noch 40 statt 160
-gleichzeitige Ausführungen. Der Entwurf behält deshalb mehrere Slots. Ob ein Slot im Agentenprofil diesen Preis wert ist und ob die Anfragen je Zeit zu begrenzen
-sind, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor.
+gleichzeitige Ausführungen. Die Verantwortlichen der Fallstudie tragen den Kanal deshalb als Restrisiko, mit mehreren
+Slots je Pod auch im Agentenprofil und ohne Begrenzung der Anfragen je Zeit. Der Kanal braucht einen mitwirkenden
+Sender im selben Pod, die Zeitquelle ist nur über ein freigegebenes Ziel erreichbar, dessen Regeln ein Aufruf nicht
+erweitern kann, und gemessen überträgt er unzuverlässig (\autoref{sec:pruefung-isolation}).
 
 Die Zugangsdaten (M6) sind auf der Plattform noch nicht getrennt. Die Trennung von Transport und Sandbox und der Auth
 Callout (\autoref{sec:bausteine}) sind lokal erprobt, der Callout setzt auf der Plattform Anpassungen des \acs{DDP}-Teams
