@@ -243,6 +243,8 @@
 % Pfad fuer Abbildungen
 %-----------------------------------
 \graphicspath{{./}{./abbildungen/}}
+% Gleitseiten oben ausrichten statt vertikal zentrieren
+\makeatletter\setlength{\@fptop}{0pt}\makeatother
 
 %-----------------------------------
 % Weitere Ebene einfügen
@@ -427,6 +429,9 @@
 \addcontentsline{toc}{section}{\abbreHeadingName}
 \input{abkuerzungen/acronyms}
 \newpage
+\addcontentsline{toc}{section}{Verzeichnis der Kürzel}
+\input{abkuerzungen/kuerzel}
+\clearpage
 
 %-----------------------------------
 % Symbolverzeichnis
