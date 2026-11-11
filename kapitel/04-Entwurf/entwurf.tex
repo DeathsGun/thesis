@@ -262,16 +262,11 @@ Skriptverwaltung.
   \label{fig:bausteine}
 \end{figure}
 
-Eine synchrone Ausführung nimmt folgenden Weg. Das Gateway lässt die Skriptkennung auflösen, legt einen Request-Body
-über 64\,KiB im Objektspeicher ab und veröffentlicht den Auftrag als Request-Reply-Nachricht auf einem Subject, das
-die Mandantenkennung trägt. Einer der dem Mandanten zugewiesenen Worker holt die Nachricht ab, führt aus, lädt einen
-großen Response-Body über eine vorsignierte \ac{URL} hoch und antwortet mit einer kleinen Nachricht, die nur Status
-und Größe trägt. Das Gateway liest den Body und antwortet dem Aufrufer. Es wartet begrenzt, und der Worker bricht
-etwas früher ab, damit jede Antwort den Aufrufer erreicht. Eine Hintergrundausführung unterscheidet sich am Ende des
-Weges: Das Gateway antwortet sofort mit dem Status 202. Der Worker stellt das Ergebnis per POST an eine
-Callback-\ac{URL} zu, die das Gateway auf einen Pfad unterhalb der Basisadresse des Mandanten, seiner SystemBaseUri, beschränkt hat, und
-bricht nach einer längeren Frist ab. Beide Fristen entsprechen denen des Ausgangszustands
-(\autoref{tab:parameter}).
+Für eine synchrone Ausführung veröffentlicht das Gateway den Auftrag als Request-Reply-Nachricht auf einem Subject,
+das den Mandanten trägt. Ein zugewiesener Worker führt aus und antwortet, große Bodies laufen über den Objektspeicher.
+Eine Hintergrundausführung beantwortet das Gateway sofort mit dem Status 202, und der Worker stellt das Ergebnis an
+eine Callback-\ac{URL} unterhalb der Basisadresse des Mandanten zu, seiner SystemBaseUri. Die Fristen entsprechen
+denen des Ausgangszustands (\autoref{tab:parameter}).
 
 Daneben verläuft der Steuerpfad. Ob ein Worker bereit ist, erfährt die Control Plane über einen Informer. Er hält
 eine lokale Kopie der Pod-Objekte und bekommt von der Kubernetes-\ac{API} jede Änderung mitgeteilt. Zuweisung und Rückzug schickt die Control Plane als \ac{HTTP}-Kommando an den Transport des Pods. Die
@@ -283,10 +278,8 @@ das Gateway greift auf den Bucket zu. Die Verbindung zu NATS gehört einem Manda
 und den Hash eines Identitäts-Secrets, das nur der Transport lesen kann. Der Callout gibt der Verbindung nur
 die Rechte, den Consumer dieses Mandanten zu binden, daraus abzurufen und zu bestätigen sowie auf dessen
 Reply-Subjects zu antworten. Consumer anlegen, den Stream verwalten und die Kommandos der Plattform lesen verbietet er
-(\autoref{lst:callout-rechte}, \autoref{lst:callout-token}). Und der Worker filtert die Header in beiden Richtungen:
-Vor dem Skript verbirgt er die Header, die die Plattform für ihre Zwischenschritte setzt. Aus der Antwort
-entfernt er Header, mit denen ein Skript die Richtlinien der Plattform-Origin schwächen könnte, etwa Cookies,
-\ac{CORS}, \ac{CSP} und \ac{HSTS} (\autoref{tab:header}).
+(\autoref{lst:callout-rechte}, \autoref{lst:callout-token}). Und der Worker filtert die Header in beiden Richtungen, sodass das Skript weder die Header der Plattform sieht noch
+deren Richtlinien für den Browser schwächen kann (\autoref{tab:header}).
 
 \subsubsection{Ebenen der Trennung}
 \label{sec:ebenen}
@@ -341,19 +334,13 @@ Egress-Proxy für die Dauer ihrer Registrierung gelten (\autoref{sec:faehigkeits
 erbeutet also keine NATS-Zugangsdaten, erst ein zweiter aus der Containergrenze erreicht den Transport. Hinter dieser schwächeren Hürde begrenzt der Auth Callout den Gewinn auf die
 Consumer des eigenen Mandanten und die Laufzeit des Tokens.
 
-Die Zuordnung eines Pods zu einem Mandanten ist endgültig. Ein einmal zugewiesener Pod endet durch eine von drei
-Ursachen. Die Control Plane entzieht ihn nach einer Stunde Zuweisungsdauer. Sie zieht ihn zurück, wenn sein Mandant
-eine Minute lang keinen Auftrag geschickt hat. Oder er wird beim Drain eines Knotens entfernt. Zurückziehen heißt,
-dass sie den Mandanten zuerst aus der Zuteilung nimmt und dem Worker dann ein \emph{retire} schickt, das seinen
-Consumer leert und den Prozess beendet. Der eigene Idle-Timeout des Workers greift nur als Fallback nach fünf
-Minuten, denn beendete der Worker sich allein, bliebe der Mandant bis zur Meldung des Informers zugewiesen. Der Pool wird ausschließlich aus frischen Pods
-nachgefüllt. Ein Pod, der nie Mandantencode ausgeführt hat, kann nichts von einem
+Die Zuordnung eines Pods zu einem Mandanten ist endgültig. Ein zugewiesener Pod endet nach einer Stunde
+Zuweisungsdauer, nach einer Minute ohne Auftrag seines Mandanten oder beim Drain eines Knotens, und der Pool wird
+ausschließlich aus frischen Pods nachgefüllt. Ein Pod, der nie Mandantencode ausgeführt hat, kann nichts von einem
 früheren Mandanten tragen, ohne Vertrauen in die innere Grenze. Die begrenzte Zuweisungsdauer begrenzt, wie lange
 ein bösartiger Mandant denselben Prozess angreifen kann. Der Preis ist ein Kaltstart je Nachfüllung, den der Pool vom
-Anfragepfad fernhält. Die Fristen von einer Stunde und einer Minute sind gesetzt und nicht hergeleitet. Große Anbieter
-halten Instanzen ebenfalls eine feste Zeit warm, \ac{AWS} zehn und Azure zwanzig Minuten, und es gibt Verfahren, die sie an
-das Aufrufmuster anpassen \autocite[S.~205]{shahrad_serverless_2020}. Die Fristen sind Betriebsparameter
-(\autoref{tab:parameter}).
+Anfragepfad fernhält. Die Fristen sind gesetzte Betriebsparameter (\autoref{tab:parameter}), wie die festen
+Warmhaltezeiten großer Anbieter \autocite[S.~205]{shahrad_serverless_2020}.
 
 Aus demselben Grund unterscheiden sich die beiden Profile nicht in der Topologie, sondern allein in der Menge ihrer
 Bindings (\autoref{sec:faehigkeitsmodell}). Ein Schnitt nach Profil trennte nur Ausführungen desselben Mandanten
@@ -382,9 +369,7 @@ leerlaufende Pods. Und fragte das Gateway je Anfrage synchron bei der Control Pl
 hinge die Skalierung am Anfragepfad. Daraus folgt die Regel:
 Die Zuteilung liegt nie auf dem Anfragepfad, und die Größe des Pools ist von der Zahl der Mandanten entkoppelt.
 
-Das Gateway veröffentlicht einen Auftrag auf ein Subject der Form
-\texttt{dv.processstudio.cmds.system.tenant.<Mandant>.execute.>}, also auf eine Adresse, die den Mandanten benennt und
-keinen Pod. Jeder zugewiesene Worker bindet den Durable Pull-Consumer seines Mandanten, dessen Filter genau
+Das Gateway veröffentlicht einen Auftrag auf ein Subject, das den Mandanten benennt und keinen Pod. Jeder zugewiesene Worker bindet den Durable Pull-Consumer seines Mandanten, dessen Filter genau
 dessen Kennung enthält und den die Control Plane vor der Zuweisung angelegt hat. Aufträge anderer Mandanten kann er
 nicht empfangen, weil der Server sie ihm nicht zustellt und seine Verbindung nur diesen Consumer ansprechen darf. Hält
 ein Mandant mehrere Pods, binden alle denselben Consumer, und der Server verteilt die Aufträge unter ihnen.
@@ -395,12 +380,12 @@ Consumer gehört der Control Plane. Sein Filter trägt an der Stelle des Mandant
 Auftrag, führt aber nichts aus, sondern prüft, ob der Mandant einen Pod hat und ob seine Last einen weiteren
 rechtfertigt.
 
-Der Consumer des Mandanten erlaubt vier Zustellungen mit Wartezeiten von 5, 10 und 20 Sekunden. Eine Nachricht kommt
+Der Consumer des Mandanten erlaubt bis zu vier Zustellungen mit wachsender Wartezeit (\autoref{tab:parameter}). Eine Nachricht kommt
 nur zurück, wenn die Wiederholung sicher ist oder ein Absturz sie erzwingt. Scheitert die Plattform, bevor Mandantencode
 lief, weil das Bundle oder der Body nicht erreichbar oder die Sandbox nicht ansprechbar ist, lehnt der Worker die
 Nachricht ab. Sie wird erneut zugestellt, solange eine Zustellung übrig ist und ein synchroner Aufrufer noch wartet.
-Vom Skript ist dann nichts gelaufen. Eine synchrone Nachricht, die erst nach der Frist von 50 Sekunden ankommt, verwirft
-der Worker, ohne sie auszuführen. Jedes andere Ergebnis bestätigt oder beendet die Nachricht, auch ein Timeout oder der Fehler des
+Vom Skript ist dann nichts gelaufen. Eine synchrone Nachricht, die erst nach Ablauf ihrer Frist ankommt,
+verwirft der Worker, ohne sie auszuführen. Jedes andere Ergebnis bestätigt oder beendet die Nachricht, auch ein Timeout oder der Fehler des
 Skripts. Stirbt der Worker mitten in einer Ausführung, oder die Sandbox, meist durch einen \ac{OOM}-Kill, kommt die Nachricht
 zurück, und das Skript läuft ein zweites Mal. Das wird hingenommen, obwohl eine Skriptausführung nicht idempotent ist.
 Die Zahl der Zustellungen begrenzt, wie oft ein Skript so einen Prozess beenden kann. Eine Startmarke je Nachricht,
@@ -439,37 +424,30 @@ des Mandanten an der letzten Bestätigung fortsetzt.
 \end{figure}
 
 \autoref{fig:erstkontakt} zeigt den Erstkontakt eines Mandanten als \ac{UML}-Sequenzdiagramm. Die Control Plane nimmt
-den Pod in einem atomaren Schritt aus dem Pool, sodass jeder bereite Pod stets in genau einer der drei Mengen steht. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an, höchstens einen je
-Mandant innerhalb von 30 Sekunden, und wartet bis zu 20 Sekunden, bis irgendein Pod bereit wird. Ein frisch angelegter
+den Pod in einem atomaren Schritt aus dem Pool, sodass jeder bereite Pod stets in genau einer der drei Mengen steht. Ist der Pool leer, legt sie über die Kubernetes-\ac{API} einen neuen Pod an und wartet begrenzt, bis
+irgendein Pod bereit wird (\autoref{tab:parameter}). Ein frisch angelegter
 Pod wird nie direkt zugewiesen, weil er Sekunden bis zur ersten Ausführung braucht (\autoref{sec:kaltstart}). Schlägt ein Schritt fehl, wird die Reservierung zurückgenommen, und der Stream stellt den Auftrag
-der Control Plane mit Verzögerung erneut zu, bis zu zwanzigmal. Die weiteren Aufträge des Mandanten laufen an der
+der Control Plane mit Verzögerung erneut zu. Die weiteren Aufträge des Mandanten laufen an der
 Control Plane vorbei, sie liest zu ihnen nur noch die Last.
 
-Der Erstkontakt gibt einem Mandanten einen Pod, weitere erhält er nach Last. Für jeden Auftrag eines zugewiesenen
-Mandanten liest die Control Plane, zeitlich gedrosselt, die Auslastung aus dem gemeinsamen Consumer, also laufende und
-noch nicht abgeholte Aufträge. Übersteigt die Summe einen festen Anteil der Slots aller Pods des Mandanten, kommen so
-viele Pods aus dem Pool hinzu, wie die Auslastung verlangt. Der Pool wird auf seine Zielgröße aufgefüllt, ohne auf
-die neuen Pods zu warten. Erstkontakte haben Vorrang, weil ein wartender Erstkontakt die volle Startzeit eines Pods
-trägt, eine ausbleibende Erweiterung aber nur Latenz kostet. Eine Erweiterung nimmt deshalb nur, solange ein fester
-Teil der Zielgröße frei bleibt, und frühestens kurz nach dem Erstkontakt. Eine Obergrenze je Mandant und ein
-Mindestabstand begrenzen sie, die Werte nennt \autoref{tab:parameter}, ihre Herleitung \autoref{sec:kaltstart}. Die
-Regel setzt an der Auslastung an und nicht am Rückstau, damit Kapazität bereitsteht, bevor ein Auftrag warten müsste.
-Den Abbau überzähliger Pods übernimmt die Control Plane: Sie merkt sich, wie viele Pods jede Lastprüfung verlangte, und zieht die
-ältesten Pods über dem Maximum der letzten Minute zurück. Die letzten Nachrichtenzeiten je Mandant legt sie in Redis
-ab, damit ein Neustart sie nicht vergisst.
+Weitere Pods erhält ein Mandant nach Last. Zu seinen Aufträgen liest die Control Plane gedrosselt die Auslastung
+des gemeinsamen Consumers, also laufende und noch nicht abgeholte Aufträge, und nimmt Pods aus dem Pool hinzu, sobald
+sie einen festen Anteil der Slots übersteigt. Die Regel setzt an der Auslastung an und nicht am Rückstau, damit
+Kapazität bereitsteht, bevor ein Auftrag warten müsste. Erstkontakte haben Vorrang, weil ein wartender Erstkontakt die
+volle Startzeit eines Pods trägt, eine ausbleibende Erweiterung aber nur Latenz kostet. Eine Erweiterung nimmt deshalb
+nur, solange ein fester Teil der Zielgröße frei bleibt. Überzählige Pods zieht die Control Plane zurück, sobald die
+Lastprüfungen der letzten Minute sie nicht mehr verlangen. Die Werte nennt \autoref{tab:parameter}.
 
 Eine Vorhersage der Zielgröße aus den Zuweisungen vergangener Wochen ist umgesetzt, gemessen wurde mit der festen
 Zielgröße vierzig (\autoref{sec:diffusion:ausblick}).
 
 Der Zustand der Zuteilung liegt in Redis ohne Ablaufzeiten, sodass die Control Plane ihn nach einem Neustart
-zurückliest und offene Zuweisungen wiederholt. Es gibt eine Replik und keine Leader Election. Eine Schleife hält den
-Bestand in Ordnung: Sie entzieht Pods nach Ablauf der Zuweisungsdauer, wobei die Grace Period laufende Ausführungen zu
-Ende kommen lässt. Sie löscht Pods, die in keiner Menge geführt werden, und füllt den Pool auf seine Zielgröße auf oder
-stutzt ihn zurück. Dabei zählen nur lebende Pods auf dem aktuellen Image, sodass ein neues Worker-Image durch den Pool
-rollt. Bekommt ein Pod einen \texttt{DeletionTimestamp}, meldet ein Informer der Kubernetes-\ac{API} das innerhalb
-von Sekunden. Die Control Plane streicht ihn aus der Menge des Mandanten, ohne sein Ende abzuwarten, ohne ihn
-erneut zu löschen und ohne ein \emph{unassign}-Kommando. War es sein letzter Pod und warten bereits Aufträge, weist
-sie den Mandanten sofort neu zu. Die Zustände eines Pods zeigt \autoref{fig:podzustaende} im Anhang.
+zurückliest und offene Zuweisungen wiederholt. Es gibt eine Replik und keine Leader Election. Eine Schleife entzieht Pods
+nach Ablauf der Zuweisungsdauer, löscht Pods, die in keiner Menge geführt werden, und hält den Pool auf seiner
+Zielgröße. Dabei zählen nur Pods auf dem aktuellen Image, sodass ein neues Worker-Image durch den Pool rollt. Meldet
+der Informer einen \texttt{DeletionTimestamp}, streicht die Control Plane den Pod sofort aus der Menge des Mandanten.
+War es sein letzter Pod und warten bereits Aufträge, weist sie den Mandanten sofort neu zu
+(\autoref{fig:podzustaende} im Anhang).
 
 Beim Drain eines Knotens für M5 erhalten die Pods SIGTERM. Ein Worker hört auf, Aufträge abzuholen, lehnt neue
 Zuweisungen ab und lässt laufende Ausführungen in der Grace Period zu Ende kommen. Der Durable Consumer bleibt mit seinem
@@ -501,31 +479,26 @@ Skripts. Das Webhook-Profil erhält \texttt{fetch}, eine abgefangene Konsole und
 braucht. Rohe Sockets samt \ac{TLS}, die nur die zehnmal kleinere Socket-Gruppe des Bestands benötigt, sind eine mandantenweit
 freigeschaltete Fähigkeit. Das Agentenprofil erhält \texttt{fetch} und Web-Globals wie Timer,
 \texttt{URL} und \texttt{Buffer}, aber weder \texttt{require} noch Konsole noch Modul-Loader. In beiden Profilen
-löscht der Worker nach der Initialisierung das \texttt{Deno}-Objekt und die Reste des Bootstraps, über die ein
-Skript die rohen Ops erreichen könnte. Die Prüfung der Ziele liegt im Proxy, in den Ops nur im Fallback ohne Proxy. Eine
+löscht der Worker nach der Initialisierung das \texttt{Deno}-Objekt, über das ein Skript die rohen Ops erreichen
+könnte. Eine
 Ableitung der Bindings aus dem Code, etwa aus dem Abhängigkeitsgraphen des Bundling-Schritts, wurde verworfen: Im
 Agentenprofil schreibt derjenige die Importe, dessen Beeinflussbarkeit das Bedrohungsmodell beschreibt (V2). Außerdem
 lassen sich zwei feste Mengen mit einer Freischaltung prüfen, eine abgeleitete nicht. Dass auch das Webhook-Profil nur
 erhält, was der Bestand braucht, folgt aus M4 und V5. In der Umsetzung ist die Zuordnung eine einzige Funktion vom
 Profil auf die Extensions (\autoref{lst:bindings}).
 
-Fehlende Kompatibilität zeigt sich in beiden Profilen erst zur Laufzeit als Fehler beim Laden eines Moduls, das die
-Schicht aus \autoref{sec:kompatibilitaetsschicht} nicht bereitstellt.
-
 Die Menge der Bindings legt fest, \emph{ob} ein Skript nach außen sprechen kann, der Egress-Proxy legt fest, \emph{wohin}.
 Beide Profile schicken \texttt{fetch} als \ac{HTTP}-Anfrage und Sockets als \texttt{CONNECT}-Tunnel an den Proxy, jeden Hop einer
 Redirect-Kette einzeln. Die Registrierung des Gateways nennt Mandant, Profil, Grenzen und Regeln. Eine Regel nennt einen
-Host, exakt, als \ac{IP}-Adresse oder als Wildcard, und optional Port, Pfadpräfix und Methoden. Ein Tunnel passt nur auf eine Regel mit
-Port. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Sie stammen
+Host und optional Port, Pfadpräfix und Methoden. Die Regeln liegen außerhalb des Skripts, denn eine Liste, die das Skript mitbrächte, wäre nach V2 wertlos. Sie stammen
 aus der Konfiguration des Mandanten, die die Skriptverwaltung mandantenweit pflegen soll. Das eigene System des Mandanten
 unter seiner SystemBaseUri ist ohne Regel erreichbar, jedes weitere Ziel braucht eine. Ein Aufruf kann Regeln mitgeben,
 sie aber nur einschränken: Das Gateway registriert die Schnittmenge aus den Regeln des Aufrufs und denen des Mandanten. Das
 betrifft vor allem Agentenläufe, deren Aufrufer nach V2 beeinflussbar ist und sonst jedes Ziel freigeben könnte. Unabhängig von den Regeln verwirft der Proxy private, Loopback-,
 Link-Local- und Metadaten-Adressen und die Adressbereiche des Clusters. Einen Treffer außerhalb der Regeln lehnt er im
-Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Der Proxy wertet Agentenläufe ohne Angabe in enforce.
-Weil die Skriptverwaltung noch keine Regeln hält, gibt der Prototyp sie selbst vor. Jeder Zugriff steht im
-Protokoll. Den Token der Person setzt der Proxy bei Agentenläufen selbst
-ein, er gelangt nie in die Sandbox. Lauschende Ports sind in beiden Profilen verwehrt.
+Modus \emph{enforce} ab und protokolliert ihn im Modus \emph{audit} nur. Weil die Skriptverwaltung noch keine Regeln
+hält, gibt der Prototyp sie selbst vor. Den Token der Person setzt der Proxy bei Agentenläufen selbst ein, er gelangt
+nie in die Sandbox.
 
 Damit wird der Proxy selbst zum Angriffsziel, denn er ist mandantenübergreifend geteilt und hält während eines
 Agentenlaufs den Token der Person. Gegen Anfragen auf interne Ziele löst er jeden Host selbst auf, verwirft ihn, wenn
@@ -552,13 +525,10 @@ Node.js in \autoref{sec:ausschluesse} als Vertrauensgrenze ausgeschieden ist. Ab
 prozessweite Berechtigungsmodell, dessen Umgehungen der Hersteller dokumentiert
 \autocite{the_deno_authors_security_2026}. Ein eigener Shim deckt nur ab, was der Bestand benötigt.
 
-Ob dieser Zuschnitt trägt, ist durch Architekturbetrachtung nicht zu klären. Die Machbarkeit wurde deshalb vorab an der
-schwierigsten Stelle des Bestands geprüft, an \texttt{tedious}, dem Treiber unterhalb von \texttt{mssql}. Er stellt
-eine bestehende Verbindung mitten im Datenstrom auf \ac{TLS} um, indem er den Handshake in die Frames des
-\ac{TDS}-Protokolls verpackt. Der unveränderte Treiber läuft dafür über den Socket-Shim. Die \ac{TLS}-Umstellung
-übernimmt eine Zustandsmaschine ohne eigene Ein- und Ausgabe, die nur über synchrone Bindings angesprochen wird,
-während der Treiber das Framing selbst verantwortet. Das Ergebnis steht in
-\autoref{sec:pruefung-kompatibilitaet}.
+Die Machbarkeit wurde vorab an der schwierigsten Stelle des Bestands geprüft, an \texttt{tedious}, dem Treiber
+unterhalb von \texttt{mssql}. Er stellt eine bestehende Verbindung mitten im Datenstrom auf \ac{TLS} um, indem er den
+Handshake in die Frames des \ac{TDS}-Protokolls verpackt. Der unveränderte Treiber läuft dafür über den Socket-Shim,
+die \ac{TLS}-Umstellung übernimmt eine Zustandsmaschine hinter synchronen Bindings.
 
 Der Vermittlungspunkt liegt bei der Socket-Gruppe auf Ebene des Verbindungsaufbaus. Der Proxy prüft Zielhost und
 Zielport beim Öffnen des Tunnels gegen die Regeln aus \autoref{sec:faehigkeitsmodell}, bevor die Verbindung zustande kommt. Danach besteht
@@ -567,32 +537,26 @@ keine Einsicht in den Datenstrom mehr, weil dieser ein mandanteneigenes Protokol
 Ebene der einzelnen Anfrage. Diese Ungleichheit ist eine Eigenschaft des Entwurfs und keine Lücke in seiner
 Umsetzung, und sie gehört als solche in die Bewertung von M4.
 
-Die Umsetzung der Schicht ist breiter als ein Shim für zwei Netzwerkschnittstellen und folgt einer Regel: Wo Node-Code
-den Host nicht berührt, läuft Nodes eigener Code, wo er ihn berührt, wird er nachgebildet oder verweigert. Die erste
-Schicht ist unveränderter Quelltext des Node-Projekts, per Commit festgelegt und beim Bau gebündelt, etwa
-\texttt{Buffer}, \texttt{events}, Streams, \texttt{util.inspect}, \texttt{path}, \texttt{querystring} und Web Streams.
-Jeder Import, der in Node zu einem nativen Binding oder zum Host führte, ist ein Stub oder wirft beim Laden. Ein
-unbekannter interner Import bricht den Bau ab, sodass keine Abhängigkeit unbemerkt nach außen reicht. Die zweite
-Schicht sind eigene Shims mit Bindings: \texttt{net}, \texttt{tls}, \texttt{http} und \texttt{https}, \texttt{zlib},
-\texttt{fetch}, \texttt{crypto} und \texttt{fs} als größenbegrenztes Dateisystem im Speicher, das je Ausführung leer
-beginnt. Die dritte sind die Web-Globals jeder Ausführung, darunter Timer, \texttt{URL} und \texttt{AbortController}.
-Nicht enthalten ist die Kompatibilitätsschicht von Deno. \texttt{process} ist so klein wie dort: Die
-Umgebungsvariablen des Hosts bleiben leer, die Variablen des Mandanten erreichen das Skript wie im Ausgangszustand
-über \texttt{req.variables()}. Die Globals bringen eine Uhr mit, die während synchroner Ausführung steht, nach dem Vorbild
+Die Schicht folgt einer Regel: Wo Node-Code den Host nicht berührt, läuft Nodes eigener Code, wo er ihn berührt,
+wird er nachgebildet oder verweigert. Die erste Schicht ist unveränderter Quelltext des Node-Projekts wie
+\texttt{Buffer}, \texttt{events} und Streams, auf einen Commit festgelegt. Jeder Import, der in Node zum Host führte,
+ist ein Stub oder wirft beim Laden, und ein unbekannter interner Import bricht den Bau ab. Die zweite Schicht sind
+eigene Shims mit Bindings, darunter \texttt{net}, \texttt{tls}, \texttt{http}, \texttt{crypto} und \texttt{fs} als
+größenbegrenztes Dateisystem im Speicher, das je Ausführung leer beginnt. Die dritte sind die Web-Globals. Die
+Umgebungsvariablen des Hosts bleiben leer, die Variablen des Mandanten erreichen das Skript wie im Ausgangszustand über
+\texttt{req.variables()}.
+
+Die Globals bringen eine Uhr mit, die während synchroner Ausführung steht, nach dem Vorbild
 der Workers-Plattform \autocite{cloudflare_security_2026}. Ein Timer rückt sie nur um seine eigene Verzögerung vor, gerechnet
 ab dem Stand beim Anlegen. Die echte Zeit zeigt sie erst beim Start und nach abgeschlossener Ein- und Ausgabe, auf 100\,ms
 abgerundet nach einem zufälligen Versatz aus der Zufallsquelle des Hosts. Ein Skript kann seine eigene Arbeit damit nicht in
 echten Millisekunden messen und sich nicht an der Systemzeit des Hosts ausrichten. Eine Zeitquelle außerhalb der Sandbox umgeht die Uhr
-\autocite{schwarzl_remote-timer-as--service_2026}, sofern die Regeln aus \autoref{sec:faehigkeitsmodell} sie erreichbar
-machen. Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
+\autocite{schwarzl_remote-timer-as--service_2026}, mindestens das eigene System des Mandanten bietet eine
+(\autoref{sec:betriebsplanung}). Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
 
-Ob die Schicht trägt, prüfen zwei Tests, deren Ergebnisse in \autoref{sec:pruefung-kompatibilitaet} stehen. Ein
-Differenztest führt 757 Fälle, die in einem echten Node derselben Version erzeugt wurden, in einem frischen Isolate
-erneut aus und verlangt dasselbe Ergebnis, wobei eine Liste bekannter Abweichungen fehlschlägt, sobald eine
-Abweichung verschwindet. Integrationstests sprechen über \texttt{http}, \texttt{fetch}, \texttt{net} und \ac{TLS} über
-einem rohen Socket mit echten Gegenstellen und prüfen Backpressure, Redirects, Abbrüche und die Allowlist. Als Arbeitsliste für die zweite Schicht diente ein
-Scanner, der jede gespeicherte Skriptversion bündelt und ihre Importe und freien Bezeichner gegen das Angebot des
-Prototyps prüft.
+Ob die Schicht trägt, prüfen ein Differenztest, der 757 in einem echten Node erzeugte Fälle in einem frischen Isolate
+wiederholt und dasselbe Ergebnis verlangt, und Integrationstests mit echten Gegenstellen
+(\autoref{sec:pruefung-kompatibilitaet}).
 
 \subsubsection{Begrenzung der Ressourcen}
 \label{sec:ressourcenbegrenzung}
@@ -612,12 +576,10 @@ Ausführungen im Pod demselben Mandanten gehören, trifft das nie einen anderen 
 Speicher verbraucht hat, erkennt nur die Ebene des Isolates.
 
 Die Umsetzung bemisst die innere Ebene aus der äußeren. Der Worker liest das Speicherlimit seines Pods über die
-Downward \ac{API}, nicht aus den cgroup-Dateien, die gVisor nur emuliert
-\autocite{googlegvisor_contributors_sandboxed_2026}. Er teilt es gleichmäßig auf die gleichzeitigen Ausführungen auf,
-je zur Hälfte als Heap-Limit und als Limit für Puffer außerhalb des Heaps. Erreicht der Heap die Grenze, beendet der
-Callback das Isolate und gewährt festen Headroom, ohne den V8 den gesamten Prozess beendete. Der zählende Allokator
-verweigert eine Zuteilung oberhalb des Limits und meldet das als abfangbaren \texttt{RangeError}. Weitere Limits
-gelten für entpackte Bundles, Bodies und das Dateisystem im Speicher.
+Downward \ac{API}, weil gVisor die cgroup-Dateien nur emuliert \autocite{googlegvisor_contributors_sandboxed_2026}, und
+teilt es gleichmäßig auf die gleichzeitigen Ausführungen auf, je zur Hälfte für Heap und Puffer. Erreicht der Heap die
+Grenze, beendet der Callback das Isolate, eine Zuteilung oberhalb des Puffer-Limits meldet der Allokator als
+abfangbaren \texttt{RangeError}.
 
 Zusammen übersteigen die Limits der Ausführungen das Limit des Pods. Bei 512\,MiB Pod-Limit und vier Slots erhält
 jede Ausführung 64\,MB Heap und 64\,MB für Puffer, zusammen schon das ganze Pod-Limit, ohne Headroom, Bundle-Cache und
@@ -660,15 +622,12 @@ Herkunft des Skripts (\autoref{tab:vorbereitung}).
 Der \emph{Laufzeit-Snapshot} trägt für jede Ausführung. Er hält eine Instanz fest, in der die Extensions des Workers
 und der JavaScript-Anteil der Shims aus \autoref{sec:kompatibilitaetsschicht} bereits ausgewertet sind. Er entsteht
 einmalig beim Bau der Binärdatei und ist, weil er kein Mandantenskript enthält, für alle Mandanten, Profile und
-Skripte derselbe. Das entspricht dem von \textcite[S.~559]{ustiugov_benchmarking_2021} untersuchten Vorgehen. Im
-Prototyp enthält er das Buffer-Bundle und den Webhook-Adapter. Extensions mit eigenen Bindings tragen Zustand je
-Ausführung und werden je Isolate registriert.
+Skripte derselbe. Das entspricht dem von \textcite[S.~559]{ustiugov_benchmarking_2021} untersuchten Vorgehen.
 
 Ein \emph{skriptbezogener Code-Cache} spart das wiederholte Kompilieren desselben Quelltexts. Gecacht wird ausschließlich
 Unveränderliches, Quelltext und kompilierter Code, nie Heap-Zustand einer vorangegangenen Ausführung, denn ein
 Snapshot des Mandantenskripts verletzte M2 (T3 in \autoref{tab:prueffaelle}). Umgesetzt ist er über den Code-Cache
-von V8, der beim ersten vollständigen Lauf eines Bundles erzeugt, neben dem Quelltext unter demselben Content-Hash
-abgelegt und beim nächsten Lauf eingespeist wird. Ein Ausbruch aus der Engine könnte nur den Cache des eigenen Mandanten verändern, und im Agentenprofil gibt es keinen.
+von V8 unter dem Content-Hash des Bundles. Ein Ausbruch aus der Engine könnte nur den Cache des eigenen Mandanten verändern, und im Agentenprofil gibt es keinen.
 
 Schwer wiegt beim Bundle nicht die Übertragung (\autoref{sec:bestandsanalyse}), sondern der konstante Anteil eines Abrufs aus dem Objektspeicher, rund 50\,ms bei jedem Aufruf.
 Der Prozess hält deshalb einen Cache, dessen Schlüssel der Inhalt ist, mit vier Festlegungen. Er liegt im Speicher und
@@ -732,9 +691,8 @@ solche Treffer vorkämen, belegt die Bestandsanalyse, in der dieselbe Skriptkenn
   \label{fig:ablauf}
 \end{figure}
 
-\autoref{fig:ablauf} fasst den Ablauf zusammen. Bei Transportfehlern werden nur Bundle-Abruf, Callback und
-Log-Upload wiederholt, nie die Ausführung selbst (\autoref{tab:parameter}). Das Konsolen-Log geht erst nach Antwort und
-Freigabe des Slots an den Skriptdienst, damit ein langsames Log-Ziel weder die Antwort verzögert noch einen Slot belegt.
+Bei Transportfehlern werden nur Bundle-Abruf, Callback und Log-Upload wiederholt, nie die Ausführung selbst
+(\autoref{fig:ablauf}, \autoref{tab:parameter}).
 
 Eine Ausführung des Webhook-Profils endet, wenn das Ergebnis des Einstiegspunkts feststeht, wie im Ausgangszustand.
 Offene Timer, Sockets und Leseoperationen werden mit dem Isolate verworfen. Im Agentenprofil läuft die Event Loop
