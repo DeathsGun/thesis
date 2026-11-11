@@ -96,8 +96,8 @@ Die Vertrauensannahmen lauten wie folgt.
     potenziell aktiv bösartig.
 
   \item[V2: Im Agentenprofil ist der Code über seine Eingaben von Dritten beeinflussbar.] Das
-    Modell erzeugt den Code aus einem Kontext, der Inhalte anderer Personen enthält, und solche
-    Inhalte lassen sich gezielt so gestalten, dass sie das Verhalten des Modells steuern
+    Sprachmodell erzeugt den Code aus einem Kontext, der Inhalte anderer Personen enthält, und solche
+    Inhalte lassen sich gezielt so gestalten, dass sie das Verhalten des Sprachmodells steuern
     \autocite[S.~79--80]{greshake_not_2023}. Der Urheber des schädlichen Codes muss deshalb nicht der
     Mandant sein. Dass von Agenten erzeugter Code risikobehaftete Operationen enthalten kann, ist
     empirisch belegt \autocite[S.~106191]{guo_redcode_2024}.
@@ -106,15 +106,15 @@ Die Vertrauensannahmen lauten wie folgt.
     Runtime-Binary und Execution Service gelten als korrekt und nicht kompromittiert.
     Angriffe, die diese Bestandteile auf anderem Weg unterwandern, etwa über die
     Control Plane von Kubernetes, liegen außerhalb der Betrachtung. Ein neues Ausführungsmodell fügt dieser Menge eigene
-    Dienste hinzu, die damit ebenfalls vertrauenswürdig sein müssen (\autoref{tab:tcb}). Das codeerzeugende Modell
+    Dienste hinzu, die damit ebenfalls vertrauenswürdig sein müssen (\autoref{tab:tcb}). Das codeerzeugende Sprachmodell
     gehört nach V5 nicht dazu.
 
   \item[V4: Die Mandanten misstrauen einander.] Es besteht keine Annahme, dass ein Mandant die
     Ausführungen eines anderen nicht angreift.
 
-  \item[V5: Das codeerzeugende Modell liegt außerhalb der Kontrolle der Plattform.] Der Mandant
-    kann ein eigenes Modell anbinden und kontrolliert dann Gewichte, System prompt und
-    vorgelagerte Prüfungen vollständig. Aussagen über das Alignment dieses Modells, über seine
+  \item[V5: Das codeerzeugende Sprachmodell liegt außerhalb der Kontrolle der Plattform.] Der Mandant
+    kann ein eigenes Sprachmodell anbinden und kontrolliert dann Gewichte, System prompt und
+    vorgelagerte Prüfungen vollständig. Aussagen über das Alignment dieses Sprachmodells, über seine
     Widerstandsfähigkeit gegen die in V2 beschriebene Prompt Injection oder über die Einhaltung
     einer vorgegebenen Schnittstelle sind deshalb nicht möglich.
 \end{description}
@@ -124,7 +124,7 @@ Skript zur Verfügung stehen, kann nicht über System prompt oder Tool Schema er
 dem Mandanten gehört. Sie muss von der Ausführungsumgebung durchgesetzt werden \autocite[S.~1]{ji_taming_2026}. Für das
 Agentenprofil verbleibt der Plattform damit keine Schutzmaßnahme außerhalb der Isolationsgrenze.
 Die jüngere Forschung zur Sicherheit agentischer Systeme betrachtet diese Frage bislang
-überwiegend aus der Perspektive des Modells und weniger aus der der Systemisolation
+überwiegend aus der Perspektive des Sprachmodells und weniger aus der der Systemisolation
 \autocite[S.~1]{christodorescu_systems_2025}.
 
 \subsection{Struktur des produktiven Skriptbestands}
@@ -197,7 +197,7 @@ Kompatibilitätsschicht in \autoref{sec:kompatibilitaetsschicht}, nicht ihre Mac
 Erkennung ist eine Analyse freier Bezeichner und zählt einen Namen nur, wenn das Skript ihn
 nirgends selbst bindet. Sie unterschätzt den Bedarf daher eher, als dass sie Abhängigkeiten erfindet.
 
-Ein zweiter Befund betrifft die Größe der gebündelten Artefakte. Ein Bundle ist die eine Datei, in die der Builder der
+Ein zweiter Befund betrifft die Größe der Bundles. Ein Bundle ist die eine Datei, in die der Builder der
 Plattform ein Skript samt seiner npm-Pakete zusammenfasst, sodass zur Laufzeit nichts nachgeladen wird. Von den 14.575
 Skriptversionen binden 2.373 npm-Pakete ein. Das fertige Bundle liegt im Median bei 69,3\,KB, im 95.\ Perzentil bei
 429,0\,KB und im Maximum bei 1,41\,MB, typischerweise den Faktor zehn bis dreißig über dem Quelltext. Betroffen sind 1.023 der 1.718 Mandanten, je Mandant
@@ -227,7 +227,7 @@ innerhalb des Containers vorausgesetzt und allein der Ausbruch untersucht wird
 \autocite[S.~3]{marchand_quantifying_2026}.
 
 Wer den Code verfasst, ist für diese Fähigkeit unerheblich. Nach V1 kann es ein bösartiger Mandant
-sein, nach V2 im Agentenprofil auch ein Dritter, dessen Inhalte in den Kontext des Modells
+sein, nach V2 im Agentenprofil auch ein Dritter, dessen Inhalte in den Kontext des Sprachmodells
 gelangen. Beide Urheber führen auf dieselbe technische Lage. Die Ziele des Angreifers entsprechen
 den negierten Schutzzielen aus \autoref{sec:systemkontext}. Alles, was V3 der Plattform zurechnet,
 gehört nicht zu seinen Fähigkeiten, also weder physischer Zugriff noch ein Zugang auf dem Host
@@ -315,7 +315,7 @@ verletzt, ist keine Lösung.
          A3 & Konfigurations\-vergleich \\[2pt]
     M4 & \textbf{Vermittelter Zugriff.} Netz und Dateisystem ausschließlich über Bindings, die
          die Ausführungsumgebung vermittelt. Keine Beschränkung beruht auf Mitwirkung des
-         Modells. & V5 & Prüffälle T7 bis T9 \\[2pt]
+         Sprachmodells. & V5 & Prüffälle T7 bis T9 \\[2pt]
     M5 & \textbf{Verfügbarkeit bei Knotenupdates.} Die Zeit ohne Ausführungsfähigkeit während
          eines Rolling Updates der Knoten überschreitet den festgelegten Wert nicht. &
          Betriebs\-anforderung, vier Updates je Jahr & Messung gegen den Ausgangszustand \\[2pt]
