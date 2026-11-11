@@ -13,7 +13,7 @@ betrachteten.
 
 Die zweite ist die bereits eingesetzte Sandbox-Laufzeit. M3 untersagt, die dem Gastcode zugängliche Oberfläche des
 Host-Kernels gegenüber dem Ausgangszustand zu vergrößern. Die äußere Grenze ist damit keine Entwurfsvariable mehr. Ihr
-Aufwand ist in die Entscheidung des Ausgangszustands bereits eingegangen \autocite[S.~3]{young_true_2019}. Ein
+Aufwand ist in die Entscheidung des Ausgangszustands bereits eingegangen \autocites[S.~3]{young_true_2019}[S.~1497]{wang_performance_2022}. Ein
 Ausbruch aus der Isolate-Grenze endet damit in einer gVisor-Sandbox und nicht auf dem Host-Kernel. Hardwareseitige
 Seitenkanäle bleiben offen, und der Sentry gehört selbst zur \ac{TCB} (\autoref{sec:grundlagen:isolation}).
 
@@ -730,8 +730,10 @@ Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitw
 \emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox von V8, die der Prototyp nicht nutzt, die Heaps der gleichzeitigen Isolates. Ein Speicherfehler
 erreicht dabei auch die Ausführungskennungen der gleichzeitigen Läufe und damit im Agentenprofil Anfragen mit dem Token
 einer anderen Person desselben Mandanten. Gemessen ist nur der verdeckte Kanal (\autoref{sec:pruefung-isolation}).
-Seit der virtuellen Uhr braucht er eine echte Zeitquelle, und die steht immer bereit, etwa der
-\texttt{Date}-Header des eigenen Systems oder die auf 100\,ms gerundete echte Zeit nach jeder Ein- und Ausgabe.
+Seit der virtuellen Uhr braucht der gemessene Empfänger eine echte Zeitquelle, und die steht immer bereit, etwa der
+\texttt{Date}-Header des eigenen Systems oder die auf 100\,ms gerundete echte Zeit nach jeder Ein- und Ausgabe. Ein
+Empfänger, der Zeitunterschiede über die Parallelität der Befehlsausführung misst, käme auch ohne sie aus
+\autocite[S.~354]{xiao_hacky_2023}.
 
 Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber einen Kanal zwischen Pods auf demselben Knoten. Dafür braucht
 das Modell unter Last 64\,\% mehr Pods und 52\,\% mehr Speicher (\autoref{sec:durchsatz}), und der Pool deckt nur noch

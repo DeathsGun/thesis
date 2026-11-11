@@ -52,11 +52,14 @@ Eine sprachbasierte Grenze hält, was die Engine prüft, nicht aber, was die Har
 verrät Daten über ein Merkmal, das nicht als Ausgabe gedacht ist, etwa über die Dauer eines Speicherzugriffs. Spectre
 nutzt dafür die spekulative Ausführung des Prozessors und liest so Speicher, den die sprachbasierte Grenze schützt
 \autocite[S.~1]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Sites im selben Prozess aufgegeben und
-durch eine Prozessgrenze ersetzt \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Ein
+durch eine Prozessgrenze ersetzt \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Auch diese
+Grenze wies Lücken auf, durch die ein Spectre-Angriff in JavaScript geschützte Daten las
+\autocite[S.~699]{agarwal_spookjs_2022}. Ein
 \emph{verdeckter Kanal} ist ein Übertragungsweg, über den ein Prozess Informationen entgegen der Sicherheitsrichtlinie
 weitergibt \autocite[S.~107]{dod_trusted_1985}, etwa indem ein Sender den Prozessor belastet und ein Empfänger seine
 eigene Laufzeit misst. Beides setzt einen Timer voraus, der fein genug auflöst. Ein Timer außerhalb der Sandbox leistet
-das ebenso wie einer im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}. gVisor schützt nach eigener
+das ebenso wie einer im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}, und ohne Uhr lässt er sich in
+JavaScript aus der Parallelität der Befehlsausführung bauen \autocite[S.~354]{xiao_hacky_2023}. gVisor schützt nach eigener
 Darstellung nicht vor hardwareseitigen Seitenkanälen \autocite{the_gvisor_authors_security_2026}.
 
 \subsection{Bausteine der Ausführung}
@@ -70,7 +73,8 @@ dieses Verhalten, wie \autoref{sec:systemkontext} zeigt.
 
 Ein \emph{Kaltstart} ist die Verzögerung, die eine Anfrage erfährt, wenn keine laufende Instanz sie
 bedienen kann und die Plattform erst eine bereitstellen muss
-\autocite[S.~1]{lin_mitigating_2019}. In der Fallstudie umfasst sie das Anlegen und Scheduling des
+\autocite[S.~1]{lin_mitigating_2019}. Welche Größen ihre Dauer bestimmen, etwa Programmiersprache, Speicher und
+Größe des Artefakts, untersuchen \textcite[S.~181]{manner_cold_2018} an 49.500 Ausführungen. In der Fallstudie umfasst sie das Anlegen und Scheduling des
 Pods, den Start der Laufzeitumgebung und das Laden des Codes. Eine Anfrage, die auf eine bereits
 laufende Instanz trifft, gilt als \emph{warm}. Drei Gegenmittel sind in der Literatur
 beschrieben: ein Pool vorgehaltener Instanzen, der den Start vom Anfragepfad nimmt
