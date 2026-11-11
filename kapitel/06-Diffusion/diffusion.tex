@@ -4,48 +4,59 @@
 \subsection{Fazit}
 \label{sec:diffusion:fazit}
 
-Die Antwort der Arbeit auf die Oberfrage ist ein Modell mit zwei Grenzen. Die Mandantengrenze bleibt der Pod unter
-gVisor, wie im Ausgangszustand. Neu sind ein V8-Isolate je Ausführung, das nach dem Lauf verworfen wird, ein Pool
-vorgehaltener Pods, den eine Control Plane über das vorhandene Messaging-System zuteilt, und eine Fähigkeitsgrenze aus
-Bindings und Egress-Proxy. Eine Kompatibilitätsschicht bildet die Node-Schnittstellen nach, die der Bestand nutzt. Den
-Latenzvorsprung im Webhook-Profil trägt der Pool, nicht die Engine, den Sicherheitsgewinn die Fähigkeitsgrenze. Alle
-Vergleichszahlen stammen aus dem Webhook-Profil.
+Die Oberfrage ist für die Fallstudie beantwortet. Ein Ausführungsmodell für fremden, auch zur Laufzeit erzeugten
+JavaScript-Code braucht zwei Grenzen, den Pod unter gVisor je Mandant wie im Ausgangszustand und ein V8-Isolate je
+Ausführung, das nach dem Lauf verworfen wird. In der bestehenden Kubernetes-Plattform bleibt es betreibbar, weil es
+fünf eigene Dienste hinzufügt und sich sonst auf gVisor, NATS, Redis und den Objektspeicher der Plattform stützt
+(\autoref{sec:bausteine}). Auf den geprüften Angriffswegen wurden Isolation und Zustandsfreiheit nicht verletzt, und
+den Kaltstart senkt es, solange ein Pool vorgehaltener Pods bereitsteht. Den Latenzvorsprung trägt der Pool, nicht die
+Engine, den Sicherheitsgewinn die Fähigkeitsgrenze aus Bindings und Egress-Proxy. Verallgemeinert ergeben sich fünf
+Designprinzipien: zwei Grenzen für zwei Schutzziele, Vorhaltung statt Wiederverwendung, Fähigkeiten nach der
+Vertrauensklasse des Codes, der Mandantenkontext außerhalb des Heaps und Ressourcenbegrenzung auf zwei Ebenen (P1 bis
+P5, \autoref{sec:diffusion:prinzipien}). Sie richten sich an Betreiber, die fremden oder von Agenten erzeugten Code auf
+Kubernetes-Clustern ohne Hypervisor ausführen, und setzen eine Sandbox-Laufzeit, ein Messaging-System mit Rechten je
+Verbindung, einen Egress-Proxy als einzigen Netzweg und eine einbettbare Engine voraus.
 
-Die Anforderungen ergeben sich aus Ausgangslage und Betrieb der Fallstudie und aus der Auswertung von 1.718 Mandanten
-mit 14.575 Skriptversionen. Im Kern verschiebt sich die Vertrauenseinheit vom Mandanten auf die einzelne Ausführung,
-sobald der Code von einem Agenten stammt. Daraus folgen sechs
-Muss- und sechs gewichtete Soll-Kriterien (\autoref{sec:kriterienkatalog}).
+\begin{description}
+  \item[U1] Die Anforderungen stammen aus dem Bedrohungsmodell und der Auswertung von 1.718 Mandanten mit 14.575
+    Skriptversionen. Im Kern verschiebt sich die Vertrauenseinheit vom Mandanten auf die einzelne Ausführung, sobald der
+    Code von einem Agenten stammt. Daraus folgen sechs Muss- und sechs gewichtete Soll-Kriterien
+    (\autoref{sec:kriterienkatalog}).
 
-Bei der Isolationsgrenze scheiden die Muss-Kriterien Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun und workerd aus, eine nach WebAssembly
-kompilierte Engine ist zurückgestellt (\autoref{sec:vorauswahl}). Die Zuordnung ist grob bei der Sicherheitsgrenze, ein
-Pod je Mandant, und fein bei den Rechten, feste Bindings je Profil. Die Instanzverwaltung hält die Zuteilung vom
-Anfragepfad fern und entkoppelt die Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
+  \item[U2] Die Muss-Kriterien schließen Node.js als Vertrauensgrenze, ein prozessweites Berechtigungsmodell, Bun und
+    workerd aus, eine nach WebAssembly kompilierte Engine ist zurückgestellt (\autoref{sec:vorauswahl}). Die Zuordnung
+    ist grob bei der Sicherheitsgrenze, ein Pod je Mandant, und fein bei den Rechten, feste Bindings je Profil. Eine
+    Control Plane teilt die Pods über das vorhandene Messaging-System zu, hält die Zuteilung vom Anfragepfad fern und
+    entkoppelt die Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}). Eine Kompatibilitätsschicht
+    bildet die Node-Schnittstellen nach, die der Bestand nutzt.
 
-Auf den geprüften Angriffswegen hält der Prototyp Isolation und Zustandsfreiheit ein. Er besteht die neun Prüffälle in
-beiden Profilen, der Ausgangszustand nur sieben, T8 davon mit Vorbehalt, weil er 23 Umgebungsvariablen preisgibt. An
-T7 und T9 scheitert er (\autoref{sec:pruefung-isolation}). Zustandsfrei ist er seit einer Umstellung während
-der Arbeit, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und Dateisystem. M3 gilt auf Clustern mit
-gVisor (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp M1 bis M5, weil ohne Auth Callout
-ein doppelter Ausbruch die gemeinsamen NATS-Zugangsdaten erreicht. Nach der Regel aus \autoref{sec:kriterienkatalog}
-ist damit der Entwurf die Lösung, sobald der Callout eingerichtet ist, und der Nutzwert gilt unter diesem Vorbehalt.
+  \item[U3] Der Prototyp besteht die neun Prüffälle in beiden Profilen. Der Ausgangszustand scheitert an T7 und T9 und
+    besteht T8 nur mit Vorbehalt, weil er 23 Umgebungsvariablen preisgibt (\autoref{sec:pruefung-isolation}). Zustandsfrei
+    ist er seit einer Umstellung während der Arbeit, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und
+    Dateisystem. Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp M1 bis M5, weil ohne Auth Callout ein doppelter
+    Ausbruch die gemeinsamen NATS-Zugangsdaten erreicht. M3 gilt nur auf Clustern mit gVisor (\autoref{tab:m3}).
 
-Mit Pool ist der Prototyp auf demselben Cluster schneller als der Ausgangszustand und braucht unter Last weniger als
-halb so viel Speicher. Er startet im Median in 278 bis 308\,ms statt 2,54 bis 2,76 Sekunden, für 3,0\,GiB und 1,0 Kerne Pool im Ruhezustand. Ohne Pool
-liegt er auf dem Niveau des Ausgangszustands (\autoref{sec:kaltstart}). Dass ein heutiger Runner mit Pool ebenso schnell
-wäre, ist nicht gemessen und bleibt eine Hypothese. Der Overhead im Lastprofil liegt im Median bei 139 bis 145 statt 300
-bis 312\,ms, im 99.\ Perzentil bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden, jeweils mit den Begleitdiensten
-(\autoref{sec:warm}). Unter Last braucht der Prototyp 14,4 bis 15,0 statt 33 bis 34\,GiB, der Durchsatz liegt in einem
-Lauf bei 400 statt 200 Aufrufen je Sekunde (\autoref{sec:durchsatz}). Beim Drain eines Knotens bleibt die Lücke bei 0,2 bis 0,3
-statt 2,1 bis 2,7 Sekunden, ohne verlorene und ohne doppelte Ausführung (\autoref{sec:pruefung-m5}). Der Nutzwert liegt
-bei 4,25 bis 4,5 gegen 3,7, je nach Unter- oder Obergrenze des abgeleiteten S6 (\autoref{sec:nutzwert}). Für das
-Agentenprofil gibt es keinen Ausgangswert. Erstaufruf und Warmstart-Latenz liegen im Bereich des Webhook-Profils, Lastprofil,
-Parallelität und Regelbedarf bleiben Annahmen (\autoref{sec:kaltstart}).
+  \item[U4] Im Webhook-Profil startet der Prototyp mit Pool im Median in 278 bis 308\,ms statt 2,54 bis 2,76
+    Sekunden, ohne Pool auf dem Niveau des Ausgangszustands (\autoref{sec:kaltstart}). Das deckt sich mit
+    \textcite[S.~1]{lin_mitigating_2019}, bei denen ein Pool vorgehaltener Instanzen auf Knative das 99.\ Perzentil der
+    Antwortzeit um 85\,\% senkte. Der Overhead liegt im Median bei 139 bis 145 statt 300 bis 312\,ms und im 99.\
+    Perzentil bei 313 bis 361\,ms statt 3,5 bis 3,7 Sekunden (\autoref{sec:warm}). Ein Worker-Pod braucht 70,5 statt
+    82,7\,MiB, und der Durchsatz liegt in einem Lauf bei 400 statt 200 Aufrufen je Sekunde (\autoref{sec:durchsatz}).
+    Für das Agentenprofil gibt es keinen Ausgangswert, Erstaufruf und Warmstart-Latenz liegen im Bereich des
+    Webhook-Profils. Der Nutzwert liegt bei 4,25 bis 4,5 gegen 3,7 (\autoref{sec:nutzwert}).
 
-Mandantenisolation ist damit für Vertraulichkeit und Integrität auf den geprüften Angriffswegen belegt, ohne Freiheit
-von Seitenkanälen (\autoref{sec:randbedingungen}). Offen sind der verdeckte Kanal zwischen gleichzeitigen Ausführungen,
+  \item[U5] Aus Entwurf und Evaluation folgen die fünf Designprinzipien und vier Voraussetzungen für ihre Übertragung
+    (\autoref{sec:diffusion:prinzipien}). Der Migrationspfad schaltet die Mandanten stufenweise über ein Feature-Flag um
+    und nimmt eine Stufe zurück, wenn ihre Fehlerrate steigt. Prinzipien und Migrationspfad bereiten die Diffusion vor,
+    die Übertragung selbst steht aus.
+\end{description}
+
+Die Prüffälle sind aus dem eigenen Bedrohungsmodell abgeleitet und ersetzen keine Schwachstellensuche, Seitenkanäle
+sind ausgenommen (\autoref{sec:randbedingungen}). Offen sind der verdeckte Kanal zwischen gleichzeitigen Ausführungen,
 die Wiederholung einer Ausführung nach einem Absturz ihrer Sandbox und die nicht begrenzte \ac{CPU}
-(\autoref{sec:betriebsplanung}, \autoref{sec:ressourcenbegrenzung}). Die Verfügbarkeit zwischen Mandanten grenzt die Arbeit aus
-(\autoref{sec:systemkontext}), die Grenzen der Messung nennt \autoref{sec:messaufbau}.
+(\autoref{sec:betriebsplanung}, \autoref{sec:ressourcenbegrenzung}). Ob ein heutiger Runner mit Pool ebenso schnell
+wäre, ist nicht gemessen, und S6 ist abgeleitet statt gemessen. Die Verfügbarkeit zwischen Mandanten ist ausgegrenzt
+(\autoref{sec:systemkontext}), die Grenzen der Messung stehen in \autoref{sec:messaufbau}.
 
 \subsection{Designprinzipien und Migrationspfad}
 \label{sec:diffusion:prinzipien}
