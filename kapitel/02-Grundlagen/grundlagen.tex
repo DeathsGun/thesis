@@ -13,14 +13,12 @@ darf \autocite[S.~25]{souppaya_application_2017}. In Kubernetes ist der \emph{Po
 deployen lässt. Er fasst einen oder mehrere Container zusammen, die sich Netz und Speicher teilen und gemeinsam auf
 einem Knoten laufen \autocite{the_kubernetes_authors_pods_2026}. Limits für Speicher und Prozessor vergibt
 Kubernetes je Container \autocite{the_kubernetes_authors_resource_2026}. Beim Update eines Knotens nimmt die Plattform
-ihn aus dem Betrieb. Ein \emph{Drain} beendet die Pods des Knotens geordnet, und sie werden auf anderen Knoten neu
-angelegt \autocite{the_kubernetes_authors_safely_2026}.
+ihn aus dem Betrieb. Ein \emph{Drain} beendet die Pods des Knotens geordnet \autocite{the_kubernetes_authors_safely_2026}, und ihr Controller legt sie auf einem anderen Knoten neu an \autocite{the_kubernetes_authors_pods_2026}.
 
 \emph{gVisor} schiebt zwischen Container und Host-Kernel eine weitere Schicht. Sein Kernstück, der Sentry, fängt die
 Systemaufrufe der Anwendung ab und bearbeitet sie selbst, statt sie an den Host-Kernel durchzureichen. Die Laufzeit
-\texttt{runsc} setzt die Spezifikation der Open Container Initiative um und lässt sich als RuntimeClass in
-Kubernetes eintragen \autocite{the_gvisor_authors_what_2026}. Weil der Sentry im User Space läuft und nur eine
-verkleinerte Angriffsfläche des Host-Kernels nutzt \autocite{the_gvisor_authors_security_2026}, gilt gVisor als
+\texttt{runsc} setzt die Spezifikation der Open Container Initiative um und lässt sich in Kubernetes einbinden \autocite{the_gvisor_authors_what_2026}, dort wählt eine RuntimeClass sie je Pod aus \autocite{the_kubernetes_authors_runtime_2026}. Weil der Sentry im User Space läuft und nur eine
+verkleinerte Angriffsfläche des Host-Kernels nutzt \autocites{the_gvisor_authors_what_2026}{the_gvisor_authors_security_2026}, gilt gVisor als
 User-Space-Kernel, der Preis sind langsamere Systemaufrufe \autocite[S.~3]{young_true_2019}. Welche Teile eines
 Systems eine solche Grenze tragen, benennt die \ac{TCB}. Sie ist die Gesamtheit der Schutzmechanismen, deren
 Zusammenwirken eine Sicherheitsrichtlinie durchsetzt \autocite[S.~112]{dod_trusted_1985}. Ein Fehler in einer dieser
@@ -29,7 +27,7 @@ bearbeitet.
 
 Die stärkste der hier betrachteten äußeren Grenzen zieht ein Hypervisor. Eine microVM wie Firecracker gibt jeder Funktion einen eigenen
 Gastkernel und beschränkt die Schnittstelle zum Host auf wenige virtuelle Geräte
-\autocite[S.~420]{agache_firecracker_2020}. Kata Containers startet Kubernetes-Pods in solchen virtuellen Maschinen
+\autocite[S.~420, 426]{agache_firecracker_2020}. Kata Containers startet Kubernetes-Pods in solchen virtuellen Maschinen
 \autocite{the_kata_containers_authors_hypervisors_2026}. Beides setzt \ac{KVM} voraus, die Virtualisierungsschnittstelle
 des Linux-Kernels, die der Host als Gerät \texttt{/dev/kvm} bereitstellt \autocite{the_firecracker_authors_getting_2026}.
 Ob die Zielplattform sie bietet, klärt \autoref{sec:randbedingungen}.
@@ -51,15 +49,16 @@ und dem JavaScript-Code, der sie dem Skript in der gewohnten Form anbietet.
 Eine sprachbasierte Grenze hält, was die Engine prüft, nicht aber, was die Hardware preisgibt. Ein \emph{Seitenkanal}
 verrät Daten über ein Merkmal, das nicht als Ausgabe gedacht ist, etwa über die Dauer eines Speicherzugriffs. Spectre
 nutzt dafür die spekulative Ausführung des Prozessors und liest so Speicher, den die sprachbasierte Grenze schützt
-\autocite[S.~1]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Sites im selben Prozess aufgegeben und
+\autocite[S.~1--2]{kocher_spectre_2019}. Chrome hat deshalb die Trennung zweier Sites im selben Prozess aufgegeben und
 durch eine Prozessgrenze ersetzt \autocites[S.~1661--1662]{reis_site_2019}[S.~1]{mcilroy_spectre_2019}. Auch diese
 Grenze wies Lücken auf, durch die ein Spectre-Angriff in JavaScript geschützte Daten las
 \autocite[S.~699]{agarwal_spookjs_2022}. Ein
 \emph{verdeckter Kanal} ist ein Übertragungsweg, über den ein Prozess Informationen entgegen der Sicherheitsrichtlinie
 weitergibt \autocite[S.~107]{dod_trusted_1985}, etwa indem ein Sender den Prozessor belastet und ein Empfänger seine
-eigene Laufzeit misst. Beides setzt einen Timer voraus, der fein genug auflöst. Ein Timer außerhalb der Sandbox leistet
-das ebenso wie einer im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}, und ohne Uhr lässt er sich in
-JavaScript aus der Parallelität der Befehlsausführung bauen \autocite[S.~354]{xiao_hacky_2023}. gVisor schützt nach eigener
+eigene Laufzeit misst. Beides setzt einen Timer voraus. Ein Timer außerhalb der Sandbox leistet
+das ebenso wie einer im Prozess \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}, und ein grob auflösender genügt, wenn
+der Angreifer feine Zeitunterschiede über die Parallelität der Befehlsausführung in JavaScript so verstärkt, dass sie grob
+messbar werden \autocite[S.~355--356]{xiao_hacky_2023}. gVisor schützt nach eigener
 Darstellung nicht vor hardwareseitigen Seitenkanälen \autocite{the_gvisor_authors_security_2026}.
 
 \subsection{Bausteine der Ausführung}
@@ -79,7 +78,7 @@ Pods, den Start der Laufzeitumgebung und das Laden des Codes. Eine Anfrage, die 
 laufende Instanz trifft, gilt als \emph{warm}. Drei Gegenmittel sind in der Literatur
 beschrieben: ein Pool vorgehaltener Instanzen, der den Start vom Anfragepfad nimmt
 \autocite[S.~1]{lin_mitigating_2019}, vorinitialisierte Laufzeitumgebungen, aus denen neue Instanzen
-entstehen \autocite[S.~57]{oakes_sock_2018}, und Snapshots initialisierter Instanzen, aus denen ein Start
+entstehen \autocite[S.~57, 63]{oakes_sock_2018}, und Snapshots initialisierter Instanzen, aus denen ein Start
 schneller hervorgeht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}.
 
 \emph{NATS JetStream} ist die Persistenzschicht des Messaging-Systems NATS. Ein \emph{Stream}
@@ -89,8 +88,7 @@ ein Client eine Nachricht nicht rechtzeitig, stellt der Server sie erneut zu
 \autocite{the_nats_authors_jetstream_2026}. Wie lange der Server auf die Bestätigung wartet, legt die \emph{Ack-Wait}
 des Consumers fest. Ein \emph{Pull-Consumer} liefert nur, wenn der Client Nachrichten anfordert, sodass jeder Client
 selbst bestimmt, wie viel er gleichzeitig annimmt \autocite{the_nats_authors_consumers_2026}. In einem Cluster wird
-jeder Consumer von einem der Server geführt, seinem \emph{Leader}, und erst wenn dieser gewählt ist, kann der
-Consumer zustellen \autocite{the_nats_authors_clustering_2026}. Die Plattform der Fallstudie betreibt einen solchen
+jeder Consumer von einem der Server geführt, seinem \emph{Leader} \autocite{the_nats_authors_clustering_2026}. Die Plattform der Fallstudie betreibt einen solchen
 Stream bereits für ihre Kommandos und Events, und das Ausführungsmodell nutzt ihn mit, wie
 \autoref{sec:bausteine} beschreibt.
 
@@ -133,21 +131,21 @@ nach ihrer Isolationseinheit und nennt ihren Schwerpunkt und ihre Grenze für da
     \hline
     Arbeit & Isolationseinheit & Schwerpunkt und Grenze \\
     \hline
-    Firecracker \autocite[S.~419]{agache_firecracker_2020} & MicroVM mit eigenem Kernel & stärkste Grenze, braucht
+    Firecracker \autocite[S.~419, 422]{agache_firecracker_2020} & MicroVM mit eigenem Kernel & Hypervisor-Grenze, braucht
       Hardwarevirtualisierung (\autoref{sec:randbedingungen}) \\
     \textcite[S.~645]{boucher_putting_2018} & Sprachbasierte Grenze je Funktion im geteilten Prozess & misst die Startkosten der
       sprachbasierten Grenze \\
-    Faasm \autocite[S.~419]{shillaker_faasm_2020}, \textcite[S.~25]{mainas_sandboxing_2024} & WebAssembly je Funktion &
+    Faasm \autocite[S.~419]{shillaker_faasm_2020} & WebAssembly je Funktion &
       Bewertung in
       \autoref{sec:wasm-zurueckgestellt} \\
-    SAND \autocite[S.~923]{akkus_sand_2018} & Container je Anwendung, Prozess je Funktion & trennt Anwendungen, nicht
+    \textcite[S.~25--26]{mainas_sandboxing_2024} & Unikernel je Funktion in Knative & Vergleich mit runc, gVisor und Kata, braucht Hardwarevirtualisierung \\
+    SAND \autocite[S.~924]{akkus_sand_2018} & Container je Anwendung, Prozess je Funktion & trennt Anwendungen, nicht
       Mandanten \\
-    Faastlane \autocite[S.~805]{kotni_faastlane_2021} & Threads eines Prozesses je Workflow, getrennt über Memory
+    Faastlane \autocite[S.~957]{kotni_faastlane_2021} & Threads eines Prozesses je Workflow, getrennt über Memory
       Protection Keys & beschleunigt Workflows einer Anwendung, trennt keine Mandanten \\
     Groundhog \autocite[S.~398]{alzayat_groundhog_2023} & Container, Snapshot zwischen Aufrufen & Zustandsfreiheit durch
       Zurücksetzen, eine Ausführung je Container \\
-    Photons, Catalyzer \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020} & Laufzeit je
-      Funktion & Ziel sind Speicherbedarf und Kaltstart \\
+    Photons, Catalyzer \autocites[S.~45]{dukic_photons_2020}[S.~467]{du_catalyzer_2020} & Laufzeit oder Sandbox je Funktion & Ziel sind Speicherbedarf (Photons) und Kaltstart (Catalyzer) \\
     \textcite[S.~1]{lin_mitigating_2019}, Agent Sandbox \autocite{kuo_running_2026} & Pool vorgehaltener Pods &
       Ziel ist der Kaltstart \\
     Cloudflare Workers \autocites{cloudflare_security_2026}{cloudflare_worker_2026} & V8-Isolate je Worker, für
@@ -157,7 +155,7 @@ nach ihrer Isolationseinheit und nennt ihren Schwerpunkt und ihre Grenze für da
       Aufruf in einem Node.js-Host & Bewertung in
       \autoref{sec:ausschluesse} \\
     IsolateGPT \autocite[S.~1]{wu_isolategpt_2025}, AgentBay \autocite[S.~1]{piao_agentbay_2025} & Anwendungen eines
-      Agentensystems, Sandbox-Dienst & Schutzziel aus Sicht des Agenten, ohne Mandanten einer Plattform \\
+      Agentensystems, Sandbox-Dienst & Schutzziel aus Sicht des Agenten, getrennt je Anwendung oder Sitzung \\
     \hline
   \end{tabularx}
 \end{table}

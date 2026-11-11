@@ -14,7 +14,7 @@ innere Grenze, nicht die einzig mögliche.
 Der Geschwindigkeitsgewinn ist kein Verdienst der Engine. Mit vorgehaltenen Pods ist der Prototyp im 95.\ Perzentil
 des Kaltstarts 6,1-mal schneller, wenn die Mandanten verteilt eintreffen, und 2,0-mal im Burst. Ohne Pool startet er im
 verteilten Lauf im Median so schnell wie der Ausgangszustand, mit längerem Tail. Das deckt sich mit \textcite[S.~1]{lin_mitigating_2019},
-bei denen ein Pool vorgehaltener Instanzen auf Knative das 99.\ Perzentil der Antwortzeit um 85\,\% senkte. Von der Zahl
+bei denen ein Pool vorgehaltener Instanzen auf Knative das 99.\ Perzentil der Antwortzeit um bis zu 85\,\% senkte. Von der Zahl
 der Mandanten hängt der Pool nicht ab, weil ein Pod erst beim ersten Auftrag einem Mandanten zugewiesen wird. Ob ein
 heutiger Runner mit Pool ebenso schnell wäre, ist nicht gemessen.
 
@@ -60,7 +60,7 @@ dabei.
     T1 bis T9 für die innere. Begründung: Die sprachbasierte Grenze trägt keine Mandantentrennung (A2), die Kernelgrenze
     Zustandsfreiheit nur mit einem frischen Prozess je Ausführung, der teurer ist als ein Isolate
     (\autoref{tab:prozessstart}). Herkunft: zweistufige Trennung wie bei SAND
-    \autocite[S.~923]{akkus_sand_2018} und Prozess je Site in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
+    \autocite[S.~924, 926]{akkus_sand_2018} und Prozess je Site in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
     sprachbasierte Grenze (\autoref{sec:betriebsplanung}).
   \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
     Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, deren Isolates aus einem

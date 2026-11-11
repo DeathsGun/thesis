@@ -43,9 +43,7 @@ Zwei Ressourcen teilen sich die Ausführungen heute, und an beiden muss eine Man
 verlaufen. Die erste ist der Host-Kernel. Der Execution Service weist seinen Runner-Pods
 dafür die RuntimeClass für gVisor zu und ergänzt sie um einen gehärteten Sicherheitskontext, bei
 dem Privilege Escalation unterbunden ist, sämtliche Capabilities entzogen sind, das
-seccomp-Standardprofil greift und kein Service-Account-Token eingebunden wird. Der direkte Zugriff auf die Systemaufrufe des
-Hosts, den ein gewöhnlicher Container gewährt \autocite[S.~17--18]{souppaya_application_2017}, wird
-dadurch verkleinert, aber nicht beseitigt.
+seccomp-Standardprofil greift und kein Service-Account-Token eingebunden wird. Die Angriffsfläche des geteilten Host-Kernels \autocite[S.~17--18]{souppaya_application_2017} wird dadurch verkleinert, aber nicht beseitigt.
 
 Welches Skript eine Instanz ausführt, entscheidet sich erst beim Aufruf. Das Skript wird je
 Ausführung aus einem Objektspeicher nachgeladen, über eine vorsignierte \ac{URL}, die den Abruf für kurze Zeit ohne
@@ -90,9 +88,7 @@ Die Vertrauensannahmen lauten wie folgt.
   \item[V1: Der ausgeführte Code ist nicht vertrauenswürdig.] Im Webhook-Profil hinterlegt der
     Mandant den Code selbst, kennt ihn und verantwortet ihn. Aus Sicht der Plattform bleibt er
     fremder Code, weil ein Mandant nach V4 bösartig sein kann. Im Agentenprofil entfällt
-    zusätzlich die Annahme, der Mandant kenne den Code, denn dieser entsteht erst zur Laufzeit
-    und wird vor seinem einzigen Lauf von keinem Menschen gelesen
-    \autocite[S.~50208]{wang_executable_2024}. Er gilt in beiden Fällen nicht als fehlerhaft, sondern als
+    zusätzlich die Annahme, der Mandant kenne den Code, denn dieser entsteht erst zur Laufzeit und wird sofort ausgeführt \autocite[S.~50208]{wang_executable_2024}, in der Regel, ohne dass ein Mensch ihn vorher liest. Er gilt in beiden Fällen nicht als fehlerhaft, sondern als
     potenziell aktiv bösartig.
 
   \item[V2: Im Agentenprofil ist der Code über seine Eingaben von Dritten beeinflussbar.] Das
@@ -100,7 +96,7 @@ Die Vertrauensannahmen lauten wie folgt.
     Inhalte lassen sich gezielt so gestalten, dass sie das Verhalten des Sprachmodells steuern
     \autocite[S.~79--80]{greshake_not_2023}. Der Urheber des schädlichen Codes muss deshalb nicht der
     Mandant sein. Dass von Agenten erzeugter Code risikobehaftete Operationen enthalten kann, ist
-    empirisch belegt \autocite[S.~106191]{guo_redcode_2024}.
+    empirisch belegt \autocite[S.~106192]{guo_redcode_2024}.
 
   \item[V3: Die Plattform ist vertrauenswürdig.] Host-Kernel, gVisor, Container-Orchestrierung,
     Runtime-Binary und Execution Service bilden die \ac{TCB} und gelten als nicht kompromittiert. Ausbrüche des
@@ -122,11 +118,10 @@ Die Vertrauensannahmen lauten wie folgt.
 
 V5 hat eine unmittelbare Folge für den Entwurf. Eine Beschränkung der Fähigkeiten, die einem
 Skript zur Verfügung stehen, kann nicht über System prompt oder Tool Schema erfolgen, weil beides
-dem Mandanten gehört. Sie muss von der Ausführungsumgebung durchgesetzt werden \autocite[S.~1]{ji_taming_2026}. Für das
+dem Mandanten gehört. Sie muss außerhalb des Modells durchgesetzt werden, wie es \textcite[S.~1--2]{ji_taming_2026} für Zugriffe von Agenten auf Werkzeuge fordern, im hier betrachteten Fall von der Ausführungsumgebung. Für das
 Agentenprofil verbleibt der Plattform damit keine Schutzmaßnahme außerhalb der Isolationsgrenze.
 Die jüngere Forschung zur Sicherheit agentischer Systeme betrachtet diese Frage bislang
-überwiegend aus der Perspektive des Sprachmodells und weniger aus der der Systemisolation
-\autocite[S.~1]{christodorescu_systems_2025}.
+überwiegend aus der Perspektive des Sprachmodells und weniger aus der der Systemsicherheit \autocite[S.~1]{christodorescu_systems_2025}.
 
 \subsection{Struktur des produktiven Skriptbestands}
 \label{sec:bestandsanalyse}
@@ -260,13 +255,11 @@ Mandantengrenze.
 
 Der dritte Weg zielt auf den Ausbruch aus der Ausführungsumgebung. Ein gewöhnlicher Container
 hält diese Grenze nur eingeschränkt. Das \ac{NIST} führt den geteilten Kernel als eigene
-Angriffsfläche und hält fest, dass ein Container eine Sandbox nicht vollwertig ersetzt
-\autocite[S.~7, 18]{souppaya_application_2017}. Eine Untersuchung an neun öffentlichen Ausbruchs-Exploits
+Angriffsfläche und hält fest, dass ein Container keine so klare Sicherheitsgrenze bietet wie eine virtuelle Maschine \autocite[S.~7, 18]{souppaya_application_2017}. Eine Untersuchung an neun öffentlichen Ausbruchs-Exploits
 zeigt, dass eine Einschränkung der Containerrechte über User Namespaces sieben davon abwehrt,
 zwei aber erfolgreich bleiben \autocite[S.~44]{reeves_towards_2021}. Die Fallstudie begegnet dem bereits
 über gVisor (\autoref{sec:grundlagen:isolation}). Die Angriffsfläche verschwindet dadurch nicht,
-sie verlagert sich auf den Sentry, der selbst in Software implementiert und angreifbar ist, was
-eine gezielte Fuzzing-Untersuchung belegt \autocite[S.~168]{li_g-fuzz_2024}.
+sie verlagert sich auf gVisor selbst, das in Software implementiert und angreifbar ist, was eine gezielte Fuzzing-Untersuchung mit mehreren gefundenen Schwachstellen belegt \autocite[S.~168]{li_g-fuzz_2024}.
 
 Der Weg bleibt damit relevant, wenn auch auf höherem Niveau. Nach einem Preprint kann ein Agent mit Codeausführung im Container
 Fehlkonfigurationen, Kernel-Schwachstellen sowie Schwächen der Laufzeit und der Orchestrierung selbst auffinden und
@@ -354,8 +347,7 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
   \end{tabularx}
 \end{table}
 
-Die Gewichte sind gesetzt, nicht gemessen. S1 wiegt am meisten, weil im Agentenprofil jeder Kaltstart in die Wartezeit
-der anfragenden Person eingeht und sich über die Aufrufe einer Aufgabe summiert \autocite[S.~76]{dean_tail_2013}. S6
+Die Gewichte sind gesetzt, nicht gemessen. S1 wiegt am meisten, weil im Agentenprofil jeder Kaltstart in die Wartezeit der anfragenden Person eingeht und sich über die Aufrufe einer Aufgabe summiert. Verzögerungen einzelner Komponenten schlagen umso stärker auf die Antwortzeit durch, je mehr davon eine Anfrage berührt \autocite[S.~76]{dean_tail_2013}. S6
 folgt, weil die Kompatibilität nach \autoref{sec:bestandsanalyse} am stärksten gegen einen Wechsel spricht. Die übrigen
 Kriterien prägen die Wartezeit weniger oder sind durch S6 bereits begrenzt.
 
@@ -373,8 +365,7 @@ Punkte, die Zuordnung der Messwerte steht in \autoref{sec:Evaluation}.
 Bei S1 und S2 muss der Prototyp den Ausgangszustand unterbieten. Eine feste Zahl wird nicht vorab gesetzt, weil der
 Ausgangszustand unter den Lastprofilen dieser Arbeit noch nicht gemessen war. S3 und S4 haben keinen Zielwert.
 
-Die Nutzwertanalyse hat zwei bekannte Schwächen \autocite[S.~14, 272]{kuehnapfel_scoring_2021}. Die Gewichte sind subjektiv, und ein
-guter Wert gleicht einen schlechten aus. Deshalb lassen sich Muss-Kriterien nicht ausgleichen, und in \autoref{sec:nutzwert}
+Die Nutzwertanalyse hat zwei Schwächen. Die Gewichte sind subjektiv \autocite[S.~14]{kuehnapfel_scoring_2021}, und ein guter Wert gleicht einen schlechten aus, weil das Verfahren zwischen den Kriterien kompensiert \autocite[S.~272]{kuehnapfel_scoring_2021}. Deshalb lassen sich Muss-Kriterien nicht ausgleichen, und in \autoref{sec:nutzwert}
 wird geprüft, ob die Rangfolge von den Gewichten abhängt. Außerdem unterscheidet die Skala oberhalb von Faktor zwei nicht mehr,
 1,9 und 5 zählen fast gleich.
 

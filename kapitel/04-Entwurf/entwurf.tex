@@ -8,8 +8,7 @@ Drei Eigenschaften der bestehenden Umgebung stehen nicht zur Disposition.
 
 Die erste ist das Fehlen eines Hypervisors. Der Zielcluster stellt \texttt{/dev/kvm} nicht bereit. Firecracker und
 Kata Containers (\autoref{sec:grundlagen:isolation}) scheiden damit aus. Das ist ein Plattformausschluss und kein
-Sicherheitsurteil, denn die von \textcite[S.~420, 424]{agache_firecracker_2020} beschriebene Grenze ist die stärkste der
-betrachteten.
+Sicherheitsurteil, denn die von \textcite[S.~420, 424]{agache_firecracker_2020} beschriebene Hypervisor-Grenze mit eigenem Gastkernel wäre unter den betrachteten die stärkste.
 
 Die zweite ist die bereits eingesetzte Sandbox-Laufzeit. M3 untersagt, die dem Gastcode zugängliche Oberfläche des
 Host-Kernels gegenüber dem Ausgangszustand zu vergrößern. Die äußere Grenze ist damit keine Entwurfsvariable mehr. Ihr
@@ -22,9 +21,7 @@ Die dritte betrifft die Granularität der Ressourcenlimits. Kubernetes vergibt s
 Containers, und der Thread-Modus von cgroup v2 kennt keinen Speicher-Controller
 \autocite{the_kernel_development_community_control_2026}. Ein eigener Container je Aufgabe im selben Pod hilft unter
 gVisor nicht. Dort wird das Limit allein für den Sandbox-Prozess gesetzt, und die je Container deklarierten Werte
-werden innerhalb der Sandbox nicht durchgesetzt \autocite{googlegvisor_contributors_container_2019}. Mehrere
-Container in einem Pod sind zudem ein Mittel der Zusammenarbeit und keine Mandantengrenze, sie teilen IP-Adresse und
-Ports \autocite{the_kubernetes_authors_pods_2026}. Der Pod ist damit die kleinste Einheit, auf der ein vom Kernel
+werden innerhalb der Sandbox nicht durchgesetzt \autocite{googlegvisor_contributors_container_2019}. Mehrere Container in einem Pod sind zudem eng gekoppelt und teilen IP-Adresse und Ports \autocite{the_kubernetes_authors_pods_2026}, eine Mandantengrenze bilden sie damit nicht. Der Pod ist damit die kleinste Einheit, auf der ein vom Kernel
 durchgesetztes Speicherlimit und eine Isolationseinheit existieren.
 
 \subsection{Vorauswahl der Engine}
@@ -104,29 +101,24 @@ Entscheidung stützt sich deshalb auf die beiden übrigen Gründe.
 
 Der erste Weg bettet V8 unmittelbar ein, mit \ac{JIT}-Kompilierung. Der zweite kompiliert eine JavaScript-Engine nach
 WebAssembly und führt sie in einer Wasm-Sandbox aus. Deren Ziel ist die sichere Ausführung nicht vertrauenswürdigen Codes
-\autocite{bytecode_alliance_security_2026}, im Serverless-Betrieb etwa Sledge \autocite{gadepalli_sledge_2020}.
+\autocite{bytecode_alliance_security_2026}, im Serverless-Betrieb etwa Sledge \autocite[S.~265]{gadepalli_sledge_2020}.
 Beide erfüllen M1 bis M4. Verglichen wird deshalb entlang der
 Soll-Kriterien, ohne Gewichtung und ohne Messung, denn gebaut wurde nur der erste Weg.
 
 Beim Sicherheitsgewinn zeigt sich kein klarer Vorsprung. Eine Wasm-Sandbox um die Engine wäre eine zweite Schicht
-gegen Speicherfehler der Engine, gegen Seitenkanäle wie Spectre hilft sie nicht. WebAssembly erlaubt keine Erzeugung von Maschinencode zur Laufzeit
-\autocite[S.~187]{haas_bringing_2017}. Im linearen Speicher fehlen aber \ac{ASLR}, Guard Pages und Stack Canaries
+gegen Speicherfehler der Engine, gegen Seitenkanäle wie Spectre hilft sie nicht. Ein Wasm-Programm kann seinen eigenen Code nicht verändern, weil sein linearer Speicher vom Codebereich getrennt ist \autocite[S.~188]{haas_bringing_2017}. Im linearen Speicher fehlen aber \ac{ASLR}, Guard Pages und Stack Canaries
 \autocite[S.~218, 221]{lehmann_everything_2020}, und Ausbrüche aus der Wasm-Laufzeit sind dokumentiert
 \autocite{bytecode_alliance_wasmtimes_2026}. Beide Wege laufen zudem in derselben gVisor-Sandbox. Bei S1 entscheidet
 nach \autoref{sec:kaltstart} nicht die Engine, sondern die Instanzverwaltung. Bei S2 und S4 läuft eine nach
 WebAssembly kompilierte Engine ohne \ac{JIT} interpretierend \autocite{igalia_five_2026}, was beim von Ein- und
 Ausgabe geprägten Lastprofil wenig wiegt. Ahead-of-time-Verfahren verkleinern den Abstand
-\autocite[S.~3]{fallin_partial_2025}. Bei S3 belegen \textcite[S.~419]{shillaker_faasm_2020} und
-\textcite[S.~25]{mainas_sandboxing_2024} einen geringeren Ressourcenbedarf gegenüber Containern, gegen ein
-eingebettetes Isolate ist das nicht gemessen. Bei S6 und S7 liegt der erste Weg vorn, weil die
+\autocite[S.~160:3]{fallin_partial_2025}. Bei S3 belegen \textcite[S.~419]{shillaker_faasm_2020} einen geringeren Speicherbedarf gegenüber Containern, gegen ein eingebettetes Isolate ist das nicht gemessen. Bei S6 und S7 liegt der erste Weg vorn, weil die
 Kompatibilitätsschicht aus \autoref{sec:kompatibilitaetsschicht} gegen die Schnittstelle von \texttt{deno\_core}
 geschrieben ist und für eine andere Engine neu entstehen müsste.
 
 Der zweite Weg ist damit nicht dominiert und wird zurückgestellt. Seinem möglichen Vorteil bei S3 und auf
 Engine-Ebene bei S1 steht ein sicherer Nachteil bei S6, dem Kriterium mit dem zweithöchsten Gewicht, und bei S7
-gegenüber. Zudem schließt der erste Weg den zweiten nicht aus: V8 führt WebAssembly-Module innerhalb derselben
-Isolate-Grenze aus \autocite[S.~196]{haas_bringing_2017}, während eine Wasm-Sandbox eine Engine mit \ac{JIT} nicht
-aufnehmen kann \autocite[S.~187]{haas_bringing_2017}. Der erste Weg ist die Obermenge, und die Entscheidung für ihn
+gegenüber. Zudem schließt der erste Weg den zweiten nicht aus: V8 übersetzt WebAssembly mit demselben Compiler wie JavaScript und führt es im Adressraum der Engine aus \autocite[S.~188, 196]{haas_bringing_2017}, ein Isolate kann also Wasm-Module mit ausführen. Umgekehrt läuft eine nach WebAssembly kompilierte Engine ohne \ac{JIT} \autocite{igalia_five_2026}. Der erste Weg ist die Obermenge, und die Entscheidung für ihn
 hält den zweiten offen. Er ist in \autoref{sec:diffusion:ausblick} als Erweiterung vorgesehen.
 
 \subsubsection{Ergebnis der Vorauswahl}
@@ -286,7 +278,7 @@ deren Richtlinien für den Browser schwächen kann (\autoref{tab:header}).
 
 Das Modell trennt auf vier Ebenen, die von außen nach innen kurzlebiger und billiger werden. Nur
 zwei davon trennen Mandanten oder Ausführungen. Eine zweistufige Trennung kennt bereits SAND, mit einem Container je
-Anwendung und einem Prozess je Funktion \autocite[S.~923]{akkus_sand_2018}. Hier ist die äußere Einheit der Mandant und
+Anwendung und einem Prozess je Funktion \autocite[S.~924, 926]{akkus_sand_2018}. Hier ist die äußere Einheit der Mandant und
 die innere die einzelne Ausführung. \autoref{tab:ebenen} ordnet jeder Ebene ihren Zuschnitt, ihre Aufgabe und das
 Kriterium zu, das sie trägt.
 
@@ -340,7 +332,7 @@ ausschließlich aus frischen Pods nachgefüllt. Ein Pod, der nie Mandantencode a
 früheren Mandanten tragen, ohne Vertrauen in die innere Grenze. Die begrenzte Zuweisungsdauer begrenzt, wie lange
 ein bösartiger Mandant denselben Prozess angreifen kann. Der Preis ist ein Kaltstart je Nachfüllung, den der Pool vom
 Anfragepfad fernhält. Die Fristen sind gesetzte Betriebsparameter (\autoref{tab:parameter}), wie die festen
-Warmhaltezeiten großer Anbieter \autocite[S.~205]{shahrad_serverless_2020}.
+Warmhaltezeiten großer Anbieter \autocite[S.~206]{shahrad_serverless_2020}.
 
 Aus demselben Grund unterscheiden sich die beiden Profile nicht in der Topologie, sondern allein in der Menge ihrer
 Bindings (\autoref{sec:faehigkeitsmodell}). Ein Schnitt nach Profil trennte nur Ausführungen desselben Mandanten
@@ -462,8 +454,7 @@ Ein Isolate erreicht die Außenwelt nur über diejenigen Bindings, die der Host 
 registriertes Binding existiert kein Weg nach außen, auch kein fehlerhaft abgesicherter. Die Menge der Bindings ist
 damit die Grenze selbst und nicht deren Bewachung, womit M4 erfüllt ist. Dass der Unterschied zwischen
 einer Liste des Erlaubten und einer des Verbotenen zählt, zeigt eine Untersuchung von rund 1.700 Denylisten für
-Shell-Kommandos in \ac{KI}-Agenten. Je nach Einstellung blockieren 69 bis 99 Prozent davon nicht vollständig, was sie
-sperren sollen \autocite[S.~1--2]{chen_one_2026}.
+Shell-Kommandos in \ac{KI}-Agenten. Je nach Art der gesperrten Operation blockieren 69 bis 99 Prozent der betroffenen Listen nicht vollständig, was sie sperren sollen \autocite[S.~1--2]{chen_one_2026}.
 
 Der Mandantenkontext, also Kennung und Profil, liegt in \texttt{OpState}, dem Zustandsobjekt, das der
 Host jedem Isolate zuordnet. Die Bindings lesen ihn dort aus dem Host-Code. Im JavaScript-Heap existiert er nicht,
@@ -550,8 +541,7 @@ Die Globals bringen eine Uhr mit, die während synchroner Ausführung steht, nac
 der Workers-Plattform \autocite{cloudflare_security_2026}. Ein Timer rückt sie nur um seine eigene Verzögerung vor, gerechnet
 ab dem Stand beim Anlegen. Die echte Zeit zeigt sie erst beim Start und nach abgeschlossener Ein- und Ausgabe, auf 100\,ms
 abgerundet nach einem zufälligen Versatz aus der Zufallsquelle des Hosts. Ein Skript kann seine eigene Arbeit damit nicht in
-echten Millisekunden messen und sich nicht an der Systemzeit des Hosts ausrichten. Eine Zeitquelle außerhalb der Sandbox umgeht die Uhr
-\autocite{schwarzl_remote-timer-as--service_2026}, mindestens das eigene System des Mandanten bietet eine
+echten Millisekunden messen und sich nicht an der Systemzeit des Hosts ausrichten. Eine Zeitquelle außerhalb der Sandbox umgeht die Uhr \autocite[S.~1]{schwarzl_remote-timer-as--service_2026}, mindestens das eigene System des Mandanten bietet eine
 (\autoref{sec:betriebsplanung}). Seitenkanalfreiheit behauptet die Arbeit nicht (\autoref{sec:randbedingungen}).
 
 Ob die Schicht trägt, prüfen ein Differenztest, der 757 in einem echten Node erzeugte Fälle in einem frischen Isolate
@@ -622,7 +612,7 @@ Herkunft des Skripts (\autoref{tab:vorbereitung}).
 Der \emph{Laufzeit-Snapshot} trägt für jede Ausführung. Er hält eine Instanz fest, in der die Extensions des Workers
 und der JavaScript-Anteil der Shims aus \autoref{sec:kompatibilitaetsschicht} bereits ausgewertet sind. Er entsteht
 einmalig beim Bau der Binärdatei und ist, weil er kein Mandantenskript enthält, für alle Mandanten, Profile und
-Skripte derselbe. Das entspricht dem von \textcite[S.~559]{ustiugov_benchmarking_2021} untersuchten Vorgehen.
+Skripte derselbe. Das folgt dem Prinzip der Snapshots, die \textcite[S.~559]{ustiugov_benchmarking_2021} untersuchen, mit dem Unterschied, dass es einen Snapshot für alle Mandanten gibt statt einen je Funktion.
 
 Ein \emph{skriptbezogener Code-Cache} spart das wiederholte Kompilieren desselben Quelltexts. Gecacht wird ausschließlich
 Unveränderliches, Quelltext und kompilierter Code, nie Heap-Zustand einer vorangegangenen Ausführung, denn ein
@@ -715,8 +705,7 @@ Redis gar nicht. Damit soll die Angriffsfläche des Kernels für den Gastcode ni
 \autoref{sec:pruefung-isolation}. Das Worker-Image liest die Control Plane bei jedem Anlegen eines
 Pods neu, sodass ein Release ohne Lücke durch den Pool rollt.
 
-Das Wartungsrisiko von \texttt{deno\_core} hat sich verschärft, weil das Deno-Team zu Cloudflare wechselt und nur
-\texttt{rusty\_v8} für workerd weiterpflegt \autocite{noauthor_deno_2026}. Für die Planung gilt \texttt{deno\_core}
+Das Wartungsrisiko von \texttt{deno\_core} hat sich verschärft, weil das Deno-Team zu Cloudflare wechselt, die Laufzeit Deno nach einem Jahr mit Fehler- und Sicherheitskorrekturen nicht weiterentwickelt und nur \texttt{rusty\_v8} für workerd weiterpflegt \autocite{noauthor_deno_2026}. Für die Planung gilt \texttt{deno\_core}
 deshalb als auslaufend. Übernommen ist nur seine Kernschicht in einer
 exakten Version, der übernommene Node-Code ist auf einen Commit festgelegt, den der Differenztest bei jedem Update
 prüft. Der Umstieg auf \texttt{rusty\_v8} ist im Ausblick beschrieben (\autoref{sec:diffusion:ausblick}).
@@ -730,10 +719,11 @@ Ziel liest das Signal und gibt es weiter. Ein \emph{Seitenkanal} kommt ohne Mitw
 \emph{Speicherfehler} in der Engine erreicht ohne die Speichersandbox von V8, die der Prototyp nicht nutzt, die Heaps der gleichzeitigen Isolates. Ein Speicherfehler
 erreicht dabei auch die Ausführungskennungen der gleichzeitigen Läufe und damit im Agentenprofil Anfragen mit dem Token
 einer anderen Person desselben Mandanten. Gemessen ist nur der verdeckte Kanal (\autoref{sec:pruefung-isolation}).
-Seit der virtuellen Uhr braucht der gemessene Empfänger eine echte Zeitquelle, und die steht immer bereit, etwa der
-\texttt{Date}-Header des eigenen Systems oder die auf 100\,ms gerundete echte Zeit nach jeder Ein- und Ausgabe. Ein
-Empfänger, der Zeitunterschiede über die Parallelität der Befehlsausführung misst, käme auch ohne sie aus
-\autocite[S.~354]{xiao_hacky_2023}.
+Seit der virtuellen Uhr braucht der Empfänger eine echte Zeitquelle, und die steht immer bereit, etwa der
+\texttt{Date}-Header des eigenen Systems oder die auf 100\,ms gerundete echte Zeit nach jeder Ein- und Ausgabe. Die
+grobe Auflösung schützt nicht sicher. Verstärkt ein Empfänger feine Zeitunterschiede über die Parallelität der
+Befehlsausführung, genügt in den meisten untersuchten Angriffen noch ein Zeitgeber mit 100\,ms Auflösung
+\autocite[S.~356]{xiao_hacky_2023}.
 
 Ein Slot je Pod schlösse den Kanal im selben Prozess und den Weg über Speicherfehler, nicht aber einen Kanal zwischen Pods auf demselben Knoten. Dafür braucht
 das Modell unter Last 64\,\% mehr Pods und 52\,\% mehr Speicher (\autoref{sec:durchsatz}), und der Pool deckt nur noch
