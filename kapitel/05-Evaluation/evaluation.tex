@@ -15,7 +15,7 @@ Gemessen wird auf hyper-int-otc, dem Kubernetes-Cluster der Integrationsstufe de
 (\autoref{tab:cluster}). Dort läuft
 neben dem Prototyp der Ausgangszustand aus \autoref{sec:systemkontext}, je Mandant ein Knative-Service mit einem
 Node.js-Runner, sodass beide Modelle auf demselben Cluster verglichen werden. Die Last stammt aus dem
-Produktivbetrieb der AWS-nativen Variante und ist nur Quelle des Lastprofils.
+Produktivbetrieb der \acs{AWS}-nativen Variante und ist nur Quelle des Lastprofils.
 
 \begin{table}[H]
   \caption{Der Cluster der Messungen}
@@ -187,7 +187,7 @@ kleinen Anteil Erstkontakte.
 \end{figure}
 
 \autoref{fig:endstand} stellt Kaltstart und Overhead beider Modelle nach Perzentilen gegenüber. Gemessen an den
-mittleren Läufen ist der Prototyp im 50., 90., 95.\ und 99.\ Perzentil 2,1-, 2,4-, 2,9- und 10-mal schneller. Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
+mittleren Läufen ist der Prototyp mit Pool im 50., 90., 95.\ und 99.\ Perzentil 2,1-, 2,4-, 2,9- und 10-mal schneller. Weder die Spannweiten noch die Bootstrap-Intervalle der einzelnen Läufe (\autoref{tab:konfidenz}) überlappen
 sich. Der Unterschied im Median liegt zwischen einem Node.js-Prozess hinter einer
 Knative-Route und einem Isolate in einem laufenden Worker und trägt nach \autoref{sec:messaufbau} auch die verschiedenen
 Begleitdienste. Der Unterschied im Tail entsteht beim Hochfahren von null: Im Ausgangszustand laufen 232 bis 365 Runner, bis
@@ -321,7 +321,7 @@ ausgelesen.
     T7 & nicht best. & nicht best. & bestanden & Ausgangszustand: \texttt{fetch} ins Internet liefert 200, \acs{TCP} zur
          Kubernetes-\acs{API} und zum Loopback wird aufgebaut, \texttt{worker\_threads} ist verfügbar. Prototyp, enforce: nur
          das eigene System und die Testregel, \texttt{Deno.core.ops} nicht erreichbar. \\
-    T8 & bestanden & bestanden & bestanden & Alle: \texttt{/etc}, \texttt{/proc} und das Token des Service-Accounts sind nicht lesbar.
+    T8 & mit Vorbehalt & mit Vorbehalt & bestanden & Alle: \texttt{/etc}, \texttt{/proc} und das Token des Service-Accounts sind nicht lesbar.
          Ausgangszustand: echtes Dateisystem des Containers, 23 Umgebungsvariablen sichtbar. Prototyp: nur ein Dateisystem im Speicher, keine Umgebungsvariablen. \\
     T9 & nicht best. & nicht best. & bestanden & Alle: Überschreibungen gelingen im Skript. Ausgangszustand: Das System eines anderen Mandanten
          ist erreichbar, es gibt keine Identitätsbindung. Prototyp: eigenes System 200, fremdes abgewiesen. \\
@@ -330,10 +330,10 @@ ausgelesen.
 \end{table}
 
 \autoref{tab:prueffaelle-ergebnis} zeigt, dass der Prototyp alle neun Prüffälle besteht und der
-Ausgangszustand nach der Umstellung zwei nicht, T7 und T9, und bei T8 Umgebungsvariablen preisgibt. Davor waren es sieben.
+Ausgangszustand nach der Umstellung zwei nicht, T7 und T9, und T8 nur mit Vorbehalt besteht, weil er Umgebungsvariablen preisgibt. Davor waren es sieben.
 Die Fehlschläge bei T1 bis T3, T5 und T6 gingen auf den gemeinsamen Node.js-Prozess zurück (\autoref{sec:angreifermodell})
 und sind behoben, seit der Runner jedes Skript in einem verworfenen Worker-Thread ausführt. Die Zustandsfreiheit hat der
-Ausgangszustand damit selbst hergestellt. Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem: T7 und T9 betreffen den Weg nach außen, T8 gilt wegen der nicht lesbaren Pfade als bestanden, lässt aber Umgebung und Dateisystem offen.
+Ausgangszustand damit selbst hergestellt. Der Unterschied liegt bei M4, also bei Netz, Umgebung und Dateisystem: T7 und T9 betreffen den Weg nach außen, Bei T8 sind die Pfade nicht lesbar, Umgebung und Dateisystem aber offen.
 
 Dieselben neun Prüffälle liefen auch im Agentenprofil des Prototyps, auf einem zweiten Testmandanten
 und als Snippets über den Endpunkt der Agentenausführungen. Die Fälle sind auf die Mittel des
@@ -358,7 +358,7 @@ Lauf (0,31) auf Zufallsniveau. Die Läufe sind wenige, die Richtung bei \ac{CPU}
 
 T7 und T9 wurden gegen den Egress-Proxy mit beiden Profilen in enforce geprüft, mit der Testregel
 example.org:443. Jeder Lauf erreicht zusätzlich das eigene System. Im Webhook-Profil gehen das eigene System und die
-Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, TCP zu 1.1.1.1:53, die Testregel auf Port 80,
+Testregel durch. Abgewiesen werden example.com, \texttt{http://1.1.1.1}, \ac{TCP} zu 1.1.1.1:53, die Testregel auf Port 80,
 \texttt{kubernetes.default.svc}, die Metadaten-Adresse, der Loopback und der Tunnel zu \texttt{nats:4222}. Im Agentenprofil
 kam eine Regel aus dem Aufruf hinzu (example.net, GET). Das eigene System, diese Regel mit GET und die Testregel gehen durch. Abgewiesen werden
 dieselbe Regel mit POST, example.com, das System eines fremden Mandanten, 1.1.1.1 und die internen Ziele. Das Anfrageprotokoll führt alle
@@ -394,15 +394,15 @@ Ein Skript erreicht das Netz nur über den Proxy (T7). Ob das auch nach einem Au
 
 Ob ein Mandant die Verfügbarkeit eines anderen beeinträchtigt, prüfte der Noisy-Neighbour-Test, je Modell dreimal im Wechsel.
 Mandant A ruft mit 40 Aufrufern ein Skript auf, das zwölf Sekunden rechnet, zwölf Mandanten B rufen je einmal pro Sekunde ein
-Skript von rund 150\,ms auf. Gewertet wird die Latenz von B nach der CPU-Last des Knotens, auf dem der Aufruf lief
-(\autoref{tab:b6} und \autoref{tab:b6-zaehlung} im Anhang). Beide Modelle isolieren die CPU nicht. Auf einem von A
+Skript von rund 150\,ms auf. Gewertet wird die Latenz von B nach der \ac{CPU}-Last des Knotens, auf dem der Aufruf lief
+(\autoref{tab:b6} und \autoref{tab:b6-zaehlung} im Anhang). Beide Modelle isolieren die \ac{CPU} nicht. Auf einem von A
 ausgelasteten Knoten (mindestens 90\,\%) steigt der Median von B im Prototyp von 217 bis 236 auf 327 bis 421\,ms und das
 95.\ Perzentil von 268 bis 390 auf 422 bis 898\,ms. Die Ausführung im Worker verdoppelt sich. Im Ausgangszustand sind es 314 bis 352 auf 475 bis 506\,ms und
 620 bis 666\,ms im 95.\ Perzentil. Den Unterschied macht die Reichweite: Der Prototyp begrenzt A auf zehn Worker, die auf sieben Knoten liegen und einen
 bis zwei voll auslasten. Knative skaliert A auf rund fünfzig Pods und lastet sieben bis neun von zwölf Knoten aus, sodass fast
 jeder Mandant B auf einem belasteten Knoten liegt. Im Prototyp steigt das 95.\ Perzentil auch auf Knoten ohne Worker von A (305 bis
 440\,ms gegen 268 bis 390), weil Gateway und Egress-Proxy auf Knoten von A lagen. Die Ressourcenbegrenzung auf zwei
-Ebenen (\autoref{sec:ressourcenbegrenzung}) reicht damit nur bis zum Speicher: Die Garantie liefert die cgroup, die CPU ist in keinem der Modelle je Mandant begrenzt.
+Ebenen (\autoref{sec:ressourcenbegrenzung}) reicht damit nur bis zum Speicher: Die Garantie liefert die cgroup, die \ac{CPU} ist in keinem der Modelle je Mandant begrenzt.
 Der erhöhte Client-Anteil im ersten Lauf des Prototyps (95.\ Perzentil bis 898\,ms) kehrte nicht wieder und ist nicht erklärt.
 
 \subsection{Verfügbarkeit beim Drain eines Knotens (M5)}

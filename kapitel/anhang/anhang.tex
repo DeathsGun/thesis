@@ -2,7 +2,7 @@
 \label{anh:rohdaten}
 
 Der Scanner schreibt je Skriptversion, je inhaltlich verschiedenem Skript und je Import einen Datensatz als Zeile im
-NDJSON-Format. \autoref{lst:rohdaten} zeigt die drei Zeilen einer Skriptversion, die nur \texttt{axios} importiert.
+Format \ac{NDJSON}. \autoref{lst:rohdaten} zeigt die drei Zeilen einer Skriptversion, die nur \texttt{axios} importiert.
 Mandanten- und Skriptkennungen sind ersetzt, Hashwerte gekürzt, die Zeilen zur Lesbarkeit umbrochen.
 
 \begin{lstlisting}[numbers=none, caption={Rohdaten einer Skriptversion mit Import von \texttt{axios}}, label={lst:rohdaten}]
@@ -47,7 +47,7 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
     & Frist synchron / Hintergrund & 50\,s / 830\,s \\
     & Body inline / maximal & 64\,KiB / 100\,MiB \\
     & Bundle entpackt, maximal & 64\,MB \\
-    & Bundle-Cache & 128\,MB je Prozess, Schlüssel SHA-256, Verdrängung des am
+    & Bundle-Cache & 128\,MB je Prozess, Schlüssel \acs{SHA}-256, Verdrängung des am
       längsten nicht genutzten Eintrags \\
     & Selbstbeendigung ohne Auftrag (Fallback) & 5\,min (Umgebungsvariable), geprüft alle 30\,s, nur im
       zugewiesenen Zustand und nur zwischen zwei Pulls \\

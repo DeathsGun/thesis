@@ -364,7 +364,7 @@ nachgefüllt. Ein Pod, der nie Mandantencode ausgeführt hat, kann nichts von ei
 früheren Mandanten tragen, ohne Vertrauen in die innere Grenze. Die begrenzte Zuweisungsdauer begrenzt, wie lange
 ein bösartiger Mandant denselben Prozess angreifen kann. Der Preis ist ein Kaltstart je Nachfüllung, den der Pool vom
 Anfragepfad fernhält. Die Fristen von einer Stunde und einer Minute sind gesetzt und nicht hergeleitet. Große Anbieter
-halten Instanzen ebenfalls eine feste Zeit warm, AWS zehn und Azure zwanzig Minuten, und es gibt Verfahren, die sie an
+halten Instanzen ebenfalls eine feste Zeit warm, \ac{AWS} zehn und Azure zwanzig Minuten, und es gibt Verfahren, die sie an
 das Aufrufmuster anpassen \autocite[S.~205]{shahrad_serverless_2020}. Die Fristen sind Betriebsparameter
 (\autoref{tab:parameter}).
 
@@ -552,7 +552,7 @@ ein, er gelangt nie in die Sandbox. Lauschende Ports sind in beiden Profilen ver
 
 Damit wird der Proxy selbst zum Angriffsziel, denn er ist mandantenübergreifend geteilt und hält während eines
 Agentenlaufs den Token der Person. Gegen Anfragen auf interne Ziele löst er jeden Host selbst auf, verwirft ihn, wenn
-eine Adresse in einem gesperrten Bereich liegt, und verbindet sich nur mit den geprüften Adressen. Eine DNS-Antwort,
+eine Adresse in einem gesperrten Bereich liegt, und verbindet sich nur mit den geprüften Adressen. Eine Antwort des \ac{DNS},
 die sich zwischen Prüfung und Verbindung ändert, erreicht den Cluster deshalb nicht, und unmittelbar vor dem
 Verbindungsaufbau prüft er die Adresse ein zweites Mal. Den Token setzt er nur in Anfragen an die SystemBaseUri über
 \ac{HTTPS} ein, sodass ein Skript ihn auf kein anderes Ziel lenken kann. Gegenüber dem Proxy weist sich eine Anfrage mit
@@ -632,7 +632,7 @@ entsteht bei allen dreien durch Aufzählung der abgedeckten Pfade, ein nicht auf
 Auf Ebene des Pods greift deshalb eine cgroup je Mandant. Sie erfasst jeden Allokationspfad und ist die harte
 Schranke, feiner ist sie nach \autoref{sec:randbedingungen} nicht zu bekommen. Weil ein Pod genau einen Mandanten
 trägt, fällt die feinste erreichbare Einheit mit der Mandantengrenze zusammen. Überschreitet der Pod sein
-Speicherlimit, beendet der OOM Killer des Kernels einen Prozess, und welchen, lässt sich nicht steuern. Weil alle
+Speicherlimit, beendet der \ac{OOM} Killer des Kernels einen Prozess, und welchen, lässt sich nicht steuern. Weil alle
 Ausführungen im Pod demselben Mandanten gehören, trifft das nie einen anderen Mandanten. Welche Ausführung den
 Speicher verbraucht hat, erkennt nur die Ebene des Isolates.
 
@@ -782,7 +782,7 @@ Leseoperation die Ausführung über deren Ende hinaus (T1, T5). Ein Abbruch von 
 Die Härtung des Worker-Pods ist Teil des Codes der Control Plane und keine Konfiguration. Sie setzt denselben
 Sicherheitskontext wie der Ausgangszustand nach \autoref{sec:systemkontext}, ergänzt um den Verzicht auf Root, ein
 schreibgeschütztes Root-Dateisystem und, wo die Plattform sie bereitstellt, die RuntimeClass für gVisor. Die Control
-Plane wählt sie nach dem Namen der Infrastruktur. Auf OTC startet sie nicht, wenn ein Worker-Pod im Dry Run ohne die
+Plane wählt sie nach dem Namen der Infrastruktur. Auf \ac{OTC} startet sie nicht, wenn ein Worker-Pod im Dry Run ohne die
 RuntimeClass ankäme. Auf anderen Infrastrukturen laufen Worker ohne gVisor. Kein Deployment
 kann diese Felder lockern, das Image enthält außer der Binärdatei keine Shell, und der Pod erreicht das Internet nur über
 den Proxy. NATS erreicht der Pod über ein Label der Cluster-Richtlinien,
@@ -815,7 +815,7 @@ gleichzeitige Ausführungen. Der Entwurf behält deshalb mehrere Slots. Ob ein S
 sind, legt die Arbeit den Verantwortlichen für Produkt und Sicherheit zur Entscheidung vor.
 
 Die Zugangsdaten (M6) sind auf der Plattform noch nicht getrennt. Die Trennung von Transport und Sandbox und der Auth
-Callout (\autoref{sec:bausteine}) sind lokal erprobt, der Callout setzt auf der Plattform Anpassungen des DDP-Teams
+Callout (\autoref{sec:bausteine}) sind lokal erprobt, der Callout setzt auf der Plattform Anpassungen des \acs{DDP}-Teams
 voraus. Bis dahin tragen dort alle Worker-Pods dieselben Zugangsdaten, auch in allen Messungen.
 
 Die Rotation entzieht Pods ohne Versatz nach genau einer Stunde, sodass zur

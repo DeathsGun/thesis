@@ -22,8 +22,8 @@ Pod je Mandant, und fein bei den Rechten, feste Bindings je Profil. Die Instanzv
 Anfragepfad fern und entkoppelt die Poolgröße von der Zahl der Mandanten (\autoref{sec:orchestrierung}).
 
 Auf den geprüften Angriffswegen hält der Prototyp Isolation und Zustandsfreiheit ein. Er besteht die neun Prüffälle in
-beiden Profilen, der Ausgangszustand nur sieben. Dieser scheitert an T7 und T9 und gibt bei T8 23
-Umgebungsvariablen preis (\autoref{sec:pruefung-isolation}). Zustandsfrei ist er seit einer Umstellung während
+beiden Profilen, der Ausgangszustand nur sieben, T8 davon mit Vorbehalt, weil er 23 Umgebungsvariablen preisgibt. An
+T7 und T9 scheitert er (\autoref{sec:pruefung-isolation}). Zustandsfrei ist er seit einer Umstellung während
 der Arbeit, der Unterschied liegt damit bei M4, also bei Netz, Umgebung und Dateisystem. M3 gilt auf Clustern mit
 gVisor (\autoref{tab:m3}). Der Entwurf erfüllt M1 bis M6, der gemessene Prototyp M1 bis M5, weil ohne Auth Callout
 ein doppelter Ausbruch die gemeinsamen NATS-Zugangsdaten erreicht. Nach der Regel aus \autoref{sec:kriterienkatalog}
@@ -173,8 +173,8 @@ statt nach Mandant nötig wird, zeigt sich erst im Betrieb mit Agenten.
 
 Für die Fallstudie stehen zwei Schritte an. Der erste ist die stufenweise Einführung für die Kunden der \ac{OTC} nach dem
 Pfad aus \autoref{sec:diffusion:prinzipien}, mit dem Knative-Service als Rückweg. Der zweite ist der Wechsel der Kunden
-der AWS-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen Knative-Service. Daten und Ausführung eines
+der \acs{AWS}-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen Knative-Service. Daten und Ausführung eines
 Mandanten, also Skripte, Versionen, Variablen und auslösende Ereignisse, wechseln deshalb in einem Schritt, und die
-AWS-native Variante bleibt der Rückweg, bis seine Stufe stabil läuft. Auf dem AWS-Cluster der \ac{DDP} muss vorher gVisor
+\acs{AWS}-native Variante bleibt der Rückweg, bis seine Stufe stabil läuft. Auf dem \acs{AWS}-Cluster der \ac{DDP} muss vorher gVisor
 bereitstehen, weil M3 nur damit gilt. Die Last dieser Kunden ist das Lastprofil der Evaluation, die Stufen prüfen damit
 den vorläufigen Wert für S4 (\autoref{sec:durchsatz}) im Betrieb nach.
