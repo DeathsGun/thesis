@@ -1,9 +1,6 @@
 \clearpage
 \section{Grundlagen und Stand der Forschung} \label{sec:grundlagen}
 
-Dieses Kapitel legt die Begriffe fest, die die folgenden Kapitel voraussetzen, und ordnet die verwandten Arbeiten ein. Begriffe, die nur an einer Stelle
-gebraucht werden, erklärt die jeweilige Stelle.
-
 \subsection{Schichten der Isolation}
 \label{sec:grundlagen:isolation}
 
@@ -80,7 +77,6 @@ beschrieben: ein Pool vorgehaltener Instanzen, der den Start vom Anfragepfad nim
 \autocite[S.~1]{lin_mitigating_2019}, vorinitialisierte Laufzeitumgebungen, aus denen neue Instanzen
 entstehen \autocite[S.~57]{oakes_sock_2018}, und Snapshots initialisierter Instanzen, aus denen ein Start
 schneller hervorgeht als aus einem leeren Prozess \autocite[S.~559]{ustiugov_benchmarking_2021}.
-Wie der Kaltstart in dieser Arbeit gemessen wird, ist in \autoref{sec:kriterienkatalog} festgelegt.
 
 \emph{NATS JetStream} ist die Persistenzschicht des Messaging-Systems NATS. Ein \emph{Stream}
 speichert Nachrichten serverseitig für ein oder mehrere Subjects, ein \emph{Consumer} ist eine
@@ -103,15 +99,14 @@ Mandanten laufen auf derselben Plattform, und die Plattform muss sie voneinander
 vertrauen. \emph{Mandantenisolation} heißt in dieser
 Arbeit, dass eine Ausführung Daten, Code und Verarbeitung anderer Mandanten weder einsehen noch
 verändern kann, sie umfasst also Vertraulichkeit und Integrität. Ob eine Ausführung andere verlangsamt, ist eine
-Frage der Verfügbarkeit und wird in \autoref{sec:systemkontext} gesondert abgegrenzt. Dort werden auch die Schutzziele aus der Ausgangslage hergeleitet.
+Frage der Verfügbarkeit und wird in \autoref{sec:systemkontext} gesondert abgegrenzt.
 
 \emph{Zustandsfreiheit} bezieht sich nicht auf Mandanten, sondern auf aufeinanderfolgende
 Ausführungen. Eine Ausführung ist zustandsfrei, wenn nichts von ihr einer späteren zugänglich ist,
 weder im Speicher des Prozesses noch in globalen Variablen, registrierten Timern, offenen
 Verbindungen oder im Dateisystem. Die Eigenschaft ist von der Mandantenisolation unabhängig, denn
 sie kann auch innerhalb eines Mandanten verletzt werden, sobald eine Plattform Instanzen über
-Ausführungen hinweg wiederverwendet, um Kaltstarts zu sparen. Warum diese Verletzung im
-Agentenprofil zu einem Sicherheitsproblem wird, zeigt \autoref{sec:systemkontext}.
+Ausführungen hinweg wiederverwendet, um Kaltstarts zu sparen.
 
 \subsection{Stand der Forschung}
 \label{sec:grundlagen:stand}

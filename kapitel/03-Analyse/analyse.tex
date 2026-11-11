@@ -131,8 +131,8 @@ Die jüngere Forschung zur Sicherheit agentischer Systeme betrachtet diese Frage
 \label{sec:bestandsanalyse}
 
 Ein Ausführungsmodell, das den heutigen Skripten die benötigte Schnittstelle entzieht, ist
-unabhängig von seinen Isolationseigenschaften nicht einführbar. Dieser Abschnitt erhebt deshalb,
-welchen Teil der Node.js-Schnittstelle der Bestand tatsächlich braucht.
+unabhängig von seinen Isolationseigenschaften nicht einführbar. Erhoben wird deshalb, welchen Teil der
+Node.js-Schnittstelle der Bestand tatsächlich braucht.
 
 \subsubsection{Datengrundlage und Vorgehen}
 
@@ -184,27 +184,19 @@ Datenbanktreiber mit eigenem binären Protokoll. Bei \texttt{mssql} und dem daru
 \texttt{tedious} wird die Verbindung im Klartext aufgebaut und erst danach auf \ac{TLS}
 umgestellt. Ein bereitgestelltes \texttt{fetch} hilft dieser Gruppe nicht.
 
-Neben den Paketen erfasst die Auswertung, welche Node-Globals ein Skript ohne Import erreicht,
-etwa \texttt{Buffer} oder \texttt{process.env}. Nach dem jeweils härtesten Merkmal eingeteilt,
-kommen 81,9\,\% der 8.310 verschiedenen Skripte ohne jede Node-spezifische \ac{API} aus und
-50,9\,\% ohne jeden Import. 15,6\,\% nutzen ein Node-Global und 2,1\,\% ein Node-Kernmodul. Die
-Abhängigkeit von Node-Globals konzentriert sich auf zwei Namen: \texttt{process.env} bei 519
-Mandanten (30,2\,\%) und \texttt{Buffer} bei 396 Mandanten (23,1\,\%). Danach fällt die Verbreitung
-um eine Größenordnung, \texttt{\_\_dirname} erreicht noch 20 Mandanten, jedes weitere Mitglied von
-\texttt{process} unter zehn. Beide häufigen Namen lassen sich in einer eingebetteten Engine
-nachbilden, ohne Ambient Authority freizugeben. Sie bestimmen den Umfang der
-Kompatibilitätsschicht in \autoref{sec:kompatibilitaetsschicht}, nicht ihre Machbarkeit. Die
-Erkennung ist eine Analyse freier Bezeichner und zählt einen Namen nur, wenn das Skript ihn
-nirgends selbst bindet. Sie unterschätzt den Bedarf daher eher, als dass sie Abhängigkeiten erfindet.
+Neben den Paketen erfasst die Auswertung, welche Node-Globals ein Skript ohne Import erreicht. 81,9\,\% der 8.310
+verschiedenen Skripte kommen ohne jede Node-spezifische \ac{API} aus. Die Abhängigkeit von Node-Globals konzentriert
+sich auf \texttt{process.env} bei 519 Mandanten (30,2\,\%) und \texttt{Buffer} bei 396 Mandanten (23,1\,\%), jedes
+weitere erreicht höchstens 20 Mandanten. Beide lassen sich in einer eingebetteten Engine nachbilden, ohne Ambient
+Authority freizugeben, und bestimmen den Umfang der Kompatibilitätsschicht, nicht ihre Machbarkeit. Die Erkennung zählt
+einen freien Bezeichner nur, wenn das Skript ihn nirgends selbst bindet, und unterschätzt den Bedarf daher eher.
 
 Ein zweiter Befund betrifft die Größe der Bundles. Ein Bundle ist die eine Datei, in die der Builder der
 Plattform ein Skript samt seiner npm-Pakete zusammenfasst, sodass zur Laufzeit nichts nachgeladen wird. Von den 14.575
-Skriptversionen binden 2.373 npm-Pakete ein. Das fertige Bundle liegt im Median bei 69,3\,KB, im 95.\ Perzentil bei
-429,0\,KB und im Maximum bei 1,41\,MB, typischerweise den Faktor zehn bis dreißig über dem Quelltext. Betroffen sind 1.023 der 1.718 Mandanten, je Mandant
-liegt die Zahl gebündelter Versionen im Median bei zwei, im 95.\ Perzentil bei dreizehn, im Einzelfall bei 151. Für
-die Kompatibilität ist das ohne Belang, für den Entwurf nicht, weil das Bundle nach \autoref{sec:zustellung} bei jeder
-Ausführung zugestellt und ausgewertet werden muss und ohne Cache der Abruf bei jeder Ausführung auf den Anfragepfad
-fällt.
+Skriptversionen binden 2.373 npm-Pakete ein, bei 1.023 der 1.718 Mandanten. Das fertige Bundle liegt im Median bei
+69,3\,KB, im 95.\ Perzentil bei 429,0\,KB und im Maximum bei 1,41\,MB, einzelne Mandanten halten bis zu 151
+gebündelte Versionen. Weil das Bundle bei jeder Ausführung zugestellt wird, fällt sein Abruf ohne Cache auf den
+Anfragepfad (\autoref{sec:zustellung}).
 
 \subsubsection{Grenzen der Auswertung}
 
@@ -398,8 +390,6 @@ erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach. T6
 innerhalb eines Mandanten, für die kein Muss-Kriterium besteht. T4 prüft, ob dessen Reset des temporären
 Verzeichnisses auch im Artefakt greift. Die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die noch
 nicht beobachtet wurden. T1 bis T8 standen fest, bevor der jeweilige Mechanismus umgesetzt war, sodass der
-Entwurf sich nicht nach den Prüffällen richten konnte. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M6. Einen vergleichbaren Katalog für Umgebungen, die nicht vertrauenswürdigen, von
-Sprachmodellen erzeugten Code ausführen, enthält SandboxEval mit 51 Eigenschaften
-\autocite[S.~1--2]{rabin_sandboxeval_2025}, zugeschnitten auf Python und Linux und in
-\autoref{sec:pruefung-isolation} für JavaScript angepasst ergänzend ausgeführt.
+Entwurf sich nicht nach den Prüffällen richten konnte. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M6. Ergänzend
+wird der Katalog von SandboxEval in \autoref{sec:pruefung-isolation} für JavaScript angepasst.
 

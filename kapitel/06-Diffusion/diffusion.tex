@@ -74,7 +74,7 @@ dabei.
     T1 bis T9 für die innere. Begründung: Die sprachbasierte Grenze trägt keine Mandantentrennung (A2), die Kernelgrenze
     keine Zustandsfreiheit ohne einen Pod je Ausführung. Herkunft: zweistufige Trennung wie bei SAND
     \autocite[S.~923]{akkus_sand_2018} und Prozess je Origin in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
-    sprachbasierten Grenze (\autoref{sec:betriebsplanung}).
+    sprachbasierte Grenze (\autoref{sec:betriebsplanung}).
   \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
     Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, deren Isolates aus einem
     Snapshot entstehen, dessen Nachfüllen nie auf dem Anfragepfad liegt. Kontext: die Größe des
@@ -111,8 +111,7 @@ dabei.
     verursachende Ausführung, die cgroup erfasst auch Pfade, die niemand aufgezählt hat. Herkunft: Defense in Depth,
     die cgroup des Kernels \autocite{the_kernel_development_community_control_2026} als zweite Ebene. Die \ac{CPU} begrenzt der Mechanismus
     nicht. Beleg: T6, in dem der
-    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt. Brauchen gleichzeitige
-    Ausführungen zusammen mehr als das Pod-Limit, beendet die cgroup alle (\autoref{sec:ressourcenbegrenzung}).
+    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt (\autoref{sec:ressourcenbegrenzung}).
 \end{description}
 
 
@@ -126,9 +125,7 @@ Start ohne Sandbox-Laufzeit verweigern, wie auf der \ac{OTC}. Die Vorauswahl fie
 \texttt{/dev/kvm} bereitstellen, denn dann käme eine MicroVM je Mandant oder je Ausführung in Frage
 (\autoref{sec:randbedingungen}), oder wenn kein JavaScript-Bestand zu übernehmen ist, denn dann verlöre die nach
 WebAssembly kompilierte Engine ihren Nachteil bei S6. Neu zu bestimmen sind alle Parameter, die die Evaluation
-abgestimmt hat. Die Standardwerte im Code weichen von den gemessenen ab, etwa die Pool-Zielgröße mit drei statt vierzig
-Pods, die Zielauslastung mit 0,5 statt 0,75 und der Speicher-Request mit 128 statt 32\,Mi (\autoref{tab:parameter}).
-Auch Slots je Pod und die Fristen von einer Stunde und einer Minute sind gesetzt, nicht hergeleitet.
+abgestimmt hat, ihre Standardwerte im Code weichen von den gemessenen ab (\autoref{tab:parameter}).
 
 Der Migrationspfad nutzt, dass das Modell je Mandant umschaltbar ist: Welcher Stack die Aufrufe bedient, entscheidet die
 Adresse der App in der Konfiguration des Mandanten. Die Umstellung erfolgt
@@ -137,11 +134,10 @@ zurückgenommen, wenn die Fehlerrate die des Prototyps im Lastprofil übersteigt
 brauchen, erhalten die mandantenweite Freischaltung vor ihrer Stufe. Mandanten mit externen Zielen erhalten ihre Regeln,
 bevor der Proxy enforce durchsetzt. Ein Mandant, dessen Prüfskripte \texttt{child\_process} ausführen, bleibt bewusst auf
 dem bisherigen Betrieb. Vor der ersten Stufe ist zu
-erheben, welche Ziele der Bestand braucht (\autoref{sec:betriebsplanung}). Festzulegen
+erheben, welche Ziele der Bestand braucht (\autoref{sec:pruefung-kompatibilitaet}). Festzulegen
 sind auch der Standardwert der Socket-Freischaltung und die Regeln für das Agentenprofil, das keinen Bestand hat, den sie
 brechen könnten. Hinzu kommen
-die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster, denn M3
-gilt nur dort. Festzulegen ist außerdem, welche Zustellgarantie als Standard gilt
+die Einrichtung des Auth Callouts durch das \acs{DDP}-Team und gVisor auf jedem Ziel-Cluster. Festzulegen ist außerdem, welche Zustellgarantie als Standard gilt
 (\autoref{sec:diffusion:ausblick}).
 
 \subsection{Ausblick}
@@ -184,5 +180,5 @@ Pfad aus \autoref{sec:diffusion:prinzipien}, mit dem Knative-Service als Rückwe
 der \acs{AWS}-nativen Variante auf die \ac{DDP}. Für sie gibt es dort keinen Knative-Service. Daten und Ausführung eines
 Mandanten, also Skripte, Versionen, Variablen und auslösende Ereignisse, wechseln deshalb in einem Schritt, und die
 \acs{AWS}-native Variante bleibt der Rückweg, bis seine Stufe stabil läuft. Auf dem \acs{AWS}-Cluster der \ac{DDP} muss vorher gVisor
-bereitstehen, weil M3 nur damit gilt. Die Last dieser Kunden ist das Lastprofil der Evaluation, die Stufen prüfen damit
+bereitstehen. Die Last dieser Kunden ist das Lastprofil der Evaluation, die Stufen prüfen damit
 den vorläufigen Wert für S4 (\autoref{sec:durchsatz}) im Betrieb nach.
