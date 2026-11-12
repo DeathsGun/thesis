@@ -24,7 +24,7 @@ Mandanten- und Skriptkennungen sind ersetzt, Hashwerte gekürzt, die Zeilen zur 
 \label{anh:parameter}
 
 Die Tabelle nennt die im Quellcode des Prototyps hinterlegten Vorgaben, auf die
-\autoref{sec:Entwurf} verweist, Stand 15. Oktober 2026, konfigurierbare Werte mit ihrem Standardwert
+\autoref{sec:Entwurf} verweist, im Endstand nach \autoref{tab:stand}, konfigurierbare Werte mit ihrem Standardwert
 und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \ac{OTLP}-Push an die Plattform.
 
 \begin{table}[H]
@@ -42,18 +42,19 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
     & Laufzeit-Snapshot & rund 1,6\,MB \\
     & lazy geladene Bundles & Node-Module rund 690\,KB, Web Streams rund 480\,KB \\[2pt]
     Worker & Slots je Pod & 4 \\
-    & Heap je Isolate & Pod-Limit / (2 $\times$ Slots), mindestens 64\,MB, ebenso viel als Limit für Puffer außerhalb des Heaps \\
-    & Headroom nach Erreichen des Heap-Limits & 32\,MB \\
+    & Heap je Isolate & Limit des Sandbox-Containers / (2 $\times$ Slots), mindestens 64\,MiB, ebenso viel als Limit für Puffer außerhalb des Heaps \\
+    & Headroom nach Erreichen des Heap-Limits & 32\,MiB \\
     & Frist synchron / Hintergrund & 50\,s / 830\,s \\
     & Body inline / maximal & 64\,KiB / 100\,MiB \\
-    & Bundle entpackt, maximal & 64\,MB \\
-    & Bundle-Cache & 128\,MB je Prozess, Schlüssel \acs{SHA}-256, Verdrängung des am
+    & Bundle entpackt, maximal & 64\,MiB \\
+    & Bundle-Cache & 128\,MiB je Prozess, Schlüssel \acs{SHA}-256, Verdrängung des am
       längsten nicht genutzten Eintrags \\
     & Selbstbeendigung ohne Auftrag (Fallback) & 5\,min (Umgebungsvariable), geprüft alle 30\,s, nur im
       zugewiesenen Zustand und nur zwischen zwei Pulls \\
     & Mandanten-Consumer & durable, Replikas wie der Stream (drei), höchstens vier Zustellungen, BackOff 5, 10 und
       20\,s, gelöscht nach 300\,s ohne Nutzung, offene Zustellungen höchstens Slots $\times$ 10,
-      ein Pull je Nachricht mit Frist 2\,s, Warten auf den Leader bis 2\,s \\
+      ein Pull je Nachricht mit Frist 2\,s, Warten auf den Leader bis 2\,s, laufende Nachrichten alle 2\,s als in Arbeit
+      gemeldet \\
     & Lesen des Consumers & Frist 2\,s, drei Versuche, Reconnect nach einem Versuch ohne Antwort \\
     & NATS-Verbindung bei der ersten Zuweisung & 500\,ms je Versuch, Wiederholung bis 30\,s, danach höchstens 66
       Reconnects, Wartezeit bis 5\,s \\
@@ -105,6 +106,7 @@ Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
   \caption{Vom Worker gefilterte Header}
   \label{tab:header}
   \small
+  \acmarkused{CORS}\acmarkused{CSP}\acmarkused{HSTS}%
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}p{0.26\textwidth}
     >{\RaggedRight\arraybackslash}X@{}}
     \hline
@@ -169,7 +171,7 @@ Die Auszüge stammen aus dem Prototyp. Sie sind gekürzt, die Kommentare sind ü
   sensitive=true, comment=[l]{//}, morestring=[b]"
 }
 
-\begin{lstlisting}[language=GoLang, caption={Rechte der NATS-Verbindung eines Workers (Auth Callout, \texttt{WorkerGrant.Permissions}, Go)}, label={lst:callout-rechte}]
+\begin{lstlisting}[language=GoLang, caption={[Rechte der NATS-Verbindung eines Workers (Auth Callout, \texttt{WorkerGrant.Permissions}, Go)]Rechte der NATS-Verbindung eines Workers (Auth Callout, \texttt{WorkerGrant.Permissions}, Go). Das Inbox-Präfix \texttt{\_INBOX\_<Worker>} setzt der Client des Transports}, label={lst:callout-rechte}]
 func (g WorkerGrant) Permissions() Permissions {
 	consumer := Stream + ".scriptworker-tenant-" + g.TenantID
 	return Permissions{
@@ -229,15 +231,18 @@ pub fn for_profile(profile: Profile) -> Self {
             net: true,
             tls: true,
             console_capture: true,
+            crypto: true,
             node_globals: true,
         },
         // Agentenprofil: erzeugter, möglicherweise beeinflusster Quelltext,
         // bekommt nie Socket-Bindings, was er auch importiert.
+        // Seine Konsole geht an den Agenten zurück.
         Profile::Agent => BindingSet {
             fetch: true,
             net: false,
             tls: false,
-            console_capture: false,
+            console_capture: true,
+            crypto: true,
             node_globals: false,
         },
     }
@@ -260,7 +265,7 @@ pub fn for_profile(profile: Profile) -> Self {
     Noisy Neighbour, erster Lauf beider Modelle & 2.\ November, morgens & wie Endstand \\
     Noisy Neighbour, übrige Läufe, Proxy-Abmeldung im Hintergrund, Mikrobenchmarks, Prozessstart unter gVisor, reale Bundles & 2.\ November & Gateway \texttt{e52c21d}, Executor \texttt{5276a03}, Control Plane 256\,MiB \\
     T7 und T9 vor dem Endstand & 28.\ Oktober & Proxy in enforce \\
-    Kaltstartverlauf, S1b & bis 15.\ Oktober & vor der Trennung in Transport und Sandbox \\
+    Kaltstartverlauf, Zerlegung des Pod-Starts & bis 15.\ Oktober & vor der Trennung in Transport und Sandbox \\
     T10 & 28.\ Oktober, lokal & mit Auth Callout \\
     Ein Slot je Pod (\autoref{tab:ein-slot}) & 30.\ Oktober & Endstand, Slots für beide Profile auf eins \\
     Verdeckter Kanal mit \texttt{setTimeout(0)} als Uhr & 2.\ November & Executor \texttt{84a05f4} \\
@@ -346,7 +351,7 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     Worker-Pods gleichzeitig, Spitze / Mittel & 340 / 284 & 207 / 181 \\
     Speicher der Worker-Pods, Spitze / Mittel, GiB & 22,8 / 18,3 & 15,0 / 12,3 \\
-    \acs{CPU} der Worker-Pods, Mittel / Spitze, Kerne & 4,26 / 5,27 & 3,31 / 4,11 \\
+    \acs{CPU} der Worker-Pods, Spitze / Mittel, Kerne & 5,27 / 4,26 & 4,11 / 3,31 \\
     Spitzenspeicher je Pod, Median / P90 / Maximum, MiB & 69,5 / 76,8 / 90,5 & 70,5 / 81,7 / 103 \\
     Overhead P50 / P95, ms & 150 / 533 & 145 / 291 \\
     Fehlgeschlagene Aufrufe & 27 & 3 \\
@@ -369,7 +374,7 @@ pub fn for_profile(profile: Profile) -> Self {
     \hline
     nur B, vorher & 235 / 324 & 236 / 390 & 217 / 268 & 314 / 494 & 319 / 536 & 352 / 1.723 \\
     A und B, Knoten ab 90\,\% & 421 / 898 & 327 / 422 & 378 / 469 & 506 / 660 & 488 / 666 & 475 / 620 \\
-    A und B, Knoten 70 bis 90\,\% & 288 / 845 & 293 / 376 & 273 / 356 & 394 / 532 & & \\
+    A und B, Knoten 70 bis 90\,\% & 288 / 845 & 293 / 376 & 273 / 356 & 394 / 532 & -- & -- \\
     A und B, Knoten unter 70\,\% & 242 / 440 & 222 / 366 & 228 / 305 & 341 / 461 & 333 / 442 & 312 / 407 \\
     nur B, nachher & 227 / 306 & 226 / 369 & 212 / 266 & 324 / 447 & 320 / 485 & 319 / 474 \\
     \hline
@@ -395,7 +400,7 @@ pub fn for_profile(profile: Profile) -> Self {
 \end{table}
 
 \begin{table}[H]
-  \caption{Reale Bundles, 2.\ November, in Millisekunden}
+  \caption{Reale Bundles, 2.\ November, P50 / P95 in Millisekunden}
   \label{tab:bundles}
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r r r r@{}}
@@ -415,7 +420,7 @@ Die Messungen zum Agentenprofil liefen am 2.\ November auf dem Endstand des Prot
 fünf Mandanten mit zusammen 10 Aufrufen je Sekunde über drei Minuten belastet, je 1.801 Aufrufe, Agent und Webhook-Profil (Hello World) direkt
 nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ Oktober keinen Aufruf hatten, mit einem Erstaufruf je Sekunde und
 30 Sekunden später je zehn warmen Aufrufen. Die Gateway-Werte stammen aus Histogrammen in Tempo, ihre oberen Quantile sind grob und können
-über den Client-Werten liegen.
+über den Client-Werten liegen, beim Erstaufruf liegt das P99 des Gateways sogar über dem Maximum beim Client.
 
 \begin{table}[H]
   \caption{Agentenprofil auf dem Prototyp, warm gegen Webhook-Profil und Kaltstart, Millisekunden}
@@ -430,7 +435,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     Skript auflösen (Skriptdienst) & -- & 25,7 / 65,9 / 126,6 \\
     Registrierung beim Proxy & 7,8 / 15,7 / 16,8 & -- \\
     \texttt{execute script}, NATS bis Antwort & 11,9 / 16,4 / 26,2 & 12,5 / 26,6 / 33,1 \\
-    Isolate erzeugen, P50 / P95 & 8 / 10 & -- \\
+    Isolate vorab erzeugen, P50 / P95 & 8 / 10 & -- \\
     Skript ausführen, P50 / P95 & 1 / 3 & -- \\
     \multicolumn{3}{@{}l}{\emph{Kaltstart}} \\
     Erstaufruf, Client, P50 / P95 / Maximum & 546 / 647 / 954 & -- \\
@@ -482,7 +487,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
 \end{table}
 
 \begin{table}[H]
-  \caption{Herleitung von S6 aus der Bestandsanalyse und den Prüfungen der Kompatibilitätsschicht}
+  \caption{Herleitung von S5 aus der Bestandsanalyse und den Prüfungen der Kompatibilitätsschicht}
   \label{tab:s6}
   \small
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X r >{\RaggedRight\arraybackslash}p{0.34\textwidth}@{}}
@@ -491,18 +496,18 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \hline
     Alle Mandanten & 1.718 & \\
     Ohne blockierendes Merkmal & 1.005 & läuft \\
-    \quad davon nur durch einen Parse-Fehler betroffen & 4 & nicht einstufbar, in der Obergrenze als lauffähig gezählt \\
+    \quad davon nur durch einen Parse-Fehler betroffen & 4 & nicht einstufbar, als lauffähig gezählt \\
     Nur ein Netzwerk-Binding blockiert (HTTP 629, Sockets 63, beide 44) & 648 & läuft über die Schicht, Annahme \\
     Übrige, nur \texttt{http}, \texttt{https}, \texttt{net} oder \texttt{tls} & 16 & läuft über die Schicht, Annahme \\
     Übrige, Skripte gelesen und im Probelauf geprüft & 49 & \\
-    \quad schreiben nach \texttt{/tmp} & 34 & nicht schlechter, scheitert im Probelauf schon im Ausgangszustand, ob der Pfad in Produktion erreicht wird, ist nicht geprüft \\
+    \quad schreiben in das erste Verzeichnis unter \texttt{/tmp} & 34 & nicht schlechter, scheitert im Probelauf schon im Ausgangszustand, wo der erste Eintrag die Skriptdatei ist, ob der Pfad in Produktion erreicht wird, ist nicht geprüft \\
     \quad lesen Windows-Pfade & 4 & nicht schlechter, ebenso \\
     \quad Import ungenutzt & 4 & läuft \\
     \quad schreiben nach \texttt{\_\_dirname} & 2 & läuft in beiden \\
     \quad \texttt{child\_process} & 1 & absichtlich blockiert, der eine nicht lauffähige Mandant \\
     \quad gebündelte Skripte & 4 & nicht unterstützt, nicht als Ausfall gezählt \\
-    S6, bis zu & 1.717 von 1.718 & 99,9\,\%, mit den vier gebündelten als Ausfall 1.713, 99,7\,\% \\
-    S6, mindestens, ohne die 664 Mandanten, die allein auf der Schicht beruhen & 1.053 von 1.718 & 61,3\,\%, mit den vier gebündelten 61,1\,\% \\
+    S5, bis zu & 1.717 von 1.718 & 99,9\,\%, mit den vier gebündelten als Ausfall 1.713, 99,7\,\% \\
+    S5, mindestens, ohne die 664 Mandanten, die allein auf der Schicht beruhen & 1.053 von 1.718 & 61,3\,\%, mit den vier gebündelten 61,1\,\% \\
     \hline
   \end{tabularx}
 \end{table}
@@ -517,7 +522,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \hline
     Bedingung & P95, Lauf 1 & P95, Lauf 2 & P95, Lauf 3 & unter 2\,s & Intervall \\
     \hline
-    Ausgang, verteilt & 3,12 bis 3,31\,s & 3,22 bis 5,03\,s & 2,92 bis 5,18\,s & 3 & 0,2 bis 3,2\,\% \\
+    Ausgang, verteilt & 3,12 bis 3,31\,s & 3,22 bis 5,03\,s & 2,92 bis 5,19\,s & 3 & 0,2 bis 3,2\,\% \\
     Pool 40, verteilt & 358 bis 555\,ms & 350\,ms bis 1,23\,s & 406\,ms bis 1,37\,s & 270 & 98,6 bis 100\,\% \\
     Pool 0, verteilt & 5,70 bis 7,59\,s & 6,06 bis 23,5\,s & 6,32 bis 9,65\,s & 99 & 30,9 bis 42,7\,\% \\
     Ausgang, Burst & 14,1 bis 20,2\,s & 12,7 bis 21,8\,s & 15,3 bis 24,3\,s & 0 & 0 bis 1,4\,\% \\
@@ -554,7 +559,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \hline
     Messgröße & Quelle & Ausgangszustand \\
     \hline
-    S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Läufe 00 bis 08, Einmalmodus auf hyper-int-otc, Pool 40 und Pool 0
+    S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Einmalmodus auf hyper-int-otc, Pool 40 und Pool 0
       je dreimal am 29.\ Oktober & Einmalmodus, je dreimal am 29.\ Oktober \\
     S2 Warmstart-Latenz & Overhead im Lastprofil, drei Läufe am 29.\ Oktober, Zerlegung über Traces & drei Läufe am 29.\ Oktober \\
     S3 Speicher & Containerstatistiken je Pod unter dem Lastprofil, Ruhezustand des Pools, 29.\ und 30.\ Oktober &
@@ -658,7 +663,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
       stellte die wartende Nachricht in den verworfenen Pull zu. & Umbau zurückgenommen. \\
     30 & 1 Aufruf im Timeout. Der Worker hielt einen dauerhaften Pull offen, die Nachricht wurde
       in ihn zugestellt, während der Prozess sich wegen Inaktivität beendete. & Ein Pull je
-      Nachricht, Beenden und Drain nur zwischen zwei Pulls, noch ohne Lastlauf. \\
+      Nachricht, Beenden und Drain nur zwischen zwei Pulls, seit dem 15.\ Oktober, im Endstand enthalten. \\
     \hline
   \end{tabularx}
 \end{table}
@@ -682,7 +687,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
   \caption{Konfigurationsvergleich der Pod-Spezifikation für M3, Container mit Gastcode}
   \label{tab:m3}
   \footnotesize
-  \begin{tabularx}{\textwidth}{@{}l >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X@{}}
+  \begin{tabularx}{\textwidth}{@{}l l l >{\RaggedRight\arraybackslash}X@{}}
     \hline
     Feld & Ausgangszustand & Prototyp & Prototyp gegenüber dem Ausgangszustand \\
     \hline
@@ -708,17 +713,17 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \hline
         Lauf & Getroffen & Lücke getroffen & Lücke übrige & Latenz max. & Fehler & Lange Aufrufe \\
     \hline
-    \multicolumn{7}{@{}l}{\emph{Prototyp, mit langen Aufrufen}} \\
+    \multicolumn{7}{@{}l}{\emph{Prototyp, mit langen Aufrufen, 20.\ Oktober, ohne Prober, Lücke als Abstand kurzer Aufrufe von rund 1,2\,s}} \\
     1 & 2 & 1,11\,s & 1,06\,s & 1.269\,ms & 0 & 8 von 8 \\
     2 & 2 & 1,20\,s & 1,13\,s & 1.291\,ms & 0 & 8 von 8 \\
     3 & 3 & 1,37\,s & 0,77\,s & 1.493\,ms & 0 & 8 von 8 \\
     4 & 2 & 0,76\,s & 0,98\,s & 1.261\,ms & 0 & 8 von 8 \\
-    \multicolumn{7}{@{}l}{\emph{Prototyp, ohne lange Aufrufe}} \\
+    \multicolumn{7}{@{}l}{\emph{Prototyp, ohne lange Aufrufe, 20.\ Oktober, ebenso}} \\
     5 & 2 & 1,12\,s & 1,11\,s & 1.483\,ms & 0 & -- \\
     6 & 1 & 0,61\,s & 1,45\,s & 1.303\,ms & 0 & -- \\
     7 & 1 & 0,66\,s & 0,59\,s & 1.243\,ms & 0 & -- \\
     8 & 2 & 1,33\,s & 1,12\,s & 1.271\,ms & 0 & -- \\
-        \multicolumn{7}{@{}l}{\emph{Ausgangszustand}} \\
+        \multicolumn{7}{@{}l}{\emph{Ausgangszustand, 19.\ Oktober, ebenso}} \\
     1 & 1 (3 Pods) & 1,9\,s & -- & 3.000\,ms & 0 & 1 von 1 (26,2\,s) \\
     \multicolumn{7}{@{}l}{\emph{Prototyp, Prober 100\,ms, 29.\ Oktober}} \\
     1 bis 3 & je 2 & 0,19 bis 0,25\,s & -- & -- & 0 bis 1 (Client) & 24 von 24 (25,2\,s), 48 von 48 Ausführungen genau einmal \\
@@ -803,14 +808,14 @@ ob sie mehrere Mandanten bedienen und welche Geheimnisse sie halten (\autoref{se
       der Anfragen, beides in Redis bis zum Ablauf der Registrierung \\
     Transport im Worker & holt Aufträge ab, führt keinen Mandantencode aus & nein, ein Mandant & NATS-Verbindung des
       Mandanten, Identitäts-Secret des Pods \\
-    Sandbox im Worker & nicht vertrauenswürdig, führt den Gastcode aus & nein, ein Mandant & keine dauerhaften, nur die Kennungen der laufenden Ausführungen \\
+    Sandbox im Worker & nicht vertrauenswürdig, führt den Gastcode aus & nein, ein Mandant & keine dauerhaften, nur Kennungen und entschlüsselte Variablen der laufenden Ausführungen \\
     \multicolumn{4}{@{}l}{\emph{Ausgangszustand}} \\
     Knative Serving & Ingress und Controller, die Runner anlegen und Anfragen leiten & ja & Rechte auf Pods im
       Namespace \\
     Skriptdienst & löst Skripte auf, prüft Berechtigungen, gemeinsam mit dem Modell genutzt & ja & entschlüsselte
       Variablen der Mandanten \\
-    Runner & Node.js-Prozess je Mandant, führt den Gastcode aus & nein, ein Mandant & 23 Umgebungsvariablen des Pods
-      (T8) \\
+    Runner & Node.js-Prozess je Mandant, führt den Gastcode aus & nein, ein Mandant & entschlüsselte Variablen der laufenden Ausführung, 23 Umgebungsvariablen
+      des Pods (T8) \\
     \hline
   \end{tabularx}
 \end{table}

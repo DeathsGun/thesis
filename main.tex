@@ -310,6 +310,9 @@
 % Abkürzungsverzeichnis
 %-----------------------------------
 \usepackage[printonlyused]{acronym}
+% Setzt Sprungziel und Erstverwendung einer Abkürzung ohne Ausgabe, etwa vor einer tabularx-Tabelle,
+% deren Probedurchläufe die Sprungmarke sonst verlieren
+\makeatletter\newcommand*\acmarkused[1]{\AC@placelabel{#1}}\makeatother
 
 \makeatletter
 \pdfstringdefDisableCommands{\let\selectlanguage\@gobble}

@@ -109,7 +109,7 @@ Die Vertrauensannahmen lauten wie folgt.
   \item[V4: Die Mandanten misstrauen einander.] Es besteht keine Annahme, dass ein Mandant die
     Ausführungen eines anderen nicht angreift.
 
-  \item[V5: Das codeerzeugende Sprachmodell liegt außerhalb der Kontrolle der Plattform.] Der Mandant
+  \item[V5: Die Plattform kontrolliert das codeerzeugende Sprachmodell nicht.] Der Mandant
     kann ein eigenes Sprachmodell anbinden und kontrolliert dann Gewichte, System prompt und
     vorgelagerte Prüfungen vollständig. Aussagen über das Alignment dieses Sprachmodells, über seine
     Widerstandsfähigkeit gegen die in V2 beschriebene Prompt Injection oder über die Einhaltung
@@ -147,9 +147,9 @@ gelesen. 87,9\,\% der Mandanten mit npm-Paketen verwenden mindestens eines davon
 
 713 Mandanten (41,5\,\%) benötigen eine Schnittstelle, die eine sprachbasierte Laufzeit ohne
 vermitteltes Binding nicht bereitstellt. Diese Gruppe wird im Folgenden als Hard Floor
-bezeichnet. Werden die Mandanten, deren Pakete vollständig außerhalb der geprüften Menge liegen,
-pessimistisch als nicht lauffähig gewertet, ergibt sich eine Spanne von 39,0\,\% bis
-42,9\,\%. \autoref{fig:hard-floor-einordnung} zeigt den Anteil am Bestand und die beiden Paketgruppen, die ihn tragen.
+bezeichnet. Ohne jede Nachbildung, also auch ohne Node-Globals, laufen 39,0 bis 42,9\,\% der Mandanten. Die
+Untergrenze lässt Mandanten aus, deren Pakete vollständig außerhalb der geprüften Menge liegen, die Obergrenze zählt
+sie mit. \autoref{fig:hard-floor-einordnung} zeigt den Anteil am Bestand und die beiden Paketgruppen, die ihn tragen.
 
 \begin{figure}[H]
   \centering
@@ -171,8 +171,8 @@ Die blockierenden Pakete zerfallen in zwei Gruppen mit deutlich verschiedenem Be
 direkt und umgeht ein bereitgestelltes \texttt{fetch}, 14 Pakete bei 629 Mandanten, am häufigsten \texttt{axios} mit
 579. Die andere benötigt einen eigenen \ac{TCP}- oder \ac{TLS}-Socket, 8 Pakete bei 63 Mandanten, am häufigsten
 \texttt{mssql} mit 46. 44 Mandanten gehören zu beiden Gruppen. Die Vereinigung umfasst 648 der 713 blockierten
-Mandanten, also 90,9\,\%. Bei ihnen fehlt nach der Paketanalyse allein ein Netzwerk-Binding. Die übrigen 65 brauchen
-nach der Paketanalyse Dateisystem, Betriebssystemmodule oder Prozesse (\autoref{sec:pruefung-kompatibilitaet}). Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
+Mandanten, also 90,9\,\%. Bei ihnen fehlt nach der Paketanalyse allein ein Netzwerk-Binding. Von den übrigen 65 nutzen 16 nur
+Netzwerkmodule direkt, die anderen brauchen nach der Paketanalyse Dateisystem, Betriebssystemmodule oder Prozesse (\autoref{sec:pruefung-kompatibilitaet}). Die Kompatibilitätsschranke ist damit eng umrissen, und zwischen
 den beiden Gruppen liegt ein Größenunterschied von etwa zehn zu eins.
 
 Die kleinere Gruppe stellt die schwierigere Anforderung. Ihre Vertreter sind überwiegend
@@ -244,7 +244,7 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 Der zweite Weg greift die Grenze innerhalb eines Prozesses an, die nach \autoref{sec:grundlagen:isolation} Angriffe
 unterhalb der Softwareebene nicht abfängt. Cloudflare hat einen solchen Angriff auf der eigenen produktiven Plattform
 mit V8 Isolates selbst vorgeführt. Über einen Remote Timer ließ sich aus einem Worker auf demselben Server ein
-\ac{JWT}{\makeatletter\AC@logged{JSON}\makeatother} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
+\ac{JWT}\acmarkused{JSON} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
 von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
 demselben Grund die Trennung von Sites im gemeinsamen Prozess aufgegeben
 (\autoref{sec:grundlagen:isolation}), und Cloudflare benennt die Restrisiken für V8 Isolates ausdrücklich
@@ -333,13 +333,13 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
     \hline
     Nr. & Kriterium & Messgröße & Gewicht \\
     \hline
-    S1 & Kaltstartlatenz & Zeit bis zum Ausführungsbeginn beim ersten Auftrag eines Mandanten, P95,
+    S1 & Kaltstartlatenz & Antwortzeit des ersten Auftrags eines Mandanten beim Client, P95,
          S1a mit Pod aus dem Pool, S1b bei leerem Pool & 0,30 \\
-    S6 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
+    S5 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
          Ausgangszustand & 0,25 \\
     S2 & Warmstart-Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
     S3 & Speicherbedarf & Bedarf je Pod unter dem Lastprofil, Pool als Vorbehalt & 0,10 \\
-    S7 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
+    S6 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,10 \\
     \hline
     \multicolumn{3}{@{}l}{Summe} & 1,00 \\
@@ -347,9 +347,9 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
   \end{tabularx}
 \end{table}
 
-Die Gewichte sind gesetzt, nicht gemessen. S1 wiegt am meisten, weil im Agentenprofil jeder Kaltstart in die Wartezeit der anfragenden Person eingeht und sich über die Aufrufe einer Aufgabe summiert. Verzögerungen einzelner Komponenten schlagen umso stärker auf die Antwortzeit durch, je mehr davon eine Anfrage berührt \autocite[S.~76]{dean_tail_2013}. S6
+Die Gewichte sind gesetzt, nicht gemessen. S1 wiegt am meisten, weil im Agentenprofil jeder Kaltstart in die Wartezeit der anfragenden Person eingeht und sich über die Aufrufe einer Aufgabe summiert. Verzögerungen einzelner Komponenten schlagen umso stärker auf die Antwortzeit durch, je mehr davon eine Anfrage berührt \autocite[S.~76]{dean_tail_2013}. S5
 folgt, weil die Kompatibilität nach \autoref{sec:bestandsanalyse} am stärksten gegen einen Wechsel spricht. Die übrigen
-Kriterien prägen die Wartezeit weniger oder sind durch S6 bereits begrenzt.
+Kriterien prägen die Wartezeit weniger oder sind durch S5 bereits begrenzt.
 
 Jedes Kriterium erhält null bis fünf Punkte, der Nutzwert ist die gewichtete Summe. Gerundet wird je Kriterium auf ganze
 Punkte, die Zuordnung der Messwerte steht in \autoref{sec:Evaluation}.
@@ -358,8 +358,8 @@ Punkte, die Zuordnung der Messwerte steht in \autoref{sec:Evaluation}.
   \item \textbf{S1 bis S4} vergleichen den Prototyp mit dem Ausgangszustand im selben Messaufbau. Maßgeblich ist der
     Faktor, um den der Prototyp besser ist. Faktor null ergibt null Punkte, gleicher Wert drei, ab Faktor zwei fünf,
     dazwischen linear. S1 zählt das 95.\ Perzentil, je zur Hälfte aus S1a und S1b, S2 den Median.
-  \item \textbf{S6 und S7} geben je angefangene 20\,\% der Mandanten einen Punkt. S6 zählt die Mandanten, die nicht
-    schlechter laufen als im Ausgangszustand, S7 die, die keine Anpassung brauchen.
+  \item \textbf{S5 und S6} geben je angefangene 20\,\% der Mandanten einen Punkt. S5 zählt die Mandanten, die nicht
+    schlechter laufen als im Ausgangszustand, S6 die, die keine Anpassung brauchen.
 \end{itemize}
 
 Bei S1 und S2 muss der Prototyp den Ausgangszustand unterbieten. Eine feste Zahl wird nicht vorab gesetzt, weil der
@@ -369,8 +369,9 @@ Die Nutzwertanalyse hat zwei Schwächen. Die Gewichte sind subjektiv \autocite[S
 wird geprüft, ob die Rangfolge von den Gewichten abhängt. Außerdem unterscheidet die Skala oberhalb von Faktor zwei nicht mehr,
 1,9 und 5 zählen fast gleich.
 
-Zwei Messgrößen wurden während der Evaluation präzisiert. S3 wird unter dem Lastprofil gemessen statt im Kaltstartlauf,
-weil nur dort mehrere Ausführungen zugleich laufen. S6 wird aus der Bestandsanalyse und den Prüfungen der
+Drei Messgrößen wurden während der Evaluation präzisiert. S1 wird als Antwortzeit beim Client gemessen statt als
+Zeit bis zum Ausführungsbeginn. S3 wird unter dem Lastprofil gemessen statt im Kaltstartlauf,
+weil nur dort mehrere Ausführungen zugleich laufen. S5 wird aus der Bestandsanalyse und den Prüfungen der
 Kompatibilitätsschicht abgeleitet.
 
 \subsubsection{Prüffallkatalog}

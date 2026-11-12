@@ -5,7 +5,7 @@
   description={Zeitspanne, die der JetStream-Server nach der Zustellung einer Nachricht auf ihre Bestätigung wartet. Bleibt sie aus, stellt er die Nachricht erneut zu \autocite{the_nats_authors_jetstream_2026}.}}
 
 \newglossaryentry{agentenprofil}{name={Agentenprofil},sort={Agentenprofil},
-  description={Profil des Ausführungsmodells für Skripte, die ein KI-Agent zur Laufzeit erzeugt und sofort ausführen lässt. Es erhält nur \texttt{fetch} und Web-Globals, keinen Modul-Loader (\autoref{sec:faehigkeitsmodell}).}}
+  description={Profil des Ausführungsmodells für Skripte, die ein KI-Agent zur Laufzeit erzeugt und sofort ausführen lässt. Es erhält \texttt{fetch}, Globals wie Timer und eine Konsole, aber keinen Modul-Loader (\autoref{sec:faehigkeitsmodell}).}}
 
 \newglossaryentry{allowlist}{name={Allowlist},sort={Allowlist},
   description={Liste des Erlaubten. Alles, was nicht aufgeführt ist, bleibt verwehrt. Gegenstück ist die Denylist, deren Lücken \textcite[S.~1--2]{chen_one_2026} an Shell-Kommandos in KI-Agenten zeigen.}}
@@ -137,7 +137,7 @@
   description={Metriksystem, das Messwerte als Zeitreihen sammelt und abfragbar hält \autocite{prometheus_authors_overview_2026}.}}
 
 \newglossaryentry{prueffall}{name={Prüffall},sort={Prueffall},
-  description={Ausführbarer Test T1 bis T10, der aus den Angriffswegen des Bedrohungsmodells abgeleitet ist und gegen Ausgangszustand und Prototyp läuft (\autoref{sec:kriterienkatalog}).}}
+  description={Ausführbarer Test T1 bis T10, der aus den Angriffswegen des Bedrohungsmodells abgeleitet ist. T1 bis T9 laufen gegen Ausgangszustand und Prototyp, T10 nur lokal gegen den Prototyp (\autoref{sec:kriterienkatalog}).}}
 
 \newglossaryentry{pullconsumer}{name={Pull-Consumer},sort={Pull-Consumer},
   description={Consumer, der nur liefert, wenn der Client Nachrichten anfordert, sodass der Client bestimmt, wie viele er gleichzeitig annimmt \autocite{the_nats_authors_consumers_2026}.}}
@@ -149,7 +149,7 @@
   description={Kubernetes-Objekt, das je Pod die Container-Laufzeit auswählt \autocite{the_kubernetes_authors_runtime_2026}, etwa \texttt{runsc} für gVisor.}}
 
 \newglossaryentry{sandbox}{name={Sandbox (Container)},sort={Sandbox},
-  description={Der Container des Worker-Pods, der den Gastcode ausführt. Er hält keine Zugangsdaten und erreicht NATS nur über den Transport (\autoref{sec:bausteine}).}}
+  description={Der Container des Worker-Pods, der den Gastcode ausführt. Er hält keine dauerhaften Zugangsdaten, keine NATS-Zugangsdaten und spricht NATS nur über den Transport an (\autoref{sec:bausteine}).}}
 
 \newglossaryentry{seccomp}{name={seccomp},sort={seccomp},
   description={Mechanismus des Linux-Kernels, der über ein Profil festlegt, welche Systemaufrufe ein Prozess absetzen darf \autocite[S.~25]{souppaya_application_2017}.}}
@@ -164,7 +164,7 @@
   description={Nachbildung einer Schnittstelle, die Aufrufe auf eine andere Umsetzung abbildet. Die Kompatibilitätsschicht bildet so \texttt{http}, \texttt{net} und \texttt{tls} auf vermittelte Bindings ab (\autoref{sec:kompatibilitaetsschicht}).}}
 
 \newglossaryentry{skriptdienst}{name={Skriptdienst},sort={Skriptdienst},
-  description={Bestehender Dienst der Fallstudie, der die hinterlegten Skripte verwaltet und eine Skriptkennung in Bundle, Variablen und Log-Ziel auflöst. Das Modell nutzt ihn unverändert mit (\autoref{sec:bausteine}).}}
+  description={Bestehender Dienst der Fallstudie, der die hinterlegten Skripte verwaltet und eine Skriptkennung in Bundle, Variablen und Log-Ziel auflöst. Das Modell nutzt ihn mit, ergänzt um eine Resolve-Funktion (\autoref{sec:bausteine}).}}
 
 \newglossaryentry{slot}{name={Slot},sort={Slot},
   description={Platz für eine gleichzeitige Ausführung in einem Worker-Pod. Ein Pod hält bis zu vier, jeder Slot führt genau ein Isolate aus (\autoref{sec:ebenen}).}}

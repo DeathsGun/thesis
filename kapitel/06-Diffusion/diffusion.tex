@@ -37,9 +37,9 @@ Die Aussagen gelten mit Einschränkungen. Der Startvorteil ist im Webhook-Profil
 nur Richtwerte. Die Prüffälle sind aus dem eigenen Bedrohungsmodell abgeleitet und ersetzen keine Schwachstellensuche,
 Seitenkanäle sind ausgenommen. Zwischen gleichzeitigen Agentenläufen eines Pods liegt nur die Isolate-Grenze, sodass
 ein Speicherfehler in der Engine fremde Heaps und Ausführungskennungen erreicht. Diesen Weg trägt die Fallstudie wie
-den verdeckten Kanal als Restrisiko. Offen bleiben die zweite Ausführung nach einem Absturz, die nicht begrenzte
-\ac{CPU} und die einzelne Replik der Control Plane. Der Vorsprung im Nutzwert hängt an S6, das abgeleitet statt
-gemessen ist, und hält, solange S6 mindestens drei Punkte erreicht.
+den verdeckten Kanal als Restrisiko. Offen bleiben die zweite Ausführung nach einem Absturz oder einer Rotation, die nicht begrenzte
+\ac{CPU} und die einzelne Replik der Control Plane. Der Vorsprung im Nutzwert hängt an S5, das abgeleitet statt
+gemessen ist, und hält mit Abstand, solange S5 mindestens drei Punkte erreicht.
 
 \subsection{Designprinzipien und Migrationspfad}
 \label{sec:diffusion:prinzipien}
@@ -79,7 +79,7 @@ dabei.
     Egress-Proxy ist die zweite Linie. Kontext: der Inhalt des Codes taugt nicht als Grundlage,
     weil er im Agentenprofil von dem geschrieben wird, dessen Beeinflussbarkeit das
     Bedrohungsmodell beschreibt. Beleg: T7 und T8, T7 auch gegen den Proxy in enforce. Begründung: Was nicht registriert ist, existiert für das
-    Skript nicht, und eine Liste des Erlaubten hat keine Lücken der Art, die Denylisten zeigen
+    Skript nicht, und eine Allowlist hat keine Lücken der Art, die Denylisten zeigen
     \autocite[S.~1--2]{chen_one_2026}. Herkunft: Complete Mediation und Least Privilege nach
     \textcite[S.~1282]{saltzer_protection_1975}.
   \item[P4 Der Mandantenkontext liegt außerhalb des Heaps.] Ziel: dass eine Ausführung die Frage,
@@ -98,7 +98,7 @@ dabei.
     verursachende Ausführung, die cgroup erfasst auch Pfade, die niemand aufgezählt hat. Herkunft: Defense in Depth,
     die cgroup des Kernels \autocite{the_kernel_development_community_control_2026} als zweite Ebene. Die \ac{CPU} begrenzt der Mechanismus
     nicht. Beleg: T6, in dem der
-    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt (\autoref{sec:ressourcenbegrenzung}).
+    Abbruch die verursachende Ausführung trifft und die folgenden fünf unberührt lässt (\autoref{sec:pruefung-isolation}).
 \end{description}
 
 
@@ -111,15 +111,16 @@ anderen Infrastrukturen trotzdem Worker (\autoref{sec:betriebsplanung}). Eine Ü
 Start ohne Sandbox-Laufzeit verweigern, wie auf der \ac{OTC}. Die Vorauswahl fiele anders aus, wenn die Knoten
 \texttt{/dev/kvm} bereitstellen, denn dann käme eine MicroVM je Mandant oder je Ausführung in Frage
 (\autoref{sec:randbedingungen}), oder wenn kein JavaScript-Bestand zu übernehmen ist, denn dann verlöre die nach
-WebAssembly kompilierte Engine ihren Nachteil bei S6. Neu zu bestimmen sind alle Parameter, die die Evaluation
+WebAssembly kompilierte Engine ihren Nachteil bei S5. Neu zu bestimmen sind alle Parameter, die die Evaluation
 abgestimmt hat, ihre Standardwerte im Code weichen von den gemessenen ab (\autoref{tab:parameter}).
 
 Der Migrationspfad nutzt, dass das Modell je Mandant umschaltbar ist: Welcher Stack die Aufrufe bedient, entscheidet die
 Adresse der App in der Konfiguration des Mandanten. Die Umstellung erfolgt
 schrittweise über ein Feature-Flag, zuerst ein Prozent der Mandanten, dann in Stufen mehr, und eine Stufe wird
 zurückgenommen, wenn die Fehlerrate die des Prototyps im Lastprofil übersteigt. Mandanten, deren Skripte rohe Sockets
-brauchen, erhalten die mandantenweite Freischaltung vor ihrer Stufe. Bestandsmandanten erhalten offene
-Egress-Regeln, neue Mandanten von Beginn an eingeschränkte. Ein Mandant, dessen Prüfskripte \texttt{child\_process}
+brauchen, erhalten die mandantenweite Freischaltung vor ihrer Stufe. Bestandsmandanten erhalten für das Webhook-Profil
+offene Egress-Regeln, neue Mandanten von Beginn an eingeschränkte. Das Agentenprofil beginnt für alle Mandanten
+eingeschränkt, weitere Ziele gibt der Mandant selbst frei. Ein Mandant, dessen Prüfskripte \texttt{child\_process}
 ausführen, bleibt bewusst auf dem bisherigen Betrieb. Festzulegen
 sind auch der Standardwert der Socket-Freischaltung und die Regeln für das Agentenprofil, das keinen Bestand hat, den sie
 brechen könnten, auch für seinen Zugriff auf die SystemBaseUri mit Pfaden, Methoden und Umfang des Tokens. Hinzu kommen
@@ -135,21 +136,22 @@ Der erste betrifft die Engine. Eine nach WebAssembly kompilierte Engine (\autore
 dominiert und ließe sich einsetzen, ohne Grenze und Zuteilung zu ändern. Ihr möglicher Vorteil beim Speicherbedarf wäre
 unter demselben Lastprofil zu messen. Offen ist auch die Speichersandbox von V8. Sie erfordert einen vollständigen
 Build, der Prototyp verwendet den vorgefertigten Build mit Pointer Compression. Für M1 bis M6 ist sie nicht
-erforderlich, weil Mandanten über die Pod-Grenze getrennt sind. Sie schlösse den Weg über Speicherfehler zwischen
-gleichzeitigen Ausführungen, nicht die Seitenkanäle.
+erforderlich, weil Mandanten über die Pod-Grenze getrennt sind. Sie schützte den Speicher des Hosts und damit die
+Ausführungskennungen gleichzeitiger Läufe \autocite{gross_v8_2024}, nicht aber deren Heaps, die sich ohne eigene Isolate-Gruppen eine Sandbox
+teilen \autocite{the_v8_authors_isolate_2026}, und nicht die Seitenkanäle.
 
 Der zweite betrifft die Einbettung. Weil \texttt{deno\_core} als auslaufend gilt (\autoref{sec:betriebsplanung}), ist der
 Aufwand zu prüfen, die rund 30 Quelldateien der Einbettungsschicht direkt auf \texttt{rusty\_v8} umzustellen. Event
 Loop, Modulauflösung und Ops müssten dann selbst entstehen und für M4 abgesichert werden.
 
 Der dritte betrifft die Zustellgarantie. Der Ausgangszustand stellt höchstens einmal zu, der Prototyp führt ein
-Skript nach einem Absturz von Worker oder Sandbox ein zweites Mal aus (\autoref{sec:zuteilung}). Beides ließe sich je Mandant
+Skript nach einem Absturz von Worker oder Sandbox oder nach einer Rotation ein zweites Mal aus (\autoref{sec:zuteilung}). Beides ließe sich je Mandant
 oder je Skript anbieten, mit einer Startmarke je Nachricht für nicht idempotente Skripte. Welcher Standard gilt und ob
 die Startmarke den zusätzlichen Redis-Zugriff auf dem Anfragepfad rechtfertigt, ist mit Produkt und Mandanten zu
 entscheiden und danach zu messen.
 
 Der vierte betrifft die Vorhersage der Pool-Größe (\autoref{sec:zuteilung}). Sie ist umgesetzt, alle Läufe nutzten
-aber die feste Zielgröße vierzig. Ob sie die Ruhekosten senkt, ohne die Kaltstarts zur vollen Stunde zu verlängern,
+aber eine feste Zielgröße. Ob sie die Ruhekosten senkt, ohne die Kaltstarts zur vollen Stunde zu verlängern,
 zeigt erst ein Lauf über mehrere Wochen.
 
 Der fünfte betrifft die Zuteilung. Neu bereite Pods dem am längsten wartenden Mandanten zu geben, kürzte den Tail der
