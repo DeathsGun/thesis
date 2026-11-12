@@ -21,7 +21,7 @@ heutiger Runner mit Pool ebenso schnell wäre, ist nicht gemessen.
 Auch den Sicherheitsgewinn trägt nicht die Grenze je Ausführung, denn zustandsfrei ist der Ausgangszustand seit seiner
 Umstellung auf Worker-Threads selbst. Der Unterschied liegt beim Zugriff nach außen: Was nicht als Binding registriert
 ist, existiert für das Skript nicht, und welche Ziele es erreicht, entscheiden Regeln außerhalb des Skripts. Gemessen
-beruht der Unterschied bei T7 bis T9 auf Proxy und Härtung zusammen, ein gehärteter Node-Runner hinter demselben Proxy
+beruht der Unterschied bei T7 bis T9 auf Proxy und Härtung zusammen, ein gehärteter Node.js-Runner hinter demselben Proxy
 ist nicht verglichen. Der Proxy begrenzt Ziele, nicht Datenflüsse. Über erlaubte Ziele, mindestens das eigene System
 des Mandanten, kann beeinflusster Code weiterhin Daten abfließen lassen. Auf den geprüften Angriffswegen wurden
 Isolation und Zustandsfreiheit nicht verletzt.
@@ -38,7 +38,7 @@ nur Richtwerte. Die Prüffälle sind aus dem eigenen Bedrohungsmodell abgeleitet
 Seitenkanäle sind ausgenommen. Zwischen gleichzeitigen Agentenläufen eines Pods liegt nur die Isolate-Grenze, sodass
 ein Speicherfehler in der Engine fremde Heaps und Ausführungskennungen erreicht. Diesen Weg trägt die Fallstudie wie
 den verdeckten Kanal als Restrisiko. Offen bleiben die zweite Ausführung nach einem Absturz oder einer Rotation, die nicht begrenzte
-\ac{CPU} und die einzelne Replik der Control Plane. Der Vorsprung im Nutzwert hängt an S5, das abgeleitet statt
+\ac{CPU} und die einzelne Replika der Control Plane. Der Vorsprung im Nutzwert hängt an S5, das abgeleitet statt
 gemessen ist, und hält mit Abstand, solange S5 mindestens drei Punkte erreicht.
 
 \subsection{Designprinzipien und Migrationspfad}
@@ -60,11 +60,11 @@ dabei.
     T1 bis T9 für die innere. Begründung: Die sprachbasierte Grenze trägt keine Mandantentrennung (A2), die Kernelgrenze
     Zustandsfreiheit nur mit einem frischen Prozess je Ausführung, der teurer ist als ein Isolate
     (\autoref{tab:prozessstart}). Herkunft: zweistufige Trennung wie bei SAND
-    \autocite[S.~924, 926]{akkus_sand_2018} und Prozess je Site in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht geschnitten ist, trennt allein die
+    \autocite[S.~924, 926]{akkus_sand_2018} und Prozess je Site in Chrome (\autoref{sec:grundlagen:isolation}). Gleichzeitige Ausführungen desselben Mandanten, auf die M2 nicht zugeschnitten ist, trennt allein die
     sprachbasierte Grenze (\autoref{sec:betriebsplanung}).
   \item[P2 Vorhaltung statt Wiederverwendung.] Ziel: Startkosten vom Anfragepfad nehmen, ohne
-    Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, deren Isolates aus einem
-    Snapshot entstehen, dessen Nachfüllen nie auf dem Anfragepfad liegt. Kontext: die Größe des
+    Zustand über Ausführungen zu tragen. Mechanismus: ein Vorrat frischer Pods, dessen Nachfüllen nie auf dem Anfragepfad liegt und deren
+    Isolates aus einem Snapshot entstehen. Kontext: Die Größe des
     Vorrats ist von der Zahl der Mandanten entkoppelt, und es gibt kein Skalieren auf null. Beleg:
     S1a, S1b und der Lauf mit leerem Pool, der zeigt, dass der Vorsprung aus der Vorhaltung
     stammt, nicht aus einem schnelleren Start. Begründung: Ein frischer Pod trägt keinen Zustand, also braucht die
@@ -76,7 +76,7 @@ dabei.
   \item[P3 Die Fähigkeitsmenge folgt aus der Vertrauensklasse des Codes.] Ziel: einem Skript nur
     die Außenwelt zu öffnen, die seine Herkunft rechtfertigt. Mechanismus: eine feste Menge
     registrierter Bindings je Vertrauensklasse, die die Grenze selbst ist. Die Prüfung der Ziele im
-    Egress-Proxy ist die zweite Linie. Kontext: der Inhalt des Codes taugt nicht als Grundlage,
+    Egress-Proxy ist die zweite Linie. Kontext: Der Inhalt des Codes taugt nicht als Grundlage,
     weil er im Agentenprofil von dem geschrieben wird, dessen Beeinflussbarkeit das
     Bedrohungsmodell beschreibt. Beleg: T7 und T8, T7 auch gegen den Proxy in enforce. Begründung: Was nicht registriert ist, existiert für das
     Skript nicht, und eine Allowlist hat keine Lücken der Art, die Denylisten zeigen
@@ -91,7 +91,7 @@ dabei.
     im Host liegt, nicht. Herkunft: der Zustand je Isolate, den \texttt{deno\_core} dem Host bereitstellt
     (\autoref{sec:faehigkeitsmodell}).
   \item[P5 Ressourcenbegrenzung auf zwei Ebenen.] Ziel: dass eine Ausführung den Speicher
-    anderer nicht erschöpft und die verursachende Ausführung benannt werden kann. Mechanismus: die
+    anderer nicht erschöpft und die verursachende Ausführung benannt werden kann. Mechanismus: Die
     Mechanismen der Engine, Heap-Limit, zählender Allokator und Watchdog, liefern die Zuordnung und
     einen abfangbaren Fehler. Die Grenze des Betriebssystems je Mandant liefert die Garantie.
     Kontext: Mechanismen der Engine wirken nur an aufgezählten Pfaden. Begründung: Die Engine kennt die
@@ -138,7 +138,7 @@ unter demselben Lastprofil zu messen. Offen ist auch die Speichersandbox von V8.
 Build, der Prototyp verwendet den vorgefertigten Build mit Pointer Compression. Für M1 bis M6 ist sie nicht
 erforderlich, weil Mandanten über die Pod-Grenze getrennt sind. Sie schützte den Speicher des Hosts und damit die
 Ausführungskennungen gleichzeitiger Läufe \autocite{gross_v8_2024}, nicht aber deren Heaps, die sich ohne eigene Isolate-Gruppen eine Sandbox
-teilen \autocite{the_v8_authors_isolate_2026}, und nicht die Seitenkanäle.
+teilen \autocite{the_v8_authors_isolate_2026}, und gegen Seitenkanäle hilft sie nicht.
 
 Der zweite betrifft die Einbettung. Weil \texttt{deno\_core} als auslaufend gilt (\autoref{sec:betriebsplanung}), ist der
 Aufwand zu prüfen, die rund 30 Quelldateien der Einbettungsschicht direkt auf \texttt{rusty\_v8} umzustellen. Event

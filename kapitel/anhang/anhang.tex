@@ -78,7 +78,7 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
     & Anlegen beim Erstkontakt & höchstens eines je Mandant in 30\,s, Warten auf Bereitschaft
       bis 20\,s, geprüft je 1\,s \\
     & Watcher-Consumer & bis zu 20 Zustellungen \\
-    & Lastskalierung je Mandant & Ziel-Auslastung 0,5 (Code) bzw.\ 0,75 (Integrationsumgebungen)
+    & Lastskalierung je Mandant & Zielauslastung 0,5 (Code) bzw.\ 0,75 (Integrationsumgebungen)
       der Slots, höchstens 10 Pods, mindestens
       1, Lastprüfung alle 250\,ms, erste Erweiterung frühestens 2\,s nach dem Erstkontakt, Abstand
       zwischen Erweiterungen 2\,s, Pool danach auf Zielgröße aufgefüllt \\
@@ -89,7 +89,7 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
     & Token der Zuweisung & RS256, gültig 80\,min, also Zuweisungsdauer plus Grace Period und Reserve \\
     & Grace Period & 900\,s \\
     & Service Mesh & Sidecar-Injection deaktiviert \\
-    & Egress & Worker-Pod: Internet nur über den Egress-Proxy auf Port 3128, NATS über ein Label der Cluster-Richtlinien, kein
+    & Egress & Worker-Pod: Internet nur über den Egress-Proxy auf Port 3128, NATS über ein Label der Clusterrichtlinien, kein
       Redis. Proxy-Pod: jeder öffentliche Port, private Bereiche ausgenommen \\
     \hline
   \end{tabularx}
@@ -100,7 +100,7 @@ und, wo die Integrationsumgebung abweicht, mit deren Wert. Metriken gehen per \a
 
 \autoref{tab:header} nennt die Header, die der Worker nach \autoref{sec:bausteine} vor dem Skript
 verbirgt oder aus dessen Antwort entfernt. \autoref{fig:podzustaende} führt die Zustände eines
-Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen, die sie beenden.
+Worker-Pods aus \autoref{sec:zuteilung} mit den Ereignissen auf, die sie beenden.
 
 \begin{table}[H]
   \caption{Vom Worker gefilterte Header}
@@ -561,7 +561,7 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
     \hline
     S1 Kaltstart & Kaltstart-Skript, Metrik \texttt{cold\_start\_duration}, Einmalmodus auf hyper-int-otc, Pool 40 und Pool 0
       je dreimal am 29.\ Oktober & Einmalmodus, je dreimal am 29.\ Oktober \\
-    S2 Warmstart-Latenz & Overhead im Lastprofil, drei Läufe am 29.\ Oktober, Zerlegung über Traces & drei Läufe am 29.\ Oktober \\
+    S2 Warmstartlatenz & Overhead im Lastprofil, drei Läufe am 29.\ Oktober, Zerlegung über Traces & drei Läufe am 29.\ Oktober \\
     S3 Speicher & Containerstatistiken je Pod unter dem Lastprofil, Ruhezustand des Pools, 29.\ und 30.\ Oktober &
       Containerstatistiken je Pod unter dem Lastprofil \\
     S4 Durchsatz & Stufenlauf mit steigender Ankunftsrate in beiden Namespaces, 30.\ Oktober & ebenso \\
@@ -578,12 +578,12 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
   \footnotesize
   \begin{tabularx}{\textwidth}{@{}>{\RaggedRight\arraybackslash}X >{\RaggedRight\arraybackslash}X r r@{}}
     \hline
-    Uhr und Aufbau & Last & selber Pod & zwischen Pods \\
+    Uhr und Aufbau & Last & derselbe Pod & zwischen Pods \\
     \hline
     \texttt{setTimeout(0)} auf echter Zeit, 64 Bits, 40-ms-Fenster, Polarität aus den Daten, Raten rund 0,45 & \acs{CPU} & 0,30--0,39 in fünf Läufen & 0,38--0,48 \\
      & Allocation & 0,25--0,44 & 0,25--0,44 \\
     virtuelle Uhr bei Timern & -- & \multicolumn{2}{r@{}}{kein Lauf erreicht seine Fenster} \\
-    externe Zeitquelle über eine Regel aus dem Aufruf, 16 Bits, 500-ms-Fenster, ohne Wahl der Polarität, Raten 0,5 & \acs{CPU} & 0,08--0,50 in sieben Läufen & Zufallsniveau, ein Lauf 0,31 \\
+    externe Zeitquelle über eine freigegebene Regel, 16 Bits, 500-ms-Fenster, ohne Wahl der Polarität, Raten 0,5 & \acs{CPU} & 0,08--0,50 in sieben Läufen & Zufallsniveau, ein Lauf 0,31 \\
     \hline
   \end{tabularx}
 \end{table}
@@ -647,12 +647,11 @@ nacheinander. Für den Kaltstart wurden 30 Mandanten gerufen, die seit dem 30.\ 
       Aufträgen sofort neu zuweisen, auf hyper-int-otc zusätzlich mit Wiederholung nach 1 bis
       16\,s, weil die erste Neuzuweisung einmal scheiterte. Seit dem 26.\ Oktober zieht die Control
       Plane Mandanten ohne Aufträge selbst zurück, bevor ein Worker sich beendet. \\
-    19 & 504 ab der ersten Minute auf hyper-int-otc. Das NATS-Konto erlaubte 100 Consumer je
+    19 & 504 ab der ersten Minute auf hyper-int-otc. Der NATS-Account erlaubte 100 Consumer je
       Stream, ab dem 97.\ aktiven Mandanten bekam keiner einen Worker. & Limit auf 1.000
       angehoben, Lauf aus dem Vergleich ausgeschlossen. \\
     22--29 & 50 bis 109 Zuweisungen je Lauf scheitern, weil Antworten der JetStream-\acs{API} auf
-      einzelnen langlebigen Verbindungen ausbleiben: In 276 von 276 Fällen war die Verbindung
-      verbunden, ein PING wurde in höchstens 3\,ms beantwortet, und in den zwei Sekunden kam kein
+      einzelnen langlebigen Verbindungen ausbleiben: In 276 von 276 Fällen bestand die Verbindung, ein PING wurde in höchstens 3\,ms beantwortet, und in den zwei Sekunden kam kein
       Byte an, während frische Verbindungen aus einem Prüf-Pod dieselben Consumer ohne einen
       einzigen Fehler lasen. Serverseitige Ursache nicht belegt, an die Plattform gemeldet. &
       Bei genau diesem Muster vor dem nächsten Versuch neu verbinden. Lauf 30: keine
@@ -800,9 +799,9 @@ ob sie mehrere Mandanten bedienen und welche Geheimnisse sie halten (\autoref{se
     \multicolumn{4}{@{}l}{\emph{Modell}} \\
     Gateway & prüft Signatur und Identität, bestimmt Mandant und Regeln eines Laufs & ja & Zugriff auf den Objektspeicher,
       Token der Person bei Agentenläufen bis zur Registrierung \\
-    Control Plane & weist Pods Mandanten zu und stellt die NATS-Token aus & ja & Signaturschlüssel der Token, Rechte auf
+    Control Plane & weist Pods Mandanten zu und stellt die NATS-Tokens aus & ja & Signaturschlüssel der Tokens, Rechte auf
       Pods im Namespace, Zuteilungszustand in Redis \\
-    Auth Callout & gibt jeder NATS-Verbindung die Rechte genau eines Mandanten & ja & Schlüssel zur Prüfung der Token und
+    Auth Callout & gibt jeder NATS-Verbindung die Rechte genau eines Mandanten & ja & Schlüssel zur Prüfung der Tokens und
       zur Vergabe von Rechten \\
     Egress-Proxy & entscheidet über jedes Ziel der Sandbox & ja & Token der Person während eines Agentenlaufs, Protokoll
       der Anfragen, beides in Redis bis zum Ablauf der Registrierung \\

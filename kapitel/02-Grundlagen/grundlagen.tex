@@ -25,7 +25,7 @@ Zusammenwirken eine Sicherheitsrichtlinie durchsetzt \autocite[S.~112]{dod_trust
 Komponenten bricht die Grenze. In der Fallstudie gehört der Sentry dazu, weil er die Systemaufrufe des Gastcodes
 bearbeitet.
 
-Die stärkste der hier betrachteten äußeren Grenzen zieht ein Hypervisor. Eine microVM wie Firecracker gibt jeder Funktion einen eigenen
+Die stärkste der hier betrachteten äußeren Grenzen zieht ein Hypervisor. Eine MicroVM wie Firecracker gibt jeder Funktion einen eigenen
 Gastkernel und beschränkt die Schnittstelle zum Host auf wenige virtuelle Geräte
 \autocite[S.~420, 426]{agache_firecracker_2020}. Kata Containers startet Kubernetes-Pods in solchen virtuellen Maschinen
 \autocite{the_kata_containers_authors_hypervisors_2026}. Beides setzt \ac{KVM} voraus, die Virtualisierungsschnittstelle
@@ -33,7 +33,7 @@ des Linux-Kernels, die der Host als Gerät \texttt{/dev/kvm} bereitstellt \autoc
 Ob die Zielplattform sie bietet, klärt \autoref{sec:randbedingungen}.
 
 Ein \emph{V8-Isolate} ist eine Instanz der JavaScript-Engine V8 mit eigenem Heap. Innerhalb eines
-Isolates kann ein \emph{Context} voneinander unabhängigen JavaScript-Code in derselben Instanz
+Isolates können mehrere \emph{Contexts} voneinander unabhängigen JavaScript-Code in derselben Instanz
 ausführen \autocite{the_v8_authors_getting_2026}. Die Grenze zwischen zwei Isolates verläuft damit
 innerhalb eines Prozesses und wird allein von der Engine durchgesetzt. Sie ist eine sprachbasierte
 Grenze, die Angriffe unterhalb der Softwareebene nicht abfängt.

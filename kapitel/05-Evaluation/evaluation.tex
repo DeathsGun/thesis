@@ -38,9 +38,9 @@ Anhang ordnet die Belege den Ständen und Commits zu. Alle Lastläufe nutzen das
 das Agentenprofil hat im Ausgangszustand kein Gegenstück. Die Prüffälle laufen in beiden Profilen.
 
 Der Ausgangszustand wurde während der Arbeit umgestellt. Der Runner führt jedes Skript
-in einem eigenen, verworfenen Worker-Thread aus und trägt statt 100\,m ein
+in einem eigenen, danach verworfenen Worker-Thread aus und trägt statt 100\,m ein
 \ac{CPU}-Limit von zwei Kernen. Der Autoscaler läuft mit Initial-Scale 1, einer Zielauslastung von 80\,\%, einem Fenster
-von 6 und 60 Sekunden Scale-Down-Delay. Diese Konfiguration entspricht der Produktion, und alle Vergleichsläufe messen
+von 6 Sekunden und 60 Sekunden Scale-Down-Delay. Diese Konfiguration entspricht der Produktion, und alle Vergleichsläufe messen
 diesen Stand.
 
 Lastgenerator ist k6 \autocite{grafana_labs_k6_2026} auf einem Arbeitsplatzrechner, dessen Aufrufe wie echte
@@ -72,7 +72,7 @@ Vergleich zwei Modelle samt ihrer Begleitdienste misst. Der Prototyp wurde über
 einmal. Hinzu kommt, dass alle Läufe ohne Auth Callout liefen. Der Callout prüft jede NATS-Verbindung eines Workers, und
 der Transport baut sie bei der Zuweisung auf (\autoref{sec:zuteilung}). Er liegt damit auf dem Pfad, den S1a misst, und
 seine Kosten sind in keinem Wert enthalten. Extern wurde auf einem Cluster der Integrationsstufe mit nachgespieltem Lastprofil gemessen, von einem einzelnen
-Rechner über das Internet. Die Pod-Löschung ersetzt bei M5 ein Drain.
+Rechner über das Internet. Die Pod-Löschung ersetzt bei M5 einen Drain.
 
 Für S1, S2 und M5 liefen je Modell drei Läufe abwechselnd (Prototyp, Ausgangszustand, Prototyp ...), je
 Lauf mit vorher geprüfter Route.
@@ -142,10 +142,10 @@ braucht sein Erstaufruf nach Tagen ohne Aufruf im Median 546\,ms. Warm liegt er 
 Webhook-Profil mit 118\,ms, weil er den Quelltext mitbringt und die Auflösung des Skripts entfällt (\autoref{tab:agent-latenz} und
 \autoref{tab:agent-parallel} im Anhang).
 
-\subsection{Overhead und Warmstart-Latenz (S2)}
+\subsection{Overhead und Warmstartlatenz (S2)}
 \label{sec:warm}
 
-Weil das Lastprofil die Mandanten überwiegend aktiv hält, nähert der Overhead die Warmstart-Latenz an und enthält
+Weil das Lastprofil die Mandanten überwiegend aktiv hält, nähert der Overhead die Warmstartlatenz an und enthält
 einen kleinen Anteil Erstkontakte (\autoref{tab:overhead}).
 
 \begin{table}[H]
@@ -190,7 +190,7 @@ beim Client. Reale Bundles
 am meisten \texttt{pdfmake} mit seinen Schriften. Mit einem 95.\ Perzentil unter 1,5 Sekunden bleiben sie unter dem
 Kaltstart des Ausgangszustands. Im Median sind warme Aufrufe 1,6- bis 2,2-mal schneller als dort, je Paket nach fünf Kaltstarts und 20 warmen Aufrufen.
 
-Die Erzeugung eines Isolates kostet im Cluster im Median 18,7\,ms (95.\ Perzentil 77\,ms) und liegt als warmes Isolate vor dem Aufruf, nicht im Anfragepfad. Das ist der Preis der Isolate-Grenze aus
+Die Erzeugung eines Isolates kostet im Cluster im Median 18,7\,ms (95.\ Perzentil 77\,ms), das Isolate liegt aber warm vor dem Aufruf bereit, nicht im Anfragepfad. Das ist der Preis der Isolate-Grenze aus
 \autoref{sec:ebenen}. Ein frischer Node.js-Prozess je Ausführung kostet unter gVisor im Median 53\,ms, doppelt so viel wie unter runc, und ein eigener
 Snapshot hilft nicht (\autoref{tab:prozessstart} im Anhang).
 
@@ -237,7 +237,7 @@ ist dem Prototyp nicht zugerechnet.
 
 Mit einem Slot je Worker-Pod statt vier (\autoref{sec:betriebsplanung}) lief ein Lauf mit dem
 Lastprofil. Er brauchte 64\,\% mehr gleichzeitige Worker-Pods, 52\,\% mehr Speicher und 28\,\% mehr \ac{CPU}
-(\autoref{tab:ein-slot}). Dreimal starb dabei die Control Plane am Limit von 128\,Mi, was Fehler und Tail mit erklären kann. Weil die Einstellung beide Profile traf, ist das die Obergrenze für das Agentenprofil.
+(\autoref{tab:ein-slot}). Weil die Einstellung beide Profile traf, ist das die Obergrenze für das Agentenprofil. Dreimal starb dabei die Control Plane am Limit von 128\,MiB, was Fehler und Tail mit erklären kann.
 
 \subsection{Zuverlässigkeit der Zustellung}
 \label{sec:zuverlaessigkeit}
@@ -324,7 +324,7 @@ Empfänger zählt je Fenster die Durchläufe einer Rechenschleife. Mit der echte
 Collector häufig auslöst, lag sie in beiden Fällen darunter, und ein Pod je Ausführung schlösse diesen Weg nicht. Seit die
 Uhr bei Timern virtuell läuft (\autoref{sec:kompatibilitaetsschicht}), erreicht kein Lauf mehr seine Fenster. Eine
 über eine Regel freigegebene externe Zeitquelle öffnete den Kanal im selben Pod wieder, unzuverlässig und zwischen Pods
-fast auf Zufallsniveau. Die Läufe sind wenige, die Richtung ist einheitlich, die Größe nicht belastbar.
+fast auf Zufallsniveau. Es gab nur wenige Läufe, die Richtung ist einheitlich, die Größe nicht belastbar.
 
 T7 und T9 wurden gegen den Egress-Proxy mit beiden Profilen in enforce und der Testregel example.org:443 geprüft, im
 Agentenprofil zusätzlich mit einer Regel aus dem Aufruf für GET. Durch gehen nur das eigene System und die Regeln mit
@@ -349,7 +349,7 @@ die Pod-Grenze je Mandant ist dieselbe wie im Ausgangszustand. M6 ist im Entwurf
 gemessenen Plattformstand nicht: Ein Ausbruch aus Engine und Container erreicht ohne den Callout die gemeinsamen
 NATS-Zugangsdaten (\autoref{sec:betriebsplanung}). Am Cluster teilen die Container keinen Prozess-Namespace, die Sandbox
 hat keine Volumes, und Identitäts-Secret und NATS-Zugangsdaten sind nur im Transport eingehängt. Von den Namespaces teilen
-beide nur das Netz. T10 bestand nur lokal: Ohne gültiges Token lässt NATS die Sandbox nicht zu, und der Transport weist ihr
+beide nur das Netz. Bestanden ist T10 nur lokal: Ohne gültiges Token lässt NATS die Sandbox nicht zu, und der Transport weist ihr
 Kommando ab.
 
 Ein Skript erreicht das Netz nur über den Proxy (T7). Ob das auch nach einem Ausbruch aus dem Isolate gilt, ist nicht geprüft.
@@ -371,7 +371,7 @@ Ein Rolling Update der Knoten verdrängt die Pods eines Knotens über \texttt{ku
 Deshalb löscht der Ersatz unter Last alle Worker-Pods eines Knotens im Namespace, sodass jeder wie bei einer Eviction
 SIGTERM und seine Grace Period erhält. Nicht abgebildet
 ist, dass ein Drain auch Control Plane, Gateway und NATS-Server verdrängt. M5 gilt damit für Worker-Pods bei laufender
-Control Plane. Diese läuft mit einer Replik ohne Leader Election (\autoref{sec:zuteilung}). Trifft ein Drain ihren
+Control Plane. Diese läuft mit einer Replika ohne Leader Election (\autoref{sec:zuteilung}). Trifft ein Drain ihren
 Knoten, erhalten Mandanten ohne Pod bis zu ihrem Neustart keinen, Mandanten mit Pod laufen weiter. Erhoben werden je Mandant die Zeit von der Löschung bis zur ersten danach
 begonnenen erfolgreichen Ausführung, die Zahl der verlorenen Aufträge und ob eine Ausführung, die die Löschung
 überspannt, zu Ende läuft. Der Ausgangszustand wird mit demselben Ersatz gemessen, indem der Runner-Pod des Mandanten
@@ -383,12 +383,12 @@ Ausführungen im Trace gezählt.
 
 In den drei Vergleichsläufen (\autoref{tab:m5} im Anhang) beträgt der längste Abstand der getroffenen Mandanten im Prototyp
 0,19 bis 0,25 Sekunden, nahe an der Netzlaufzeit von rund 0,2 Sekunden. Im Ausgangszustand sind es 2,06 bis 2,68 Sekunden: Die
-gelöschten Runner beenden ihre Anfrage noch, danach zahlen neue Aufrufe den Kaltstart der ersetzten Runner. Alle 24 langen Aufrufe über die Löschung enden im Prototyp
+gelöschten Runner beenden ihre Anfrage noch, danach warten neue Aufrufe auf den Kaltstart neuer Runner. Alle 24 langen Aufrufe über die Löschung enden im Prototyp
 mit 200 nach 25,2 Sekunden. Von den 48 laufenden Ausführungs-IDs hat jede genau eine Ausführung im Trace, keine ging verloren und
 keine lief doppelt. Beim Absturz eines Workers gilt das nicht (\autoref{sec:zuverlaessigkeit}). Der Ausgangszustand verliert ebenfalls keine, seine Aufrufe enden nach 25,3 bis 25,5 Sekunden.
 Der relative Zielwert aus \autoref{sec:kriterienkatalog} ist erreicht. Mit vierzig Mandanten unter Last und sechs
 getroffenen Mandanten, einem kleinen Drain, bleibt die Lücke im Prototyp unter 0,56 Sekunden. Gemessen ist das mit einem
-Prober im 200-ms-Takt. Bei Knative sind es bis zu 5,15 Sekunden, dort starten sechs Runner zugleich kalt. Ein echtes Drain auf allen Knoten ist auf dem
+Prober im 200-ms-Takt. Bei Knative sind es bis zu 5,15 Sekunden, dort starten sechs Runner zugleich kalt. Ein echter Drain auf allen Knoten ist auf dem
 Integrationscluster nicht messbar.
 
 \subsection{Kompatibilität des Bestands (S5, S6)}
@@ -401,8 +401,8 @@ mit 757 Fällen, die 440 Tests des Executors und die Machbarkeitsprüfung an \te
 Treiber verbindet sich in drei Läufen über den Socket-Shim mit einer echten Datenbankinstanz, schaltet auf \ac{TLS} um und
 fragt ab, beide Negativkontrollen schlagen wie in Node fehl. Mit den vier häufigsten gebündelten Paketen des Bestands
 gelingen alle 525 Aufrufe (\autoref{tab:bundles} im Anhang). Die Skripte der übrigen 49 Mandanten wurden gelesen und auf
-beiden Modellen mit einem Probeskript geprüft. Bis auf einen laufen sie im Prototyp nicht schlechter. Vier gebündelte
-sind nicht unterstützt und zählen nicht als Ausfall.
+beiden Modellen mit einem Probeskript geprüft. Bis auf einen und vier gebündelte, die nicht unterstützt sind und nicht
+als Ausfall zählen, laufen sie im Prototyp nicht schlechter.
 
 Damit laufen bis zu 1.717 von 1.718 Mandanten, 99,9 Prozent, nicht schlechter als im Ausgangszustand. Werden die 664
 Mandanten, deren Lauffähigkeit allein auf der Schicht beruht, pessimistisch als Ausfall gezählt, bleiben 1.053, also 61,3
@@ -440,7 +440,7 @@ Kaltstart bis zu rund einer Sekunde, behält S1 diese vier Punkte. Die Fehlerrat
   \end{tabularx}
 \end{table}
 
-Der Nutzwert liegt bei 4,25 bis 4,5 gegen 3,7, den Bezugswert des Ausgangszustands im Schema, je nachdem, ob S5 mit seiner Unter- oder Obergrenze eingeht. Mit der
+Je nachdem, ob S5 mit seiner Unter- oder Obergrenze eingeht, liegt der Nutzwert bei 4,25 bis 4,5 gegen 3,7 im Ausgangszustand. Mit der
 Obergrenze liegt der Prototyp bei keinem Kriterium zurück, und die Rangfolge hängt nicht von den Gewichten ab.
 Mit der Untergrenze sinkt der Vorsprung von 0,8 auf 0,55. Bei auf eins
 normierten Gewichten kehrte er sich erst um, wenn S5 mehr als 0,52 statt 0,25 wöge. Mit drei Punkten für S5 hält er mit

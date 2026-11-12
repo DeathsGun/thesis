@@ -60,12 +60,12 @@ obwohl die Ausführung noch läuft. Aufeinanderfolgende
 Ausführungen desselben Mandanten teilen sich damit den Prozessspeicher. Das temporäre Verzeichnis
 wird vor jeder Ausführung zurückgesetzt, Heap und globale Variablen bleiben bestehen. Ein
 Node.js-Prozess je Mandant statt je Ausführung ist der Ausgangspunkt, gegen den sich jedes
-geprüfte Modell messen lassen muss. So war der Stand bei der Analyse. In den letzten Messschritten wurde der Runner umgestellt und führt jedes Skript seither in einem eigenen, verworfenen Worker-Thread aus (\autoref{sec:messaufbau}).
+geprüfte Modell messen lassen muss. So war der Stand bei der Analyse. In den letzten Messschritten wurde der Runner umgestellt und führt jedes Skript seither in einem eigenen, danach verworfenen Worker-Thread aus (\autoref{sec:messaufbau}).
 
 Aus diesem Konzept folgen die Schutzziele. \emph{Vertraulichkeit} und \emph{Integrität}
 verlangen die Mandantenisolation aus \autoref{sec:grundlagen:eigenschaften}. Die \emph{Verfügbarkeit} verlangt das
 Modell an zwei Stellen: Eine Ausführung darf die folgenden desselben Mandanten nicht unbrauchbar machen (\autoref{sec:angreifermodell}), und
-ein Knotenupdate darf die Ausführung nicht unterbrechen (M5). Den Speicher eines Mandanten begrenzt das cgroup seines
+ein Knotenupdate darf die Ausführung nicht unterbrechen (M5). Den Speicher eines Mandanten begrenzt die cgroup seines
 Pods. Dass ein Mandant die Rechenzeit eines anderen nicht schmälert, ist dagegen kein Ziel des Modells. Die \ac{CPU}
 der Knoten teilt der Cluster nach seinen Richtlinien, die das Modell nicht ändert, und in \autoref{sec:pruefung-isolation}
 wird nur gemessen, wie weit die Wirkung eines lastintensiven Mandanten reicht. Hinzu tritt die \emph{Zustandsfreiheit}, die verlangt, dass eine Ausführung
@@ -77,7 +77,7 @@ gemeinsame Vertrauensdomäne. Übernommener Zustand stört dort die folgenden Au
 überschreitet aber keine Vertrauensgrenze, weshalb Zustandsfreiheit hier eine Anforderung an die
 Zuverlässigkeit ist. Im Agentenprofil gilt das nicht mehr. Zwei aufeinanderfolgende Ausführungen
 desselben Mandanten entstehen aus verschiedenen Kontexten und können nach V2 von verschiedenen
-Dritten beeinflusst sein, sind einander also nicht wechselseitig vertrauenswürdig. Übernommener
+Dritten beeinflusst sein, vertrauen einander also nicht. Übernommener
 Zustand wird damit auch innerhalb eines Mandanten zur Vertraulichkeitsverletzung. Die
 Vertrauenseinheit verschiebt sich vom Mandanten auf die einzelne Ausführung, und die
 Isolationsgrenze muss dieser Verschiebung folgen.
@@ -110,14 +110,14 @@ Die Vertrauensannahmen lauten wie folgt.
     Ausführungen eines anderen nicht angreift.
 
   \item[V5: Die Plattform kontrolliert das codeerzeugende Sprachmodell nicht.] Der Mandant
-    kann ein eigenes Sprachmodell anbinden und kontrolliert dann Gewichte, System prompt und
+    kann ein eigenes Sprachmodell anbinden und kontrolliert dann Gewichte, System Prompt und
     vorgelagerte Prüfungen vollständig. Aussagen über das Alignment dieses Sprachmodells, über seine
     Widerstandsfähigkeit gegen die in V2 beschriebene Prompt Injection oder über die Einhaltung
     einer vorgegebenen Schnittstelle sind deshalb nicht möglich.
 \end{description}
 
 V5 hat eine unmittelbare Folge für den Entwurf. Eine Beschränkung der Fähigkeiten, die einem
-Skript zur Verfügung stehen, kann nicht über System prompt oder Tool Schema erfolgen, weil beides
+Skript zur Verfügung stehen, kann nicht über System Prompt oder Tool-Schema erfolgen, weil beides
 dem Mandanten gehört. Sie muss außerhalb des Modells durchgesetzt werden, wie es \textcite[S.~1--2]{ji_taming_2026} für Zugriffe von Agenten auf Werkzeuge fordern, im hier betrachteten Fall von der Ausführungsumgebung. Für das
 Agentenprofil verbleibt der Plattform damit keine Schutzmaßnahme außerhalb der Isolationsgrenze.
 Die jüngere Forschung zur Sicherheit agentischer Systeme betrachtet diese Frage bislang
@@ -138,7 +138,7 @@ zuverlässig bestimmen lassen (269 Inhalte, 519 Skriptversionen, 25 Mandanten), 
 verschiebt die Kennzahlen um gut einen Prozentpunkt. Jedes Skript wird anhand seiner Importe klassifiziert, wobei die
 härteste Einschränkung zählt, und ein Mandant erhält die Einstufung seines härtesten Skripts. Die Analyse ist
 statisch und sieht weder dynamisch zusammengesetzte Modulnamen noch gebündelten Code, 27 Versionen bei 24 Mandanten sind
-Parse-Fehler und nicht einstufbar. Der Scanner sieht nur, welche Pakete ein Skript importiert, nicht welche
+Parse-Fehler und nicht einstufbar. Der Scanner sieht nur, welche Pakete ein Skript importiert, nicht, welche
 Node-Module diese Pakete selbst laden. Ein Skript, das nur \texttt{axios} importiert, braucht über das Paket trotzdem
 \texttt{http} und \texttt{https}. Deshalb wurde für 27 häufig genutzte der 203 npm-Pakete der ausgelieferte Quelltext
 gelesen. 87,9\,\% der Mandanten mit npm-Paketen verwenden mindestens eines davon.
@@ -149,7 +149,7 @@ gelesen. 87,9\,\% der Mandanten mit npm-Paketen verwenden mindestens eines davon
 vermitteltes Binding nicht bereitstellt. Diese Gruppe wird im Folgenden als Hard Floor
 bezeichnet. Ohne jede Nachbildung, also auch ohne Node-Globals, laufen 39,0 bis 42,9\,\% der Mandanten. Die
 Untergrenze lässt Mandanten aus, deren Pakete vollständig außerhalb der geprüften Menge liegen, die Obergrenze zählt
-sie mit. \autoref{fig:hard-floor-einordnung} zeigt den Anteil am Bestand und die beiden Paketgruppen, die ihn tragen.
+sie mit. \autoref{fig:hard-floor-einordnung} zeigt den Anteil des Hard Floor am Bestand und die beiden Paketgruppen, die ihn tragen.
 
 \begin{figure}[H]
   \centering
@@ -243,11 +243,11 @@ Plattform Runner-Pods deshalb nach 24 Stunden automatisch, weil minütlich ausge
 
 Der zweite Weg greift die Grenze innerhalb eines Prozesses an, die nach \autoref{sec:grundlagen:isolation} Angriffe
 unterhalb der Softwareebene nicht abfängt. Cloudflare hat einen solchen Angriff auf der eigenen produktiven Plattform
-mit V8 Isolates selbst vorgeführt. Über einen Remote Timer ließ sich aus einem Worker auf demselben Server ein
+mit V8-Isolates selbst vorgeführt. Über einen Remote Timer ließ sich aus einem Worker auf demselben Server ein
 \ac{JWT}\acmarkused{JSON} auslesen, mit bis zu zwölf Bit pro Sekunde bei einer Genauigkeit
 von rund 99 Prozent \autocites[S.~1]{schwarzl_remote-timer-as--service_2026}{schwarzl_revisit_2026}. Chrome hat aus
 demselben Grund die Trennung von Sites im gemeinsamen Prozess aufgegeben
-(\autoref{sec:grundlagen:isolation}), und Cloudflare benennt die Restrisiken für V8 Isolates ausdrücklich
+(\autoref{sec:grundlagen:isolation}), und Cloudflare benennt die Restrisiken für V8-Isolates ausdrücklich
 \autocite{cloudflare_security_2026}. Eine sprachbasierte Grenze allein bildet damit keine hinreichende
 Mandantengrenze.
 
@@ -312,7 +312,7 @@ verletzt, ist keine Lösung.
   \end{tabularx}
 \end{table}
 
-M2 ist auf aufeinanderfolgende Ausführungen geschnitten, weil der Ausgangszustand je Prozess eine Ausführung
+M2 ist auf aufeinanderfolgende Ausführungen zugeschnitten, weil der Ausgangszustand je Prozess eine Ausführung
 vorsieht. Der Zuschnitt folgt nicht aus dem Bedrohungsmodell, sondern ist ein Zugeständnis an die Kosten, die in \autoref{sec:durchsatz} beziffert sind. Gleichzeitige Ausführungen entstehen dort nur über abgebrochene Anfragen, im Modell durch mehrere Slots je
 Pod (\autoref{sec:betriebsplanung}). M3 ist gegen den Ausgangszustand formuliert, weil dieser mit gVisor bereits einen
 User-Space-Kernel einsetzt. Ein Modell, das diese Schicht aufgibt, wäre auf der Infrastrukturebene ein Rückschritt,
@@ -337,7 +337,7 @@ Ausführung darf verloren gehen, eine absolute Schranke wäre aus der Betriebsan
          S1a mit Pod aus dem Pool, S1b bei leerem Pool & 0,30 \\
     S5 & Kompatibilität des Bestands & Anteil der Mandanten, die nicht schlechter lauffähig sind als im
          Ausgangszustand & 0,25 \\
-    S2 & Warmstart-Latenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
+    S2 & Warmstartlatenz & Ausführungslatenz bei warmer Instanz, P50 bis P99 & 0,15 \\
     S3 & Speicherbedarf & Bedarf je Pod unter dem Lastprofil, Pool als Vorbehalt & 0,10 \\
     S6 & Aufwand für den Rest & Aufwand, den nicht lauffähigen Anteil zu überführen & 0,10 \\
     S4 & Durchsatz & Ausführungen je Sekunde bei gesättigter Last & 0,10 \\
@@ -380,8 +380,8 @@ M2 und M4 lassen sich nicht durch Architekturbetrachtung allein belegen. Für si
 (\autoref{tab:prueffaelle} im Anhang), abgeleitet aus den Angriffswegen A1 bis A3 und gegen den Ausgangszustand und
 das Artefakt ausgeführt, sodass die Gegenüberstellung zugleich belegt, welche Eigenschaften der Ausgangszustand bereits
 erfüllt. T1 und T6 bilden dokumentierte Vorgänge des Ausgangszustands nach. T6 prüft zugleich die Verfügbarkeit
-innerhalb eines Mandanten, für die kein Muss-Kriterium besteht. T4 prüft, ob dessen Reset des temporären
-Verzeichnisses auch im Artefakt greift. Die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die noch
+innerhalb eines Mandanten, für die kein Muss-Kriterium besteht. T4 prüft, ob der Reset des temporären
+Verzeichnisses aus dem Ausgangszustand auch im Artefakt greift. Die übrigen Fälle ergänzen Wege aus derselben geteilten Ressource, die noch
 nicht beobachtet wurden. T1 bis T8 standen fest, bevor der jeweilige Mechanismus umgesetzt war, sodass der
 Entwurf sich nicht nach den Prüffällen richten konnte. T9 und T10 kamen während der Evaluation hinzu, T10 gilt M6. Ergänzend
 wird der Katalog von SandboxEval in \autoref{sec:pruefung-isolation} für JavaScript angepasst.
