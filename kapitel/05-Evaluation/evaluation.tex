@@ -1,12 +1,6 @@
 \clearpage
 \section{Evaluation} \label{sec:Evaluation}
 
-S1 bis S4 und M5 werden gemessen, M1 bis M4 und M6 über den
-Prüffallkatalog und die Architekturprüfung geprüft. Den
-Vergleich mit dem Ausgangszustand tragen allein die Läufe auf hyper-int-otc, die übrigen Läufe dienten der Wahl der
-Entwurfsparameter.
-Einzelne Detailtabellen stehen im \ref{sec:messdaten}.
-
 \subsection{Messaufbau und Vorgehen}
 \label{sec:messaufbau}
 
@@ -14,7 +8,9 @@ Gemessen wird auf hyper-int-otc, dem Kubernetes-Cluster der Integrationsstufe de
 (\autoref{tab:cluster}). Dort läuft
 neben dem Prototyp der Ausgangszustand aus \autoref{sec:systemkontext}, je Mandant ein Knative-Service mit einem
 Node.js-Runner, sodass beide Modelle auf demselben Cluster verglichen werden. Die Last stammt aus dem
-Produktivbetrieb der \acs{AWS}-nativen Variante und ist nur Quelle des Lastprofils.
+Produktivbetrieb der \acs{AWS}-nativen Variante und ist nur Quelle des Lastprofils. Den Vergleich tragen allein die
+Läufe auf hyper-int-otc, die übrigen dienten der Wahl der Entwurfsparameter. S1 bis S4 und M5 werden gemessen, M1 bis
+M4 und M6 über den Prüffallkatalog und die Architekturprüfung geprüft.
 
 \begin{table}[H]
   \caption{Der Cluster der Messungen}
